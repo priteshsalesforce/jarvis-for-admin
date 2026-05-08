@@ -20,7 +20,7 @@
   <!-- Mark -->
   <rect width="360" height="300" fill="url(#jg2)" mask="url(#jm2)"/>
   <!-- Wordmark -->
-  <text x="380" y="200" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+  <text x="380" y="200" font-family="Salesforce Sans, Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
         font-weight="800" font-size="180" letter-spacing="-6"
         fill="currentColor">Jarvis</text>
 </svg>

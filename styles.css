@@ -3,6 +3,11 @@
    Theme tokens are at the top so you can re-skin quickly.
    ========================================================= */
 
+/* Font stack: prefer locally-installed Salesforce Sans (works on Salesforce
+   employee machines), then fall back to Inter (loaded from Google Fonts in
+   index.html — Inter is metrics-compatible with Salesforce Sans), then
+   system-ui. Salesforce Sans is licensed and cannot be hosted publicly. */
+
 :root {
   /* Palette */
   --bg-0: #05060a;
@@ -32,7 +37,7 @@
   --shadow-1: 0 10px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(120,160,255,.08) inset;
   --shadow-2: 0 20px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(140,180,255,.12) inset;
 
-  --font-ui: 'Inter', 'SF Pro Text', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --font-ui: 'Salesforce Sans', 'Inter', 'SF Pro Text', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 

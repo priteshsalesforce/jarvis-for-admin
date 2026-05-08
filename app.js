@@ -388,18 +388,10 @@
 
   // ---- Wire up entry surfaces ----
   $suggestions.addEventListener("click", (e) => {
-    const chip = e.target.closest(".chip");
-    if (!chip) return;
-    const action = chip.dataset.action;
+    const trigger = e.target.closest("[data-action]");
+    if (!trigger) return;
+    const action = trigger.dataset.action;
     if (action === "install-itsm") startDemo();
-    else {
-      // Stub for other suggestions — show a friendly message
-      flipWhisperToDock();
-      $hero.classList.add("hero--collapsed");
-      $thread.innerHTML = "";
-      lastPersona = null;
-      jarvisBubble(`That flow is on the roadmap. For now, try <strong>Install ITSM</strong> — the full demo lives there.`);
-    }
   });
 
   $whisperSend.addEventListener("click", handleWhisper);

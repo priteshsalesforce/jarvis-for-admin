@@ -127,9 +127,9 @@ window.STORY = [
     text: "All set. I've prepared a live dashboard so you can watch the system breathe.",
     pause: 300 },
   { type: "link-card",
-    title: "Proactive ITSM · Live Dashboard",
-    sub:   "incidents · SLAs · agent activity",
-    url:   "https://itsm.salesforce.com/dashboard",
+    title: "CMDB discovery dashboard",
+    sub:   "configuration items · health · expiry",
+    url:   "https://itsm.salesforce.com/cmdb",
     page:  "itsm-dashboard",
     icon:  "📊"
   },
@@ -180,44 +180,81 @@ window.PAGES = {
     });
   },
 
-  /* Live ITSM dashboard preview */
+  /* CMDB discovery dashboard */
   "itsm-dashboard": (panel) => {
-    const bars = Array.from({ length: 12 }, () =>
-      `<span style="height:${20 + Math.random() * 60}%"></span>`
-    ).join("");
+    // A small synthetic but believable CI inventory
+    const items = [
+      { sn: "SF-MAC-0481",  mfr: "Apple",   exp: "2027-04-18", health: "ok"   },
+      { sn: "SF-WIN-1192",  mfr: "Dell",    exp: "2026-06-02", health: "warn" },
+      { sn: "SF-SRV-2034",  mfr: "HPE",     exp: "2028-11-30", health: "ok"   },
+      { sn: "SF-NET-0719",  mfr: "Cisco",   exp: "2026-05-22", health: "warn" },
+      { sn: "SF-MAC-0498",  mfr: "Apple",   exp: "2027-09-14", health: "ok"   },
+      { sn: "SF-WIN-1207",  mfr: "Lenovo",  exp: "2025-12-09", health: "crit" },
+      { sn: "SF-SRV-2055",  mfr: "Dell",    exp: "2029-02-04", health: "ok"   },
+      { sn: "SF-IOT-3301",  mfr: "Aruba",   exp: "2027-08-21", health: "ok"   },
+      { sn: "SF-NET-0822",  mfr: "Juniper", exp: "2026-03-15", health: "warn" },
+      { sn: "SF-MAC-0512",  mfr: "Apple",   exp: "2028-01-07", health: "ok"   },
+    ];
+    const healthLabel = { ok: "Healthy", warn: "Warning", crit: "Critical" };
+    const rows = items.map(i => `
+      <div class="ci-row">
+        <div class="ci-cell ci-cell--sn">${i.sn}</div>
+        <div class="ci-cell">${i.mfr}</div>
+        <div class="ci-cell">${i.exp}</div>
+        <div class="ci-cell">
+          <span class="ci-health ci-health--${i.health}">
+            <span class="ci-health__dot"></span>${healthLabel[i.health]}
+          </span>
+        </div>
+      </div>
+    `).join("");
+
     panel.innerHTML = `
       <div class="dash">
-        <h2><span class="dot"></span> Proactive ITSM · Control Tower</h2>
+        <h2><span class="dot"></span> CMDB discovery dashboard</h2>
 
         <div class="tile">
-          <div class="tile__label">Open incidents</div>
-          <div class="tile__value">7</div>
-          <div class="tile__delta">▼ 32% vs last week</div>
+          <div class="tile__label">CI detected</div>
+          <div class="tile__value">${items.length.toLocaleString()}</div>
+          <div class="tile__delta">▲ +3 in last hour</div>
         </div>
 
         <div class="tile">
-          <div class="tile__label">Avg resolution</div>
-          <div class="tile__value">04:21</div>
-          <div class="tile__delta">▼ 18%</div>
+          <div class="tile__label">Percentage completed</div>
+          <div class="tile__value" id="pctValue">0%</div>
+          <div class="tile__progress">
+            <div class="tile__progress__bar" id="pctBar"></div>
+          </div>
         </div>
 
-        <div class="tile tile--wide">
-          <div class="tile__label">Incidents · last 12h</div>
-          <div class="bar">${bars}</div>
-        </div>
-
-        <div class="tile">
-          <div class="tile__label">CMDB nodes</div>
-          <div class="tile__value">1,248</div>
-          <div class="tile__delta">+12 today</div>
-        </div>
-
-        <div class="tile">
-          <div class="tile__label">Agents active</div>
-          <div class="tile__value">5</div>
-          <div class="tile__delta">all healthy</div>
+        <div class="tile tile--wide tile--ci">
+          <div class="tile__label">Discovered configuration items</div>
+          <div class="ci-grid">
+            <div class="ci-row ci-row--head">
+              <div class="ci-cell">Serial number</div>
+              <div class="ci-cell">Manufacturer</div>
+              <div class="ci-cell">Expiry date</div>
+              <div class="ci-cell">Health</div>
+            </div>
+            ${rows}
+          </div>
         </div>
       </div>
     `;
+
+    // Animate the "Percentage completed" tile from 0 → 78% on open
+    const pctBar   = panel.querySelector("#pctBar");
+    const pctValue = panel.querySelector("#pctValue");
+    const target = 78;
+    requestAnimationFrame(() => {
+      pctBar.style.transition = "width 1800ms cubic-bezier(.2,.7,.2,1)";
+      pctBar.style.width = target + "%";
+    });
+    let n = 0;
+    const tick = setInterval(() => {
+      n += 2;
+      if (n >= target) { n = target; clearInterval(tick); }
+      pctValue.textContent = n + "%";
+    }, 40);
   }
 };

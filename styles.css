@@ -616,6 +616,61 @@ body {
   display: block; background: var(--grad-jarvis); border-radius: 3px 3px 0 0; opacity: .85;
 }
 
+/* Progress bar inside a KPI tile (used for "Percentage completed") */
+.tile__progress {
+  margin-top: 10px; height: 6px; border-radius: 4px;
+  background: rgba(120, 160, 255, .12); overflow: hidden;
+}
+.tile__progress__bar {
+  height: 100%; width: 0%;
+  background: var(--grad-jarvis);
+  border-radius: 4px;
+  box-shadow: 0 0 14px rgba(162, 75, 255, .35);
+}
+
+/* CI grid — Serial number / Manufacturer / Expiry date / Health */
+.tile--ci { padding: 14px 14px 8px; }
+.ci-grid {
+  margin-top: 10px;
+  display: flex; flex-direction: column;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ci-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr .9fr;
+  gap: 8px; padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.ci-row:last-child { border-bottom: 0; }
+.ci-row--head {
+  background: rgba(120, 160, 255, .06);
+  font-size: 11px; color: var(--ink-dim);
+  letter-spacing: 1.2px; text-transform: uppercase;
+}
+.ci-row:not(.ci-row--head):hover { background: rgba(120, 160, 255, .04); }
+.ci-cell { display: flex; align-items: center; min-width: 0; }
+.ci-cell--sn { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+
+.ci-health {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  border: 1px solid transparent;
+}
+.ci-health__dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  display: inline-block;
+}
+.ci-health--ok    { color: #b9f1d3; background: rgba(86,227,159,.10); border-color: rgba(86,227,159,.28); }
+.ci-health--ok    .ci-health__dot { background: var(--accent-ok); box-shadow: 0 0 8px var(--accent-ok); }
+.ci-health--warn  { color: #ffd9a8; background: rgba(255,184,107,.10); border-color: rgba(255,184,107,.32); }
+.ci-health--warn  .ci-health__dot { background: var(--accent-warn); box-shadow: 0 0 8px var(--accent-warn); }
+.ci-health--crit  { color: #ffb1b1; background: rgba(255,95,95,.10); border-color: rgba(255,95,95,.35); }
+.ci-health--crit  .ci-health__dot { background: #ff5f5f; box-shadow: 0 0 8px #ff5f5f; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 980px) {
   .stage { padding: 24px 5% 100px; }

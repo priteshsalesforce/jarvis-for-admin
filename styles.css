@@ -141,12 +141,8 @@ body {
   padding: 14px 8% 22px;
   position: relative;
 }
-/* Soft fade above the dock so older bubbles don't slam against the edge */
-.dock::before {
-  content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 36px;
-  background: linear-gradient(to top, rgba(10,12,20,.85), transparent);
-  pointer-events: none;
-}
+/* (Removed the dark fade above the dock — keeping it transparent so the
+   translucent whisper actually reads as translucent.) */
 
 /* Hero / whisper ----------------------------------------- */
 .hero {
@@ -220,9 +216,13 @@ body {
   transition: transform .7s cubic-bezier(.2,.7,.2,1), box-shadow .7s ease;
   will-change: transform;
 }
-/* Whisper inside the dock keeps the same look but adds stronger glow */
+/* Whisper inside the dock — translucent, no dark drop shadow */
 .dock .whisper {
-  box-shadow: var(--shadow-1), 0 0 80px rgba(106,162,255,.14);
+  background: rgba(20, 26, 44, 0.32);
+  border-color: rgba(140, 180, 255, 0.22);
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .whisper::before {
   content: ""; position: absolute; inset: -1px; border-radius: inherit;

@@ -128,7 +128,6 @@ window.STORY = [
     pause: 300 },
   { type: "link-card",
     title: "CMDB discovery dashboard",
-    sub:   "configuration items · health · expiry",
     url:   "https://itsm.salesforce.com/cmdb",
     page:  "itsm-dashboard",
     icon:  "📊"
@@ -175,8 +174,17 @@ window.PAGES = {
         </div>
       </div>
     `;
-    panel.querySelector("#splunkLoginBtn").addEventListener("click", () => {
-      panel.dispatchEvent(new CustomEvent("splunk-login", { bubbles: true }));
+    const loginBtn = panel.querySelector("#splunkLoginBtn");
+    loginBtn.addEventListener("click", () => {
+      if (loginBtn.disabled) return;
+      // Swap button content for a spinner + label, disable repeat clicks
+      loginBtn.disabled = true;
+      loginBtn.classList.add("is-loading");
+      loginBtn.innerHTML = `<span class="btn-spinner"></span><span>Authenticating…</span>`;
+      // Brief pause so the spinner is visible, then proceed with the flow
+      setTimeout(() => {
+        panel.dispatchEvent(new CustomEvent("splunk-login", { bubbles: true }));
+      }, 1200);
     });
   },
 

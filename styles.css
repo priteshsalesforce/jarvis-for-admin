@@ -581,9 +581,19 @@ body {
   background: linear-gradient(135deg, #f57c00, #ff5a00);
   color: white; font-weight: 600; font-family: inherit; cursor: pointer;
   font-size: 14px; box-shadow: 0 8px 24px rgba(255,90,0,.35);
-  transition: transform .15s ease;
+  transition: transform .15s ease, filter .2s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
 }
 .btn-primary:hover { transform: translateY(-1px); }
+.btn-primary.is-loading { cursor: progress; filter: brightness(.92); transform: none; }
+.btn-primary[disabled] { opacity: 1; }   /* keep the orange — only swap content */
+.btn-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .35);
+  border-top-color: #ffffff;
+  animation: spin .9s linear infinite;
+  flex: 0 0 16px;
+}
 .auth-footer {
   font-size: 11px; color: var(--ink-mute); margin-top: 10px;
 }

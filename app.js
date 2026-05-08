@@ -212,7 +212,7 @@
         <div class="linkcard__icon">${step.icon || "🔗"}</div>
         <div>
           <div class="linkcard__title">${md(step.title)}</div>
-          <div class="linkcard__sub">${md(step.sub || step.url)}</div>
+          ${step.sub ? `<div class="linkcard__sub">${md(step.sub)}</div>` : ""}
         </div>
         <div class="linkcard__cta">Open ▸</div>
       `;

@@ -282,7 +282,6 @@ body {
   filter: brightness(1.06);
 }
 .cta-install:active { transform: translateY(0) scale(.99); }
-.cta-install__glyph { font-size: 18px; }
 .cta-helper {
   font-size: 12px; color: var(--ink-mute); letter-spacing: .02em;
 }

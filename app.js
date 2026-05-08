@@ -387,11 +387,12 @@
   }
 
   // ---- Wire up entry surfaces ----
-  $suggestions.addEventListener("click", (e) => {
-    const trigger = e.target.closest("[data-action]");
-    if (!trigger) return;
-    const action = trigger.dataset.action;
-    if (action === "install-itsm") startDemo();
+  // Direct listener on every [data-action] element — robust against
+  // event-target oddities and DOM changes inside the button.
+  document.querySelectorAll("[data-action]").forEach((el) => {
+    el.addEventListener("click", () => {
+      if (el.dataset.action === "install-itsm") startDemo();
+    });
   });
 
   $whisperSend.addEventListener("click", handleWhisper);
@@ -402,14 +403,16 @@
   function handleWhisper() {
     const v = ($whisperInput.value || "").trim().toLowerCase();
     if (!v) return;
-    if (v.includes("install") && v.includes("itsm")) startDemo();
+    const wantsInstall = v.includes("install") &&
+      (v.includes("itsm") || v.includes("it service") || v.includes("it services"));
+    if (wantsInstall) startDemo();
     else {
       flipWhisperToDock();
       $hero.classList.add("hero--collapsed");
       $thread.innerHTML = "";
       lastPersona = null;
       userBubble($whisperInput.value);
-      jarvisBubble(`I heard "<em>${md($whisperInput.value)}</em>". For this demo, click <strong>Install ITSM</strong> or whisper "install ITSM".`);
+      jarvisBubble(`I heard "<em>${md($whisperInput.value)}</em>". For this demo, click <strong>Install IT Services</strong> or whisper "install IT services".`);
     }
   }
 

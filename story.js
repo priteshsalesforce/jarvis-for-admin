@@ -65,7 +65,7 @@ window.STORY = [
 
   // 1 — Licences
   { type: "status", text: "Checking licences",
-                    duration: 1400, doneText: "Licences validated" },
+                    duration: 2600, doneText: "Licences validated" },
 
   // 2 — Ask: Install CMDB?
   { type: "ask",
@@ -84,7 +84,7 @@ window.STORY = [
   // 4 — Install CMDB branch
   { id: "install-cmdb", type: "progress",
     text: "Installing CMDB package",
-    duration: 2600, doneText: "CMDB package installed" },
+    duration: 2900, doneText: "CMDB package installed" },
 
   { type: "say", text: "CMDB is online. Next, let's connect a monitoring source.", pause: 300 },
 
@@ -112,15 +112,15 @@ window.STORY = [
   { type: "wait-for", event: "splunk-login", text: "Waiting for you to authenticate…" },
 
   { type: "status", text: "Exchanging tokens",
-                    duration: 1200, doneText: "Splunk authenticated" },
+                    duration: 2400, doneText: "Splunk authenticated" },
 
   { type: "browser-close" },
   { type: "say", text: "Setup continues — closing the auth window.", pause: 200 },
 
   { type: "progress", text: "Provisioning data pipelines",
-                      duration: 1800, doneText: "Pipelines provisioned" },
+                      duration: 2700, doneText: "Pipelines provisioned" },
   { type: "progress", text: "Configuring incident routing",
-                      duration: 1600, doneText: "Routing live" },
+                      duration: 2400, doneText: "Routing live" },
 
   // ----- Dashboard handoff -----
   { id: "open-dashboard", type: "say",

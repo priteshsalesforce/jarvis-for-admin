@@ -47,10 +47,10 @@
 
           <!-- Whisper box (FLIPs to .dock when demo starts) -->
           <div class="whisper" id="whisper">
-            <div class="whisper__icon">
+            <input class="whisper__input" id="whisperInput" placeholder="Ask me anything" />
+            <button class="whisper__mic" type="button" title="Voice input">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
-            </div>
-            <input class="whisper__input" id="whisperInput" placeholder="Whisper to Jarvis... e.g. 'install ITSM', 'audit my org', 'why is incident #482 open?'" />
+            </button>
             <button class="whisper__send" id="whisperSend" title="Send">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             </button>

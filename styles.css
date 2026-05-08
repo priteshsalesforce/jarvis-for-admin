@@ -231,12 +231,24 @@ body {
   -webkit-mask-composite: xor; mask-composite: exclude;
   opacity: .4; pointer-events: none;
 }
-.whisper__icon { color: var(--accent-1); display: flex; }
 .whisper__input {
   flex: 1; background: transparent; border: 0; outline: none;
   color: var(--ink); font-size: 15px; font-family: inherit;
+  padding-left: 6px;
 }
 .whisper__input::placeholder { color: var(--ink-mute); }
+.whisper__mic {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line-strong); cursor: pointer;
+  background: transparent; color: var(--ink-dim);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease, color .2s ease, border-color .2s ease, background .2s ease;
+}
+.whisper__mic:hover {
+  color: var(--accent-1); border-color: rgba(255, 61, 190, .55);
+  background: rgba(255, 61, 190, .08);
+  transform: scale(1.06);
+}
 .whisper__send {
   width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
   background: var(--grad-jarvis); color: #0a0c14;

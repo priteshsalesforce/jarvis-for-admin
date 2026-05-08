@@ -8,7 +8,9 @@
   const $hero        = document.getElementById("hero");
   const $thread      = document.getElementById("thread");
   const $stage       = document.getElementById("stage");
-  const $composer    = document.getElementById("composer");
+  const $stageMain   = document.getElementById("stageMain");
+  const $dock        = document.getElementById("dock");
+  const $whisper     = document.getElementById("whisper");
   const $workspace   = document.getElementById("workspace");
   const $sidepanel   = document.getElementById("sidepanel");
   const $browserView = document.getElementById("browserViewport");
@@ -18,6 +20,9 @@
   const $whisperInput = document.getElementById("whisperInput");
   const $whisperSend  = document.getElementById("whisperSend");
   const $suggestions  = document.getElementById("suggestions");
+
+  // Composer was removed in the new layout — stub so legacy refs don't crash.
+  const $composer = { hidden: true };
 
   // ---- State ----
   let stepIndex = 0;
@@ -37,7 +42,7 @@
 
   const scrollDown = () => {
     requestAnimationFrame(() =>
-      $stage.scrollTo({ top: $stage.scrollHeight, behavior: "smooth" })
+      $stageMain.scrollTo({ top: $stageMain.scrollHeight, behavior: "smooth" })
     );
   };
 
@@ -336,8 +341,43 @@
     return stepIndex !== myIdx; // we moved away
   }
 
+  // ---- FLIP: smoothly relocate the whisper from hero → dock ----
+  function flipWhisperToDock() {
+    if ($whisper.parentElement === $dock) return;       // already docked
+    const first = $whisper.getBoundingClientRect();      // measure BEFORE
+    $dock.appendChild($whisper);                         // move in DOM
+    const last = $whisper.getBoundingClientRect();       // measure AFTER
+
+    const dx = first.left - last.left;
+    const dy = first.top  - last.top;
+    const sx = first.width  / last.width;
+    const sy = first.height / last.height;
+
+    // INVERT — start at the old position/size, no transition
+    $whisper.style.transition = "none";
+    $whisper.style.transformOrigin = "top left";
+    $whisper.style.transform =
+      `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+
+    // PLAY — next frame, transition back to identity
+    requestAnimationFrame(() => {
+      $whisper.style.transition =
+        "transform .7s cubic-bezier(.2,.7,.2,1)";
+      $whisper.style.transform = "";
+    });
+
+    // Cleanup so subsequent CSS hover/transitions aren't stomped
+    $whisper.addEventListener("transitionend", function clean(e) {
+      if (e.propertyName !== "transform") return;
+      $whisper.style.transition = "";
+      $whisper.style.transformOrigin = "";
+      $whisper.removeEventListener("transitionend", clean);
+    });
+  }
+
   // ---- Entry: how the demo starts ----
   function startDemo() {
+    flipWhisperToDock();              // 1. fly the whisper down to the dock
     $hero.classList.add("hero--collapsed");
     stepIndex = 0;
     lastPersona = null;
@@ -354,11 +394,11 @@
     if (action === "install-itsm") startDemo();
     else {
       // Stub for other suggestions — show a friendly message
+      flipWhisperToDock();
       $hero.classList.add("hero--collapsed");
       $thread.innerHTML = "";
       lastPersona = null;
       jarvisBubble(`That flow is on the roadmap. For now, try <strong>Install ITSM</strong> — the full demo lives there.`);
-      $composer.hidden = false;
     }
   });
 
@@ -372,12 +412,12 @@
     if (!v) return;
     if (v.includes("install") && v.includes("itsm")) startDemo();
     else {
+      flipWhisperToDock();
       $hero.classList.add("hero--collapsed");
       $thread.innerHTML = "";
       lastPersona = null;
       userBubble($whisperInput.value);
       jarvisBubble(`I heard "<em>${md($whisperInput.value)}</em>". For this demo, click <strong>Install ITSM</strong> or whisper "install ITSM".`);
-      $composer.hidden = false;
     }
   }
 

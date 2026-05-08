@@ -229,6 +229,11 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
+
+/* Whisper inside the hero — sit a bit below the CTA helper line */
+.hero .whisper {
+  margin-top: 28px;
+}
 .whisper::before {
   content: ""; position: absolute; inset: -1px; border-radius: inherit;
   padding: 1px; background: var(--grad-jarvis);

@@ -58,24 +58,25 @@
             </button>
             <div class="cta-helper">Required to unlock the rest of Jarvis</div>
           </div>
+
+          <!-- Whisper bar (FLIPs down into the dock when demo starts) -->
+          <div class="whisper" id="whisper">
+            <input class="whisper__input" id="whisperInput" placeholder="Ask me anything" />
+            <button class="whisper__mic" type="button" title="Voice input">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+            </button>
+            <button class="whisper__send" id="whisperSend" title="Send">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+            </button>
+          </div>
         </div>
 
         <!-- Chat thread (built dynamically) -->
         <div class="thread" id="thread"></div>
       </div>
 
-      <!-- Dock — whisper lives here from the start -->
-      <div class="dock" id="dock">
-        <div class="whisper" id="whisper">
-          <input class="whisper__input" id="whisperInput" placeholder="Ask me anything" />
-          <button class="whisper__mic" type="button" title="Voice input">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
-          </button>
-          <button class="whisper__send" id="whisperSend" title="Send">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-          </button>
-        </div>
-      </div>
+      <!-- Dock — empty until the demo starts and the whisper FLIPs down here -->
+      <div class="dock" id="dock"></div>
     </section>
 
     <!-- RIGHT: Browser / visual side panel -->

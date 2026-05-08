@@ -182,11 +182,15 @@
         <div class="card__body"><div class="choice-grid"></div></div>
       `;
       const grid = card.querySelector(".choice-grid");
+      const isImagePath = (s) => typeof s === "string" && /\.(png|jpe?g|svg|gif|webp)(\?|$)/i.test(s);
       step.options.forEach((o) => {
         const b = document.createElement("button");
         b.className = "choice";
+        const logoHtml = isImagePath(o.logo)
+          ? `<div class="choice__logo choice__logo--img"><img src="${o.logo}" alt="${md(o.label)}" /></div>`
+          : `<div class="choice__logo" style="background:${o.color || "var(--grad-jarvis)"}">${o.logo || "•"}</div>`;
         b.innerHTML = `
-          <div class="choice__logo" style="background:${o.color || "var(--grad-jarvis)"}">${o.logo || "•"}</div>
+          ${logoHtml}
           <div class="choice__name">${md(o.label)}</div>
           <div class="choice__sub">${md(o.sub || "")}</div>
         `;

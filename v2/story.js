@@ -92,9 +92,9 @@ window.STORY = [
   { id: "after-cmdb", type: "choose",
     text: "Which observability service should I wire up?",
     options: [
-      { label: "Splunk",  value: "splunk",  logo: "S", color: "#f57c00",
+      { label: "Splunk",  value: "splunk",  logo: "assets/Splunk.png",
         sub: "Log analytics & SIEM",        goto: "splunk-flow" },
-      { label: "Datadog", value: "datadog", logo: "D", color: "#632ca6",
+      { label: "Datadog", value: "datadog", logo: "assets/datadog.png",
         sub: "Metrics, traces & logs",      goto: "datadog-flow" }
     ]
   },
@@ -152,7 +152,9 @@ window.PAGES = {
     panel.innerHTML = `
       <div class="auth-page">
         <div class="auth-brand">
-          <div class="auth-brand__logo">S</div>
+          <div class="auth-brand__logo auth-brand__logo--img">
+            <img src="assets/Splunk.png" alt="Splunk" />
+          </div>
           <div>
             <div class="auth-brand__name">splunk&gt;</div>
             <div class="auth-brand__sub">Single Sign‑On</div>

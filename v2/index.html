@@ -3,190 +3,100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jarvis · Agentic Portal Builder (v2)</title>
+  <title>Jarvis · Proactive ITSM</title>
   <link rel="icon" type="image/png" href="assets/jarvis-mark.png" />
+  <!-- Salesforce Sans is licensed; Inter (Google Fonts) is used as the public
+       substitute when SF Sans isn't installed locally. Same metrics, near-
+       identical glyphs — Salesforce community sites use this exact pair. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Soft pastel ambient blobs -->
-  <div class="blob blob--a"></div>
-  <div class="blob blob--b"></div>
-  <div class="blob blob--c"></div>
+  <!-- Ambient background grid + orb glow -->
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb--a"></div>
+  <div class="bg-orb bg-orb--b"></div>
 
-  <main class="app" id="app">
-    <!-- ============ WELCOME STATE ============ -->
-    <section class="welcome" id="welcome">
-      <div class="container">
-        <!-- Pill -->
-        <div class="pill" id="heroPill">
-          <span class="pill__sparkle">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L13.5 8.5 L20 10 L13.5 11.5 L12 18 L10.5 11.5 L4 10 L10.5 8.5 Z M19 3 L19.7 5 L21.7 5.7 L19.7 6.4 L19 8.4 L18.3 6.4 L16.3 5.7 L18.3 5 Z"/></svg>
-          </span>
-          <span>AGENTIC PORTAL BUILDER</span>
-        </div>
-
-        <!-- Welcome line -->
-        <p class="welcome__greet" id="heroGreet">Welcome, <span class="welcome__name">Alice!</span></p>
-
-        <!-- Headline -->
-        <h1 class="hl" id="heroHl">
-          <span class="hl__line hl__line--top"><span class="hl__word">Build</span> <span class="hl__word">by</span> <span class="hl__word">describing</span></span>
-          <span class="hl__line hl__line--bot grad"><span class="hl__word">your</span> <span class="hl__word">vision...</span></span>
-        </h1>
-
-        <!-- Prompt card -->
-        <div class="promptcard" id="promptCard">
-          <textarea class="promptcard__input" id="promptInput" rows="2"
-            placeholder="Prompt or upload files to set up an agentic portal that can answer customer questions from knowledge articles and previous cases…"></textarea>
-          <div class="promptcard__row">
-            <button type="button" class="kb-chip" id="kbChip" title="Add knowledge base">
-              <span class="kb-chip__plus">+</span>
-              <span>Add Knowledge Base</span>
-            </button>
-            <div class="promptcard__actions">
-              <button type="button" class="icon-btn" id="micBtn" title="Voice input">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
-              </button>
-              <button type="button" class="cta" id="getStartedBtn">
-                <span class="cta__sparkle">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L13.5 8.5 L20 10 L13.5 11.5 L12 18 L10.5 11.5 L4 10 L10.5 8.5 Z"/></svg>
-                </span>
-                <span>Get Started</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Get started with a prompt -->
-        <div class="prompts">
-          <h3 class="prompts__title">Get started with a prompt</h3>
-
-          <button type="button" class="suggestion" data-action="prompt" data-prompt="concierge">
-            <span class="suggestion__sparkle">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L13.5 8.5 L20 10 L13.5 11.5 L12 18 L10.5 11.5 L4 10 L10.5 8.5 Z"/></svg>
-            </span>
-            <span>Create a friendly concierge agent that answers destination and itinerary questions. Ground its responses in our travel guides to provide weather updates, local packing tips, and check‑in instructions for specific hotels.</span>
-          </button>
-
-          <button type="button" class="suggestion" data-action="prompt" data-prompt="bookings">
-            <span class="suggestion__sparkle">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L13.5 8.5 L20 10 L13.5 11.5 L12 18 L10.5 11.5 L4 10 L10.5 8.5 Z"/></svg>
-            </span>
-            <span>Design an agent to assist with new bookings and upgrades. It should use our seasonal deal articles to recommend flights and hotels, while offering travel insurance and car rentals based on the user's destination.</span>
-          </button>
-
-          <a class="prompts__more" href="#" onclick="event.preventDefault()">Browse more prompts</a>
+  <!-- Top brand bar -->
+  <header class="topbar">
+    <div class="topbar__left">
+      <div class="logo">
+        <img class="logo__mark" src="assets/jarvis-mark.png" alt="Jarvis" />
+        <div class="logo__text">
+          <div class="logo__sub">Jarvis</div>
         </div>
       </div>
-    </section>
+    </div>
+    <div class="topbar__right">
+      <div class="status-pill">
+        <span class="status-pill__dot"></span>
+        <span>Jarvis online</span>
+      </div>
+    </div>
+  </header>
 
-    <!-- ============ BUILDER STATE ============ -->
-    <section class="builder" id="builder" hidden>
-      <!-- LEFT: chat -->
-      <div class="chat" id="chat">
-        <div class="chat__thread" id="chatThread"></div>
+  <!-- Workspace: left = chat, right = browser/visual panel -->
+  <main class="workspace" id="workspace">
+    <!-- LEFT: Chat stage -->
+    <section class="stage" id="stage">
+      <!-- Scrollable main area: hero + chat thread -->
+      <div class="stage__main" id="stageMain">
+        <div class="hero" id="hero">
+          <div class="orb">
+            <div class="orb__aura"></div>
+            <img class="orb__mark" src="assets/jarvis-mark.png" alt="Jarvis" />
+          </div>
+          <h1 class="hero__title">Hi Admin, I'm <span class="grad">Jarvis</span>.</h1>
+          <p class="hero__sub">Set up, observe, and fix things across your stack — start by installing IT Services.</p>
 
-        <div class="composer" id="composer">
-          <textarea class="composer__input" id="composerInput" rows="1"
-            placeholder="Add your question or response…"></textarea>
-          <div class="composer__row">
-            <div class="composer__left">
-              <button type="button" class="composer__icon" title="Attach"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
-              <button type="button" class="composer__icon" title="Edit"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-            </div>
-            <div class="composer__right">
-              <button type="button" class="composer__icon" title="Audio"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h2"/><path d="M7 7v10"/><path d="M11 4v16"/><path d="M15 8v8"/><path d="M19 11v2"/></svg></button>
-              <button type="button" class="composer__icon" title="Mic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg></button>
-              <button type="button" class="composer__send" id="composerSend" title="Send">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-              </button>
-            </div>
+          <!-- Primary CTA — nothing else works until IT Services is installed -->
+          <div class="cta-row" id="suggestions">
+            <button class="cta-install" data-action="install-itsm">
+              <span>Install IT Services</span>
+            </button>
+            <div class="cta-helper">Required to unlock the rest of Jarvis</div>
+          </div>
+
+          <!-- Whisper bar (FLIPs down into the dock when demo starts) -->
+          <div class="whisper" id="whisper">
+            <input class="whisper__input" id="whisperInput" placeholder="Ask me anything" />
+            <button class="whisper__mic" type="button" title="Voice input">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 0-4 4v6a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+            </button>
+            <button class="whisper__send" id="whisperSend" title="Send">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+            </button>
           </div>
         </div>
+
+        <!-- Chat thread (built dynamically) -->
+        <div class="thread" id="thread"></div>
       </div>
 
-      <!-- RIGHT: side panel (Choose Site) -->
-      <aside class="panel" id="panel" aria-hidden="true">
-        <div class="panel__inner" id="panelInner">
-          <h2 class="panel__title">Choose Site</h2>
-          <p class="panel__sub">Choose which site you'd like to transform into an agentic portal.</p>
-
-          <div class="stats">
-            <div class="stat"><div class="stat__label">Total Sites</div>          <div class="stat__value" data-target="25">0</div></div>
-            <div class="stat"><div class="stat__label">Knowledge Articles</div>   <div class="stat__value" data-target="4800">0</div></div>
-            <div class="stat"><div class="stat__label">Available Features</div>   <div class="stat__value" data-target="6">0</div></div>
-            <div class="stat"><div class="stat__label">Unlocked Features</div>    <div class="stat__value" data-target="4">0</div></div>
-          </div>
-
-          <div class="search">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input class="search__input" placeholder="Search…" />
-          </div>
-
-          <button type="button" class="newsite">
-            <span class="newsite__icon">+</span>
-            <div class="newsite__text">
-              <div class="newsite__title">Create New Site</div>
-              <div class="newsite__sub">Add a new site to transform into an agentic portal</div>
-            </div>
-          </button>
-
-          <div class="sites">
-            <button type="button" class="site site--rec is-selected">
-              <span class="site__rec-flag" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
-              </span>
-              <div class="site__url"><span class="site__proto">https://</span><strong>help.yourcompany</strong><span class="site__tld">.com</span></div>
-              <div class="site__meta">
-                <span><span class="dim">Articles:</span> <strong>400</strong></span>
-                <span><span class="dim">Published:</span> <strong>380</strong></span>
-                <span><span class="dim">Categories:</span> <strong>12</strong></span>
-                <span><span class="dim">Last Updated:</span> <strong>March 8, 2026</strong></span>
-              </div>
-              <span class="site__rec-pill">
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M12 2 L13.5 8.5 L20 10 L13.5 11.5 L12 18 L10.5 11.5 L4 10 L10.5 8.5 Z"/></svg>
-                Recommended
-              </span>
-            </button>
-
-            <button type="button" class="site">
-              <div class="site__url"><span class="site__proto">https://</span><strong>partners.yourcompany</strong><span class="site__tld">.com</span></div>
-              <div class="site__meta">
-                <span><span class="dim">Articles:</span> <strong>250</strong></span>
-                <span><span class="dim">Published:</span> <strong>395</strong></span>
-                <span><span class="dim">Categories:</span> <strong>121</strong></span>
-                <span><span class="dim">Last Updated:</span> <strong>March 8, 2026</strong></span>
-              </div>
-            </button>
-
-            <button type="button" class="site">
-              <div class="site__url"><span class="site__proto">https://</span><strong>internal.yourcompany</strong><span class="site__tld">.com</span></div>
-              <div class="site__meta">
-                <span><span class="dim">Articles:</span> <strong>312</strong></span>
-                <span><span class="dim">Published:</span> <strong>490</strong></span>
-                <span><span class="dim">Categories:</span> <strong>15</strong></span>
-                <span><span class="dim">Last Updated:</span> <strong>March 6, 2026</strong></span>
-              </div>
-            </button>
-
-            <button type="button" class="site">
-              <div class="site__url"><span class="site__proto">https://</span><strong>internal.yourcompany</strong><span class="site__tld">.com</span></div>
-              <div class="site__meta">
-                <span><span class="dim">Articles:</span> <strong>312</strong></span>
-                <span><span class="dim">Published:</span> <strong>490</strong></span>
-                <span><span class="dim">Categories:</span> <strong>15</strong></span>
-                <span><span class="dim">Last Updated:</span> <strong>March 6, 2026</strong></span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </aside>
+      <!-- Dock — empty until the demo starts and the whisper FLIPs down here -->
+      <div class="dock" id="dock"></div>
     </section>
+
+    <!-- RIGHT: Browser / visual side panel -->
+    <aside class="sidepanel" id="sidepanel" aria-hidden="true">
+      <div class="browser">
+        <div class="browser__chrome">
+          <div class="browser__dots">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="browser__url" id="browserUrl">about:blank</div>
+          <button class="browser__close" id="browserClose" title="Close">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <div class="browser__viewport" id="browserViewport"></div>
+      </div>
+    </aside>
   </main>
 
+  <script src="story.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

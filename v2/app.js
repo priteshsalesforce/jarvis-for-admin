@@ -1,185 +1,419 @@
-/* =====================================================
-   Jarvis · Agentic Portal Builder — v2 engine
-   ===================================================== */
+/* =============================================================
+   ENGINE — runs window.STORY one step at a time.
+   You normally don't edit this file. Edit story.js instead.
+   ============================================================= */
+
 (() => {
   // ---- DOM refs ----
-  const $welcome   = document.getElementById("welcome");
-  const $builder   = document.getElementById("builder");
-  const $thread    = document.getElementById("chatThread");
-  const $promptInput = document.getElementById("promptInput");
-  const $getStarted  = document.getElementById("getStartedBtn");
-  const $composer  = document.getElementById("composer");
-  const $composerInput = document.getElementById("composerInput");
-  const $composerSend  = document.getElementById("composerSend");
-  const $panel     = document.getElementById("panel");
-  const $suggestions = document.querySelectorAll("[data-action='prompt']");
+  const $hero        = document.getElementById("hero");
+  const $thread      = document.getElementById("thread");
+  const $stage       = document.getElementById("stage");
+  const $stageMain   = document.getElementById("stageMain");
+  const $dock        = document.getElementById("dock");
+  const $whisper     = document.getElementById("whisper");
+  const $workspace   = document.getElementById("workspace");
+  const $sidepanel   = document.getElementById("sidepanel");
+  const $browserView = document.getElementById("browserViewport");
+  const $browserUrl  = document.getElementById("browserUrl");
+  const $browserClose= document.getElementById("browserClose");
+
+  const $whisperInput = document.getElementById("whisperInput");
+  const $whisperSend  = document.getElementById("whisperSend");
+  const $suggestions  = document.getElementById("suggestions");
+
+  // Composer was removed in the new layout — stub so legacy refs don't crash.
+  const $composer = { hidden: true };
 
   // ---- State ----
-  let lastPersona = null;
+  let stepIndex = 0;
+  let pendingResolve = null; // for "ask" / "choose" / "wait-for" / link-card
+  let lastPersona  = null;   // "jarvis" | "user" — for consecutive grouping
 
-  // ---- utils ----
+  // ---- Utilities ----
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const md = (s) => String(s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  const md = (s) =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>");
 
   const scrollDown = () => {
     requestAnimationFrame(() =>
-      $thread.scrollTo({ top: $thread.scrollHeight, behavior: "smooth" })
+      $stageMain.scrollTo({ top: $stageMain.scrollHeight, behavior: "smooth" })
     );
   };
 
-  // ---- bubbles ----
-  function jarvisBubble(innerHTML) {
+  const findStepIndex = (id) =>
+    window.STORY.findIndex((s) => s && s.id === id);
+
+  // ---- Bubble factories ----
+  function jarvisBubble(innerHTML, { sys = false } = {}) {
     const wrap = document.createElement("div");
-    const cont = lastPersona === "jarvis";
-    wrap.className = "bubble" + (cont ? " bubble--continued" : "");
+    const isContinued = lastPersona === "jarvis";
+    wrap.className = "bubble"
+      + (sys ? " bubble--sys" : "")
+      + (isContinued ? " bubble--continued" : "");
     wrap.innerHTML = `
       <div class="bubble__avatar"></div>
-      <div class="bubble__body">${innerHTML}</div>
+      <div class="bubble__body">
+        <div class="bubble__name">Jarvis</div>
+        <div class="bubble__text">${innerHTML}</div>
+      </div>
     `;
     $thread.appendChild(wrap);
     lastPersona = "jarvis";
     scrollDown();
     return wrap;
   }
+
   function userBubble(text) {
     const wrap = document.createElement("div");
-    wrap.className = "bubble bubble--user";
-    wrap.innerHTML = `<div class="bubble__body">${md(text)}</div>`;
+    const isContinued = lastPersona === "user";
+    wrap.className = "bubble bubble--user"
+      + (isContinued ? " bubble--continued" : "");
+    wrap.innerHTML = `
+      <div class="bubble__avatar"></div>
+      <div class="bubble__body">
+        <div class="bubble__name">Admin</div>
+        <div class="bubble__text">${md(text)}</div>
+      </div>
+    `;
     $thread.appendChild(wrap);
     lastPersona = "user";
     scrollDown();
     return wrap;
   }
 
-  // ---- flow steps ----
-  function askChoice(prompt, choices) {
+  function typingBubble() {
+    return jarvisBubble(`<span class="typing"><span></span><span></span><span></span></span>`);
+  }
+
+  // ---- Step renderers ----
+  async function renderSay(step) {
+    const typing = typingBubble();
+    await sleep(450);
+    typing.querySelector(".bubble__text").innerHTML = md(step.text);
+  }
+
+  async function renderStatus(step) {
+    const duration = step.duration ?? 1400;
+    const text = step.text;
+    const doneText = step.doneText || `${text} ✓`;
+
+    const bubble = jarvisBubble(`
+      <div class="status-line">
+        <span class="status-line__icon is-busy"><span class="spinner"></span></span>
+        <span class="status-line__label">${md(text)}…</span>
+      </div>
+    `);
+
+    await sleep(duration);
+
+    bubble.querySelector(".status-line").innerHTML = `
+      <span class="status-line__icon is-ok">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="M5 12l5 5L20 7"/>
+        </svg>
+      </span>
+      <span class="status-line__label">${md(doneText)}</span>
+    `;
+  }
+
+  async function renderProgress(step) {
+    const duration = step.duration ?? 2200;
+    const bubble = jarvisBubble(`
+      <div class="status-line">
+        <span class="status-line__icon is-busy"><span class="spinner"></span></span>
+        <span class="status-line__label" style="min-width:160px">${md(step.text)}…</span>
+        <div class="progress"><div class="progress__bar"></div></div>
+      </div>
+    `);
+    const bar = bubble.querySelector(".progress__bar");
+    // Animate inset
+    requestAnimationFrame(() => {
+      bar.style.transition = `inset ${duration}ms cubic-bezier(.2,.7,.2,1)`;
+      bar.style.inset = "0 0 0 0";
+    });
+
+    await sleep(duration);
+
+    bubble.querySelector(".status-line").innerHTML = `
+      <span class="status-line__icon is-ok">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="M5 12l5 5L20 7"/>
+        </svg>
+      </span>
+      <span class="status-line__label">${md(step.doneText || step.text + " complete")}</span>
+    `;
+  }
+
+  function renderAsk(step) {
     return new Promise((resolve) => {
-      const bubble = jarvisBubble(`<div>${md(prompt)}</div>`);
-      const row = document.createElement("div");
-      row.className = "choices";
-      choices.forEach((c) => {
+      const bubble = jarvisBubble(`<div>${md(step.text)}</div>`);
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      step.choices.forEach((c) => {
         const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "choice-btn";
-        btn.innerHTML = `
-          ${c.icon ? `<span class="choice-btn__icon">${c.icon}</span>` : ""}
-          <span>${md(c.label)}</span>
-        `;
+        btn.className = "action" + (c.primary ? " action--primary" : "");
+        btn.innerHTML = `${c.glyph ? `<span class="action__glyph">${c.glyph}</span>` : ""}${md(c.label)}`;
         btn.addEventListener("click", () => {
-          [...row.children].forEach((b) => (b.disabled = true));
+          // disable siblings
+          [...actions.children].forEach((b) => (b.disabled = true));
           userBubble(c.label);
           resolve(c);
         });
-        row.appendChild(btn);
+        actions.appendChild(btn);
       });
-      bubble.querySelector(".bubble__body").appendChild(row);
+      bubble.querySelector(".bubble__body").appendChild(actions);
       scrollDown();
     });
   }
 
-  function showAnalysing() {
-    const bubble = jarvisBubble(`
-      <div class="analysing">
-        <span class="analysing__sparkle">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 L13.5 8.5 L20 10 L13.5 11.5 L12 18 L10.5 11.5 L4 10 L10.5 8.5 Z"/></svg>
-        </span>
-        <span class="analysing__label">Analysing</span>
-      </div>
-      <div class="skeleton skeleton--a"></div>
-      <div class="skeleton skeleton--b"></div>
-    `);
-    return bubble;
+  function renderChoose(step) {
+    return new Promise((resolve) => {
+      const bubble = jarvisBubble(`<div>${md(step.text)}</div>`);
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="card__header"><span class="dot"></span> Pick one</div>
+        <div class="card__body"><div class="choice-grid"></div></div>
+      `;
+      const grid = card.querySelector(".choice-grid");
+      step.options.forEach((o) => {
+        const b = document.createElement("button");
+        b.className = "choice";
+        b.innerHTML = `
+          <div class="choice__logo" style="background:${o.color || "var(--grad-jarvis)"}">${o.logo || "•"}</div>
+          <div class="choice__name">${md(o.label)}</div>
+          <div class="choice__sub">${md(o.sub || "")}</div>
+        `;
+        b.addEventListener("click", () => {
+          [...grid.children].forEach((c) => (c.disabled = true));
+          b.classList.add("is-selected");
+          userBubble(`Use ${o.label}`);
+          resolve(o);
+        });
+        grid.appendChild(b);
+      });
+      bubble.querySelector(".bubble__body").appendChild(card);
+      scrollDown();
+    });
   }
 
-  // ---- side panel ----
-  function openPanel() {
-    $panel.setAttribute("aria-hidden", "false");
-    requestAnimationFrame(() => $panel.classList.add("is-open"));
-    animateStatCounters();
+  function renderLinkCard(step) {
+    return new Promise((resolve) => {
+      const bubble = jarvisBubble("");
+      const btn = document.createElement("button");
+      btn.className = "linkcard";
+      btn.innerHTML = `
+        <div class="linkcard__icon">${step.icon || "🔗"}</div>
+        <div>
+          <div class="linkcard__title">${md(step.title)}</div>
+          ${step.sub ? `<div class="linkcard__sub">${md(step.sub)}</div>` : ""}
+        </div>
+        <div class="linkcard__cta">Open ▸</div>
+      `;
+      btn.addEventListener("click", () => {
+        openBrowser(step.url, step.page);
+      });
+      bubble.querySelector(".bubble__body").appendChild(btn);
+      scrollDown();
+      // Resolve immediately so the story can proceed; opening the link
+      // is a passive action by the admin.
+      resolve();
+    });
   }
 
-  function animateStatCounters() {
-    document.querySelectorAll(".stat__value").forEach((el) => {
-      const target = parseInt(el.dataset.target, 10) || 0;
-      const dur = 1100 + Math.random() * 400;
-      const start = performance.now();
-      const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
-      function tick(now) {
-        const t = Math.min(1, (now - start) / dur);
-        const v = Math.round(ease(t) * target);
-        el.textContent = v.toLocaleString();
-        if (t < 1) requestAnimationFrame(tick);
-        else el.textContent = target.toLocaleString();
+  function renderWaitFor(step) {
+    return new Promise((resolve) => {
+      const text = step.text || "Waiting…";
+      const bubble = jarvisBubble(`
+        <div class="status-line">
+          <span class="status-line__icon is-busy"><span class="spinner"></span></span>
+          <span class="status-line__label">${md(text)}</span>
+        </div>
+      `);
+      const handler = () => {
+        $sidepanel.removeEventListener(step.event, handler);
+        // Mark this status as ✓
+        bubble.querySelector(".status-line").innerHTML = `
+          <span class="status-line__icon is-ok">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <path d="M5 12l5 5L20 7"/>
+            </svg>
+          </span>
+          <span class="status-line__label">Confirmed</span>
+        `;
+        resolve();
+      };
+      $sidepanel.addEventListener(step.event, handler);
+    });
+  }
+
+  // ---- Side panel browser ----
+  function openBrowser(url, pageKey) {
+    $workspace.classList.add("workspace--split");
+    $sidepanel.setAttribute("aria-hidden", "false");
+    $browserUrl.textContent = url || "about:blank";
+    $browserView.innerHTML = "";
+    const factory = window.PAGES?.[pageKey];
+    if (factory) factory($browserView, { dispatch: (name) => $sidepanel.dispatchEvent(new CustomEvent(name)) });
+    else $browserView.innerHTML = `<div class="page"><p>${pageKey || "Empty page"}</p></div>`;
+  }
+
+  function closeBrowser() {
+    $workspace.classList.remove("workspace--split");
+    $sidepanel.setAttribute("aria-hidden", "true");
+    setTimeout(() => { $browserView.innerHTML = ""; }, 500);
+  }
+
+  $browserClose.addEventListener("click", closeBrowser);
+
+  // ---- Main runner ----
+  async function runStep(step) {
+    if (!step) return false;
+    if (step.pause) await sleep(step.pause);
+
+    switch (step.type) {
+      case "say":          await renderSay(step); break;
+      case "status":       await renderStatus(step); break;
+      case "progress":     await renderProgress(step); break;
+      case "ask": {
+        const picked = await renderAsk(step);
+        if (picked.goto) {
+          const idx = findStepIndex(picked.goto);
+          if (idx >= 0) { stepIndex = idx; return true; }
+        }
+        break;
       }
-      requestAnimationFrame(tick);
-    });
-  }
-
-  // ---- demo entry ----
-  async function startDemo(seedPrompt) {
-    // Hide welcome → show builder
-    $welcome.hidden = true;
-    $builder.hidden = false;
-
-    // 1. Greeting + choice (Update Existing Site / Start from Scratch)
-    await sleep(280);
-    jarvisBubble(`Welcome <strong>Alice</strong>! Let us get started to set up your self service portal. Would you like to choose an existing site or create a new site?`);
-
-    const pick = await askChoice("", [
-      { label: "Update Existing Site", value: "update", icon: refreshSvg() },
-      { label: "Start from Scratch",   value: "scratch", icon: editSvg() }
-    ]);
-
-    // 2. Open the Choose Site panel a beat after the first answer
-    await sleep(420);
-    openPanel();
-
-    // 3. Confirmation + analysing
-    jarvisBubble(`Thank you for choosing your site, I'll now start analysing your site. In order to continue you need to turn on all your permissions.`);
-    await sleep(380);
-    showAnalysing();
-
-    // 4. (For the demo, freeze on Analysing — that's the screenshot's final state)
-    // If you want to extend, add more steps here.
-  }
-
-  // ---- entry surfaces ----
-  $getStarted.addEventListener("click", () => startDemo($promptInput.value));
-  $promptInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) startDemo($promptInput.value);
-  });
-  $suggestions.forEach((el) => {
-    el.addEventListener("click", () => {
-      $promptInput.value = el.querySelector("span:last-child").textContent.trim();
-      startDemo($promptInput.value);
-    });
-  });
-
-  $composerSend.addEventListener("click", () => {
-    const v = ($composerInput.value || "").trim();
-    if (!v) return;
-    userBubble(v);
-    $composerInput.value = "";
-    // Echo a placeholder response so the composer feels real
-    setTimeout(() => {
-      jarvisBubble(`Got it — I'll fold that into the analysis.`);
-    }, 600);
-  });
-  $composerInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      $composerSend.click();
+      case "choose": {
+        const picked = await renderChoose(step);
+        if (picked.goto) {
+          const idx = findStepIndex(picked.goto);
+          if (idx >= 0) { stepIndex = idx; return true; }
+        }
+        break;
+      }
+      case "browser":      openBrowser(step.url, step.page); break;
+      case "browser-close":closeBrowser(); break;
+      case "wait-for":     await renderWaitFor(step); break;
+      case "link-card":    await renderLinkCard(step); break;
+      case "user":         userBubble(step.text); break;
+      case "goto": {
+        const idx = findStepIndex(step.to);
+        if (idx >= 0) { stepIndex = idx; return true; }
+        break;
+      }
+      case "end":
+        $composer.hidden = false;
+        return false;
+      default:
+        console.warn("Unknown step type:", step.type, step);
     }
+    return true;
+  }
+
+  async function runStory() {
+    while (stepIndex < window.STORY.length) {
+      const step = window.STORY[stepIndex];
+      const advanced = await runStep(step);
+      if (step?.type === "end") break;
+      // If step changed stepIndex (goto), don't auto-advance.
+      if (advanced === true && (step.type === "ask" || step.type === "choose" || step.type === "goto")) {
+        // For ask/choose without goto, just advance
+        if (!stepHadGoto(step)) stepIndex += 1;
+      } else if (advanced === false) {
+        break;
+      } else {
+        stepIndex += 1;
+      }
+    }
+    $composer.hidden = false;
+  }
+
+  function stepHadGoto(step) {
+    // Only true if we actually jumped — runStep updates stepIndex on jump.
+    // Easiest check: compare current stepIndex to the step's index in array.
+    const myIdx = window.STORY.indexOf(step);
+    return stepIndex !== myIdx; // we moved away
+  }
+
+  // ---- FLIP: smoothly relocate the whisper from hero → dock ----
+  function flipWhisperToDock() {
+    if ($whisper.parentElement === $dock) return;       // already docked
+    const first = $whisper.getBoundingClientRect();      // measure BEFORE
+    $dock.appendChild($whisper);                         // move in DOM
+    const last = $whisper.getBoundingClientRect();       // measure AFTER
+
+    const dx = first.left - last.left;
+    const dy = first.top  - last.top;
+    const sx = first.width  / last.width;
+    const sy = first.height / last.height;
+
+    // INVERT — start at the old position/size, no transition
+    $whisper.style.transition = "none";
+    $whisper.style.transformOrigin = "top left";
+    $whisper.style.transform =
+      `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+
+    // PLAY — next frame, transition back to identity
+    requestAnimationFrame(() => {
+      $whisper.style.transition =
+        "transform .7s cubic-bezier(.2,.7,.2,1)";
+      $whisper.style.transform = "";
+    });
+
+    // Cleanup so subsequent CSS hover/transitions aren't stomped
+    $whisper.addEventListener("transitionend", function clean(e) {
+      if (e.propertyName !== "transform") return;
+      $whisper.style.transition = "";
+      $whisper.style.transformOrigin = "";
+      $whisper.removeEventListener("transitionend", clean);
+    });
+  }
+
+  // ---- Entry: how the demo starts ----
+  function startDemo() {
+    flipWhisperToDock();              // 1. fly the whisper down to the dock
+    $hero.classList.add("hero--collapsed");
+    stepIndex = 0;
+    lastPersona = null;
+    $thread.innerHTML = "";
+    closeBrowser();
+    runStory();
+  }
+
+  // ---- Wire up entry surfaces ----
+  // Direct listener on every [data-action] element — robust against
+  // event-target oddities and DOM changes inside the button.
+  document.querySelectorAll("[data-action]").forEach((el) => {
+    el.addEventListener("click", () => {
+      if (el.dataset.action === "install-itsm") startDemo();
+    });
   });
 
-  // ---- inline icons (small) ----
-  function refreshSvg() {
-    return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>`;
+  $whisperSend.addEventListener("click", handleWhisper);
+  $whisperInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") handleWhisper();
+  });
+
+  function handleWhisper() {
+    const v = ($whisperInput.value || "").trim().toLowerCase();
+    if (!v) return;
+    const wantsInstall = v.includes("install") &&
+      (v.includes("itsm") || v.includes("it service") || v.includes("it services"));
+    if (wantsInstall) startDemo();
+    else {
+      flipWhisperToDock();
+      $hero.classList.add("hero--collapsed");
+      $thread.innerHTML = "";
+      lastPersona = null;
+      userBubble($whisperInput.value);
+      jarvisBubble(`I heard "<em>${md($whisperInput.value)}</em>". For this demo, click <strong>Install IT Services</strong> or whisper "install IT services".`);
+    }
   }
-  function editSvg() {
-    return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
-  }
+
 })();

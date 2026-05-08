@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 300" fill="none">
+  <defs>
+    <linearGradient id="jg" x1="20" y1="150" x2="340" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF3DBE"/>
+      <stop offset=".5" stop-color="#A24BFF"/>
+      <stop offset="1" stop-color="#22D3FF"/>
+    </linearGradient>
+    <mask id="jm">
+      <rect width="360" height="300" fill="black"/>
+      <!-- Main rounded helmet body -->
+      <rect x="48" y="36" width="264" height="232" rx="118" fill="white"/>
+      <!-- Left earcup (large side protrusion) -->
+      <rect x="22" y="120" width="40" height="80" rx="8" fill="white"/>
+      <!-- Right earcup -->
+      <rect x="298" y="120" width="40" height="80" rx="8" fill="white"/>
+      <!-- Top-left bracket tab -->
+      <rect x="58" y="48" width="22" height="16" rx="4" fill="white"/>
+      <!-- Top-right bracket tab -->
+      <rect x="280" y="48" width="22" height="16" rx="4" fill="white"/>
+      <!-- Bottom-left bracket tab -->
+      <rect x="58" y="240" width="22" height="16" rx="4" fill="white"/>
+      <!-- Bottom-right bracket tab -->
+      <rect x="280" y="240" width="22" height="16" rx="4" fill="white"/>
+      <!-- Inner face cutout (smooth rounded rectangle, near-circle) -->
+      <rect x="78" y="66" width="204" height="172" rx="92" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="360" height="300" fill="url(#jg)" mask="url(#jm)"/>
+</svg>

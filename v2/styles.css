@@ -126,9 +126,15 @@ body {
   position: relative; z-index: 2;
   height: calc(100vh - 60px);
   display: grid; grid-template-columns: 1fr 0fr;
+  /* Panel width is driven by --panel-w (set by drag handle in JS).
+     Default split width is the fallback. */
+  --panel-w: 540px;
   transition: grid-template-columns .6s cubic-bezier(.2,.7,.2,1);
 }
-.workspace.workspace--split { grid-template-columns: 1fr 540px; }
+.workspace.workspace--split { grid-template-columns: 1fr var(--panel-w); }
+/* While dragging, kill the transition so the panel tracks the cursor 1:1 */
+.workspace.is-resizing { transition: none; }
+.workspace.is-resizing * { user-select: none; }
 
 /* ---------- Stage (chat side) ---------- */
 .stage {
@@ -524,16 +530,43 @@ body {
   display: flex; justify-content: center;
 }
 
-/* ---------- Side panel / fake browser ---------- */
+/* ---------- Side panel / fake browser ----------
+   Panel itself is transparent so the page gradient continues underneath;
+   the inner .browser card is the opaque surface. The left edge has a
+   drag handle that lets the user resize the panel. */
 .sidepanel {
   position: relative;
-  border-left: 1px solid var(--line);
-  background: rgba(255, 255, 255, .85);
-  overflow: hidden;
+  background: transparent;       /* let the page gradient show through */
+  border-left: 0;
+  overflow: visible;             /* the resize handle pokes into the gutter */
   opacity: 0; transform: translateX(20px);
   transition: opacity .5s ease, transform .5s ease;
 }
 .workspace--split .sidepanel { opacity: 1; transform: translateX(0); }
+
+/* Resize handle — sits on the left edge of the panel */
+.sidepanel__resizer {
+  position: absolute;
+  top: 14px; bottom: 14px;
+  left: -6px;                    /* straddles the left edge of the panel */
+  width: 12px;
+  cursor: col-resize;
+  z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+}
+.sidepanel__resizer::before {
+  content: "";
+  width: 4px; height: 56px;
+  border-radius: 4px;
+  background: rgba(140, 150, 200, .25);
+  transition: background .15s ease, height .2s ease, width .2s ease;
+}
+.sidepanel__resizer:hover::before,
+.workspace.is-resizing .sidepanel__resizer::before {
+  background: var(--accent-1);
+  width: 5px;
+  height: 72px;
+}
 
 .browser {
   height: 100%; display: flex; flex-direction: column;

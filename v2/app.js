@@ -420,4 +420,46 @@
     }
   }
 
+  // ---- Side-panel drag-to-resize ----
+  const $resizer = document.getElementById("sidepanelResizer");
+  if ($resizer) {
+    const MIN_W = 320;            // panel can't shrink past this
+    const MIN_CHAT = 360;         // chat can't shrink past this
+    let startX = 0, startW = 0, vw = 0;
+
+    const onMove = (e) => {
+      const x = (e.touches ? e.touches[0].clientX : e.clientX);
+      const dx = startX - x;                  // drag LEFT increases panel width
+      let next = Math.max(MIN_W, Math.min(vw - MIN_CHAT, startW + dx));
+      $workspace.style.setProperty("--panel-w", next + "px");
+    };
+    const onUp = () => {
+      $workspace.classList.remove("is-resizing");
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onUp);
+    };
+    const onDown = (e) => {
+      // Only allow resize when the panel is visible
+      if (!$workspace.classList.contains("workspace--split")) return;
+      e.preventDefault();
+      vw = window.innerWidth;
+      startX = (e.touches ? e.touches[0].clientX : e.clientX);
+      startW = $sidepanel.getBoundingClientRect().width;
+      $workspace.classList.add("is-resizing");
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      document.addEventListener("touchmove", onMove, { passive: false });
+      document.addEventListener("touchend", onUp);
+    };
+    $resizer.addEventListener("mousedown", onDown);
+    $resizer.addEventListener("touchstart", onDown, { passive: false });
+
+    // Double-click resets to default width
+    $resizer.addEventListener("dblclick", () => {
+      $workspace.style.removeProperty("--panel-w");
+    });
+  }
+
 })();

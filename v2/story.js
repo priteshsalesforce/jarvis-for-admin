@@ -135,7 +135,7 @@ window.STORY = [
   },
 
   { type: "say",
-    text: "I'll keep watching for anomalies in the background. Drag the left edge of the panel to give the dashboard more room.",
+    text: "I'll keep watching for anomalies in the background.",
     pause: 200 },
 
   { type: "end" }

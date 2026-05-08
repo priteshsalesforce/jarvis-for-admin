@@ -544,7 +544,6 @@ body {
   position: relative;
   background: transparent;       /* let the page gradient show through */
   border-left: 0;
-  overflow: hidden;
   opacity: 0; transform: translateX(20px);
   transition: opacity .5s ease, transform .5s ease;
 }

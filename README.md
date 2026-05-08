@@ -2,11 +2,15 @@
 
 > Interactive demo of the **Proactive Agentic ITSM** narrative — first walkthrough.
 
-## 🚀 Live demo
+## 🚀 Live demos
 
-**https://priteshsalesforce.github.io/jarvis-for-admin/**
+| Version | URL | Style |
+|---|---|---|
+| **v1 — Proactive ITSM** (dark, Jarvis-led setup) | **https://priteshsalesforce.github.io/jarvis-for-admin/** | Sci-fi dark theme |
+| **v2 — Agentic Portal Builder** (light, Vibe-coded) | **https://priteshsalesforce.github.io/jarvis-for-admin/v2/** | Pastel light theme matching SLDS reference |
 
-Click **"Install ITSM"** on the welcome screen (or whisper *"install ITSM"* in the input) to start the flow.
+In v1, click **"Install IT Services"** on the welcome screen.
+In v2, type or pick a prompt and click **"Get Started"**.
 
 ## What it covers
 

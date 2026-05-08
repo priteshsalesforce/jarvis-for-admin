@@ -157,11 +157,15 @@ body {
   scroll-behavior: smooth;
   overflow-anchor: auto;
   display: flex; flex-direction: column;
-  /* While the hero is visible (welcome state), center it vertically.
-     Once the demo starts and `.hero--collapsed` is added, this overrides
-     itself via the `:has()` rule below so the chat thread can grow from
-     the top and pin the dock at the bottom. */
+  /* Vertical center of children (welcome hero); :has() rule below
+     flips this once the demo starts so chat anchors to the bottom. */
   justify-content: center;
+  /* Horizontal center of children — defensive against asymmetric
+     scrollbar gutter rendering across browsers. */
+  align-items: center;
+  /* Reserve scrollbar space symmetrically so the centered content
+     doesn't shift left when overflow appears. */
+  scrollbar-gutter: stable both-edges;
 }
 .stage__main::-webkit-scrollbar { width: 10px; }
 .stage__main::-webkit-scrollbar-thumb { background: rgba(120, 140, 210, .25); border-radius: 8px; }
@@ -179,7 +183,7 @@ body {
 
 /* Hero ----------------------------------------- */
 .hero {
-  max-width: 880px; margin: 0 auto; text-align: center;
+  width: 100%; max-width: 880px; margin: 0 auto; text-align: center;
   padding-top: 24px;
   transition: opacity .5s ease, transform .5s ease, max-width .6s cubic-bezier(.2,.7,.2,1);
 }

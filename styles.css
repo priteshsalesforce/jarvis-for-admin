@@ -231,7 +231,7 @@ body {
 .workspace:not(.workspace--split) .dock        { padding: 14px 5% 22px; }
 .workspace:not(.workspace--split) .hero        { max-width: 1100px; }
 .workspace:not(.workspace--split) .thread      { max-width: 1040px; }
-.workspace:not(.workspace--split) .whisper     { max-width: 880px; }
+.workspace:not(.workspace--split) .dock .whisper { max-width: 880px; }
 /* Smooth the chat content's grow/shrink as the panel opens/closes */
 .stage__main, .dock { transition: padding .6s cubic-bezier(.2,.7,.2,1); }
 .thread { transition: max-width .6s cubic-bezier(.2,.7,.2,1); }
@@ -364,7 +364,14 @@ body {
   pointer-events: none;
   opacity: .9;
 }
-.hero .whisper { margin-top: 28px; }
+/* On the welcome hero, keep the whisper compact (600px). Once the
+   demo starts and the whisper FLIPs into the dock, it returns to the
+   default dock widths (720px split / 880px full) and the existing
+   `max-width` transition animates the grow smoothly. */
+.hero .whisper {
+  margin-top: 28px;
+  max-width: 600px;
+}
 
 /* Whisper inside the dock — same iOS frost as the topbar */
 .dock .whisper {

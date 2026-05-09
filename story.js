@@ -124,17 +124,18 @@ window.STORY = [
 
   // ----- Dashboard handoff -----
   { id: "open-dashboard", type: "say",
-    text: "All set. I've prepared a live dashboard so you can watch the system breathe.",
+    text: "All set. Opening your **CMDB discovery dashboard** on the right — you can watch the system breathe in real time.",
     pause: 300 },
-  { type: "link-card",
-    title: "CMDB discovery dashboard",
-    url:   "https://itsm.salesforce.com/cmdb",
-    page:  "itsm-dashboard",
-    icon:  "📊"
+
+  // Auto-open the dashboard in the side panel (no click required)
+  { type: "browser",
+    url:  "https://itsm.salesforce.com/cmdb",
+    page: "itsm-dashboard",
+    pause: 400
   },
 
   { type: "say",
-    text: "Click the card whenever you're ready and I'll open it on the right. I'll keep watching for anomalies in the background.",
+    text: "I'll keep watching for anomalies in the background.",
     pause: 200 },
 
   { type: "end" }

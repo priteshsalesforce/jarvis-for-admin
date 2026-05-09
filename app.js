@@ -186,8 +186,6 @@
       step.options.forEach((o) => {
         const b = document.createElement("button");
         b.className = "choice";
-        // Render the logo as either an <img> (if it looks like an image path)
-        // or as a single letter inside a colored tile (legacy behaviour).
         const logoHtml = isImagePath(o.logo)
           ? `<div class="choice__logo choice__logo--img"><img src="${o.logo}" alt="${md(o.label)}" /></div>`
           : `<div class="choice__logo" style="background:${o.color || "var(--grad-jarvis)"}">${o.logo || "•"}</div>`;
@@ -260,9 +258,15 @@
   }
 
   // ---- Side panel browser ----
+  // The panel is always present in the DOM. We only flip the
+  // `workspace--split` class (drives the CSS slide animation) and
+  // `inert` / `aria-hidden` for accessibility. We never toggle the
+  // `hidden` attribute, because that pulls the panel out of layout
+  // mid-transition and snaps the chat side around.
   function openBrowser(url, pageKey) {
-    $workspace.classList.add("workspace--split");
+    $sidepanel.removeAttribute("inert");
     $sidepanel.setAttribute("aria-hidden", "false");
+    $workspace.classList.add("workspace--split");
     $browserUrl.textContent = url || "about:blank";
     $browserView.innerHTML = "";
     const factory = window.PAGES?.[pageKey];
@@ -273,7 +277,9 @@
   function closeBrowser() {
     $workspace.classList.remove("workspace--split");
     $sidepanel.setAttribute("aria-hidden", "true");
-    setTimeout(() => { $browserView.innerHTML = ""; }, 500);
+    $sidepanel.setAttribute("inert", "");
+    // Cosmetic cleanup once the slide-out has finished.
+    setTimeout(() => { $browserView.innerHTML = ""; }, 600);
   }
 
   $browserClose.addEventListener("click", closeBrowser);
@@ -404,6 +410,33 @@
   $whisperSend.addEventListener("click", handleWhisper);
   $whisperInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleWhisper();
+  });
+
+  // ---- Theme toggle (light ⇄ dark) ----
+  // Default is light; user's choice is persisted to localStorage. The
+  // initial `data-theme` attribute is also set by an inline script in
+  // <head> before paint to avoid a flash of the wrong theme.
+  const $themeToggle = document.getElementById("themeToggle");
+  const THEME_KEY = "jarvis-theme";
+
+  function applyTheme(theme) {
+    const isDark = theme === "dark";
+    if (isDark) document.documentElement.setAttribute("data-theme", "dark");
+    else        document.documentElement.removeAttribute("data-theme");
+    if ($themeToggle) {
+      $themeToggle.setAttribute("aria-pressed", String(isDark));
+      $themeToggle.title = isDark ? "Switch to light theme" : "Switch to dark theme";
+      $themeToggle.setAttribute("aria-label", $themeToggle.title);
+    }
+  }
+
+  // Reflect the inline-script's initial state on the button.
+  applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+
+  $themeToggle?.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
   });
 
   function handleWhisper() {

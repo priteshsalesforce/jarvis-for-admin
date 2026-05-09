@@ -1,37 +1,61 @@
 # Jarvis for Admin · Proactive ITSM Demo
 
-> Interactive demo of the **Proactive Agentic ITSM** narrative — first walkthrough.
+> Interactive demo of the **Proactive Agentic ITSM** narrative — Jarvis walks an admin through licence checks, CMDB install, observability pickup, and the live ITSM dashboard handoff.
 
-## 🚀 Live demos
+## 🚀 Live demo
 
-| Version | URL | Style |
-|---|---|---|
-| **v1 — Proactive ITSM** (dark, Jarvis-led setup) | **https://priteshsalesforce.github.io/jarvis-for-admin/** | Sci-fi dark theme |
-| **v2 — Agentic Portal Builder** (light, Vibe-coded) | **https://priteshsalesforce.github.io/jarvis-for-admin/v2/** | Pastel light theme matching SLDS reference |
+**https://priteshsalesforce.github.io/jarvis-for-admin/**
 
-In v1, click **"Install IT Services"** on the welcome screen.
-In v2, type or pick a prompt and click **"Get Started"**.
+Click **"Install IT Services"** (or whisper *"install IT services"*) on the welcome screen to play the flow.
 
-## What it covers
+The previously separate dark (`/`) and light (`/v2/`) builds have been **merged into a single themable demo** at the root URL. The legacy `/v2/` URL has been retired — please use the root URL.
 
-The approved opening sequence:
+## 🌗 Light + Dark themes
+
+A moon/sun toggle in the top-bar right swaps the entire UI between two palettes:
+
+- **Light** — pastel SLDS-inspired surface, blue→violet brand gradient (default).
+- **Dark** — deep navy/violet surface, brighter accent variants for contrast.
+
+Implementation:
+- All design tokens live at `:root` (light) and are overridden by `[data-theme="dark"]` on `<html>`.
+- Component CSS uses semantic vars (`--bg-1`, `--bg-soft`, `--bg-chrome`, `--linkcard-grad`, `--whisper-ring`, `--orb-*`, …) — never hardcoded `white`/hex literals.
+- The user's choice is persisted in `localStorage["jarvis-theme"]`. An inline `<head>` script applies it before paint to avoid a flash.
+- The top bar uses an iOS-style frost (`backdrop-filter: saturate(180%) blur(24px)`) so the page gradient and ambient orbs bleed through.
+
+## 🎬 What the demo covers
 
 1. Admin lands on the welcome screen and meets Jarvis.
-2. Clicks **Install ITSM** → license check.
+2. Clicks **Install IT Services** → licence check.
 3. Jarvis offers to install the **CMDB package**; admin approves.
 4. Jarvis asks which observability service to wire up — **Splunk** or **Datadog**.
-5. Splunk SSO opens in a side-panel "browser"; admin signs in; tokens are exchanged.
+5. Splunk SSO opens in the right-side "browser" panel; admin signs in; tokens are exchanged.
 6. Pipelines provisioned, incident routing configured.
-7. Live **Proactive ITSM dashboard** is handed off as a clickable link card.
+7. Right-side panel auto-opens the **CMDB discovery dashboard** (CI inventory + animated discovery progress).
 
-## Tech notes
+## 🧱 Project layout
+
+```
+.
+├── index.html        ← markup + entry point (theme toggle in top-bar right)
+├── styles.css        ← themable design system (`:root` light, `[data-theme="dark"]` dark)
+├── story.js          ← THE demo script — edit to change narrative beats
+├── app.js            ← story engine + PAGES registry + theme + side-panel anim
+└── assets/
+    ├── jarvis-mark.png   (theme-agnostic Jarvis mark — favicon, hero, avatars)
+    ├── Splunk.png
+    └── datadog.png
+```
+
+## 🔧 Tech notes
 
 - Vanilla HTML / CSS / JS — no build step, no dependencies.
-- The whole demo flow lives in **`story.js`** as a step array. Easy to iterate on narrative beats.
-- Engine + step types (`say`, `status`, `progress`, `ask`, `choose`, `browser`, `wait-for`, `link-card`, `goto`, `end`) live in **`app.js`** and rarely need editing.
-- Side-panel "fake browser" pages (e.g. Splunk SSO, ITSM dashboard) are registered under `window.PAGES` in `story.js`.
+- The whole flow lives in **`story.js`** as a `window.STORY` step array. Easy to iterate on beats.
+- Engine + step types (`say`, `status`, `progress`, `ask`, `choose`, `browser`, `browser-close`, `wait-for`, `link-card`, `user`, `goto`, `end`) live in **`app.js`** and rarely need editing.
+- Side-panel fake browser pages (Splunk SSO, CMDB dashboard) are registered under `window.PAGES` in `story.js`.
+- The right-side panel uses a stable two-track CSS Grid (`1fr 0px` ↔ `1fr 540px`) plus an absolutely-positioned, `translateX`-animated browser card, so opening/closing slides smoothly without disturbing the chat side.
 
-## Run locally
+## 🛠 Run locally
 
 ```bash
 # Any static server works; Python's is everywhere:
@@ -39,10 +63,14 @@ python3 -m http.server 5174
 # then open http://127.0.0.1:5174/
 ```
 
-## What's intentionally not yet here
+Or just double-click `index.html` — there's no build step.
+
+## 🗺️ Roadmap
 
 Planned next iterations:
-- Self-building service graph / live CMDB visualization
-- Proactive resolution scenarios (VPN cert renewal, server memory pressure, customer-impact correlation)
-- AI Control Tower with multi-vendor agent observability
-- "Vibe-coded" admin describes-org-in-natural-language setup
+
+- **Vignette 2 — IT Landscape in the making**: live CMDB / service-graph view with CI discovery and node-detail drill-down.
+- **Vignette 3 — Control Tower & Observability**: Splunk threshold breach → agent-logged incident → remediation agent fix → stakeholder RCA notification.
+- **Vignette 4 — Agent orchestration**: multi-agent collaboration on a complex scenario (not just human-in-the-loop).
+- **Datadog branch** — currently a one-line placeholder; flesh it out as a parallel install path.
+- **"Vibe coding" agent creation** — admin describes the org in natural language and Jarvis assembles the agents.

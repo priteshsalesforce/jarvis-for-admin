@@ -12,10 +12,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- Apply saved theme before paint to avoid a flash of the wrong theme. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("jarvis-theme");
+        if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body>
-  <!-- Ambient background grid + orb glow -->
-  <div class="bg-grid"></div>
+  <!-- Ambient background orb glow -->
   <div class="bg-orb bg-orb--a"></div>
   <div class="bg-orb bg-orb--b"></div>
 
@@ -30,6 +38,25 @@
       </div>
     </div>
     <div class="topbar__right">
+      <button class="theme-toggle" id="themeToggle" type="button"
+              aria-label="Switch theme" aria-pressed="false"
+              title="Switch to dark theme">
+        <!-- Shown on light theme: moon icon (click → switch to dark) -->
+        <svg class="theme-toggle__icon theme-toggle__icon--moon"
+             viewBox="0 0 24 24" width="16" height="16"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <!-- Shown on dark theme: sun icon (click → switch to light) -->
+        <svg class="theme-toggle__icon theme-toggle__icon--sun"
+             viewBox="0 0 24 24" width="16" height="16"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
       <div class="status-pill">
         <span class="status-pill__dot"></span>
         <span>Jarvis online</span>
@@ -79,8 +106,10 @@
       <div class="dock" id="dock"></div>
     </section>
 
-    <!-- RIGHT: Browser / visual side panel -->
-    <aside class="sidepanel" id="sidepanel" aria-hidden="true">
+    <!-- RIGHT: Browser / visual side panel — always in DOM, slid off-screen via CSS
+         until a story step opens it. We use `inert` to keep it out of the a11y tree
+         and tab order while closed; toggling `hidden` would cause a layout snap. -->
+    <aside class="sidepanel" id="sidepanel" aria-hidden="true" inert>
       <div class="browser">
         <div class="browser__chrome">
           <div class="browser__dots">

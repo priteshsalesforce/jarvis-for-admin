@@ -505,25 +505,34 @@
             <div class="bs-card__caption">More accurate than a year-long manual CMDB project.</div>
           </section>
 
-          <!-- Shared tooltip + Inspector drawer. Single instance,
-               every phase's interactive nodes feed into them. -->
+          <!-- Shared tooltip + Inspector modal. Single instance,
+               every phase's interactive nodes feed into them. The
+               Inspector is a true centered modal: backdrop dims the
+               whole bootstrap pane, dialog opens in the middle, Esc
+               or backdrop-click dismisses, focus moves into the
+               dialog and returns to the originating node on close. -->
           <div class="bs-tooltip" id="bsTooltip" role="tooltip" aria-hidden="true"></div>
 
-          <aside class="bs-inspector" id="bsInspector" aria-hidden="true" tabindex="-1"
-                 aria-labelledby="bsInspectorTitle">
-            <header class="bs-inspector__head">
-              <div class="bs-inspector__eyebrow" id="bsInspectorEyebrow">Detail</div>
-              <h3 class="bs-inspector__title" id="bsInspectorTitle">Select a node</h3>
-              <button type="button" class="bs-inspector__close" id="bsInspectorClose"
-                      aria-label="Close detail panel">
-                <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
-                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M3 3l10 10M13 3 3 13"/>
-                </svg>
-              </button>
-            </header>
-            <div class="bs-inspector__body" id="bsInspectorBody"></div>
-          </aside>
+          <div class="bs-inspector" id="bsInspector" aria-hidden="true">
+            <div class="bs-inspector__backdrop" id="bsInspectorBackdrop" aria-hidden="true"></div>
+            <div class="bs-inspector__dialog" role="dialog" aria-modal="true"
+                 aria-labelledby="bsInspectorTitle" tabindex="-1">
+              <header class="bs-inspector__head">
+                <div>
+                  <div class="bs-inspector__eyebrow" id="bsInspectorEyebrow">Detail</div>
+                  <h3 class="bs-inspector__title" id="bsInspectorTitle">Select a node</h3>
+                </div>
+                <button type="button" class="bs-inspector__close" id="bsInspectorClose"
+                        aria-label="Close detail panel">
+                  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+                       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 3l10 10M13 3 3 13"/>
+                  </svg>
+                </button>
+              </header>
+              <div class="bs-inspector__body" id="bsInspectorBody"></div>
+            </div>
+          </div>
         </div>
       `;
 
@@ -534,13 +543,15 @@
       // full record. Keeping them shared (rather than per-phase)
       // means consistent behavior + only one set of listeners.
       // -------------------------------------------------------------
-      const bsRoot       = panel.querySelector(".bootstrap");
-      const tooltipEl    = panel.querySelector("#bsTooltip");
-      const inspectorEl  = panel.querySelector("#bsInspector");
-      const inspBodyEl   = panel.querySelector("#bsInspectorBody");
-      const inspTitleEl  = panel.querySelector("#bsInspectorTitle");
-      const inspEyebEl   = panel.querySelector("#bsInspectorEyebrow");
-      const inspCloseBtn = panel.querySelector("#bsInspectorClose");
+      const bsRoot         = panel.querySelector(".bootstrap");
+      const tooltipEl      = panel.querySelector("#bsTooltip");
+      const inspectorEl    = panel.querySelector("#bsInspector");
+      const inspDialogEl   = panel.querySelector(".bs-inspector__dialog");
+      const inspBackdropEl = panel.querySelector("#bsInspectorBackdrop");
+      const inspBodyEl     = panel.querySelector("#bsInspectorBody");
+      const inspTitleEl    = panel.querySelector("#bsInspectorTitle");
+      const inspEyebEl     = panel.querySelector("#bsInspectorEyebrow");
+      const inspCloseBtn   = panel.querySelector("#bsInspectorClose");
       const escape = (s) => String(s == null ? "" : s)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;")
         .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -635,11 +646,14 @@
         inspBodyEl.innerHTML = renderInspectorBody(p);
         inspectorEl.dataset.show = "1";
         inspectorEl.setAttribute("aria-hidden", "false");
-        // Move focus into the drawer for keyboard users.
-        requestAnimationFrame(() => inspectorEl.focus());
+        // Modal semantics: focus moves into the dialog (the actual
+        // role="dialog" surface) so SR + keyboard land inside the
+        // modal rather than on the outer overlay shell.
+        requestAnimationFrame(() => inspDialogEl.focus());
         hideTooltip();
       }
       function closeInspector() {
+        if (inspectorEl.dataset.show !== "1") return;
         inspectorEl.dataset.show = "0";
         inspectorEl.setAttribute("aria-hidden", "true");
         if (lastFocus && typeof lastFocus.focus === "function") {
@@ -647,6 +661,10 @@
         }
       }
       inspCloseBtn.addEventListener("click", closeInspector);
+      // Backdrop-click dismisses the modal — but only when the
+      // user clicked the dim overlay itself, not bubbled clicks
+      // from inside the dialog (e.g. action buttons).
+      inspBackdropEl.addEventListener("click", closeInspector);
       bsRoot.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && inspectorEl.dataset.show === "1") {
           e.stopPropagation();

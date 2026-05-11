@@ -3510,37 +3510,93 @@ section.lobby[hidden]  { display: none; }
   letter-spacing: .02em;
 }
 
-/* ----- Inspector drawer — bottom-anchored, slides up on click.
-   Sticks to the bottom of the bootstrap pane so it never blocks
-   the header / progress bar; capped at 60% panel height with its
-   own scroll so even rich content stays readable. */
+/* ----- Inspector modal — centered dialog with a dim backdrop,
+   scoped to the bootstrap pane. We use `position: fixed` here on
+   purpose: the parent `.browser` panel has `transform: translateX`
+   which makes it the containing block for fixed descendants, so
+   `inset: 0` covers the entire panel area without leaking out into
+   the chat side. The backdrop dims everything behind, the dialog
+   centers in the middle, Esc + backdrop click + close button all
+   dismiss. Capped height with its own scroll keeps long detail
+   payloads readable on short viewports. */
 .bs-inspector {
-  position: sticky;
-  bottom: 0;
-  margin-top: 16px;
-  z-index: 4;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: 14px 14px 12px 12px;
-  box-shadow: 0 -16px 40px rgba(20, 30, 60, .12);
-  max-height: 60vh;
-  overflow: auto;
-  transform: translateY(20px);
-  opacity: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  visibility: hidden;
   pointer-events: none;
-  transition: transform .35s cubic-bezier(.2,.7,.2,1), opacity .25s ease;
 }
 .bs-inspector[data-show="1"] {
-  transform: translateY(0);
-  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
+/* Lock scroll-through on the panel while the modal is open. Without
+   this, wheel/touch on the dim backdrop bubbles up to the browser
+   viewport scroll container and moves the bootstrap content behind
+   the modal — distracting and breaks the "everything else is paused"
+   feel. `:has()` keeps the lock purely CSS-driven (no extra JS state
+   to toggle). */
+.browser__viewport:has(.bs-inspector[data-show="1"]) {
+  overflow: hidden;
+}
+
+/* Backdrop — full-pane dim layer. Fades in/out so the modal
+   doesn't pop. Click here closes the modal (handler in JS). */
+.bs-inspector__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+.bs-inspector[data-show="1"] .bs-inspector__backdrop {
+  opacity: 1;
+}
+
+/* Dialog — the centered card itself. Uses `position: relative`
+   so it stacks above the backdrop, and `max-height: 80%` with
+   its own scroll for long bodies. The subtle rise-in transform
+   makes the open feel intentional without being distracting. */
+.bs-inspector__dialog {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: min(80%, 640px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .28),
+              0 4px 14px rgba(15, 23, 42, .14);
+  opacity: 0;
+  transform: translateY(8px) scale(.98);
+  transition: transform .28s cubic-bezier(.2,.85,.25,1),
+              opacity .22s ease;
+  overflow: hidden;
+}
+.bs-inspector__dialog:focus { outline: none; }
+.bs-inspector[data-show="1"] .bs-inspector__dialog {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
 .bs-inspector__head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px 8px;
+  padding: 16px 16px 12px;
   border-bottom: 1px dashed var(--line);
+  flex: 0 0 auto;
+}
+.bs-inspector__head > div:first-child {
+  flex: 1;
+  min-width: 0;
 }
 .bs-inspector__eyebrow {
   font-size: 10px;
@@ -3556,7 +3612,6 @@ section.lobby[hidden]  { display: none; }
   font-weight: 700;
   color: var(--ink);
   line-height: 1.25;
-  flex: 1;
 }
 .bs-inspector__close {
   flex: 0 0 auto;
@@ -3580,7 +3635,10 @@ section.lobby[hidden]  { display: none; }
   outline-offset: 2px;
 }
 .bs-inspector__body {
-  padding: 12px 16px 16px;
+  padding: 14px 16px 18px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .bs-insp-summary {
@@ -3699,12 +3757,13 @@ section.lobby[hidden]  { display: none; }
   outline-offset: 2px;
 }
 
-/* Reduced-motion: drop the rise-in transitions for tooltip + drawer
+/* Reduced-motion: drop the rise-in transitions for tooltip + modal
    so users with `prefers-reduced-motion` don't get any animation. */
 @media (prefers-reduced-motion: reduce) {
   .bs-tooltip,
-  .bs-inspector {
+  .bs-inspector__backdrop,
+  .bs-inspector__dialog {
     transition: none;
   }
-  .bs-inspector { transform: none; }
+  .bs-inspector__dialog { transform: none; }
 }

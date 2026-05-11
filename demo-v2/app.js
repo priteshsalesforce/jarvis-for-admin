@@ -149,17 +149,17 @@
     const wrap = document.createElement("div");
     const isContinued = lastPersona === "user";
     wrap.className = "bubble bubble--user" + (isContinued ? " bubble--continued" : "");
-    const initial = (persona && persona.avatarText) || "?";
-    const accent  = (persona && persona.accent)     || "var(--accent-1)";
-    const name    = (persona && persona.name)       || "You";
+    const name = (persona && persona.name) || "You";
+    // No avatar here on purpose — every chapter is already scoped to
+    // a single persona (the topbar pill + chapter avatar carry that
+    // identity), so showing the user a tiny picture of themselves
+    // next to every message is just noise. The name label above the
+    // card is enough to scan whose turn it was.
     wrap.innerHTML = `
       <div class="bubble__body">
         <div class="bubble__name">${md(name)}</div>
         <div class="bubble__text">${md(text)}</div>
       </div>
-      <div class="bubble__avatar bubble__avatar--user"
-           style="--persona-accent: ${accent}"
-           aria-hidden="true">${md(initial)}</div>
     `;
     activeThread().appendChild(wrap);
     lastPersona = "user";

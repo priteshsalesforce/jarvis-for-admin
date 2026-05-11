@@ -1506,26 +1506,15 @@ body {
 }
 
 /* =============================================================
-   Persona-aware user bubble — show the avatar instead of hiding it
-   (override the legacy `.bubble--user .bubble__avatar { display: none }`
-   rule from earlier in the file)
+   User bubble — name label only.
+   The avatar circle is intentionally not rendered for user bubbles:
+   each chapter is already scoped to a single persona (their pill +
+   chapter avatar live in the topbar), so a tiny self-portrait next
+   to every message is redundant. The name label still surfaces
+   *whose* turn it is at a glance, but folds away on continuations.
    ============================================================= */
-.bubble--user .bubble__avatar--user {
-  display: inline-flex !important;
-  align-items: center; justify-content: center;
-  width: 28px; height: 28px; flex: 0 0 28px;
-  border-radius: 50%;
-  background: var(--persona-accent, var(--accent-1));
-  color: #fff;
-  font: 700 12px/1 var(--font-ui);
-  letter-spacing: .02em;
-  box-shadow:
-    0 5px 12px color-mix(in srgb, var(--persona-accent, var(--accent-1)) 28%, transparent),
-    0 1px 0 rgba(255, 255, 255, .25) inset;
-  margin-top: 2px;
-}
-.bubble--user .bubble__name { display: inline-block; }
 .bubble--user .bubble__name {
+  display: inline-block;
   font-size: 11px;
   font-weight: 600;
   color: var(--ink-mute);

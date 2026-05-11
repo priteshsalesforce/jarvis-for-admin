@@ -1505,25 +1505,13 @@ body {
   white-space: nowrap;
 }
 
-/* =============================================================
-   User bubble — name label only.
-   The avatar circle is intentionally not rendered for user bubbles:
-   each chapter is already scoped to a single persona (their pill +
-   chapter avatar live in the topbar), so a tiny self-portrait next
-   to every message is redundant. The name label still surfaces
-   *whose* turn it is at a glance, but folds away on continuations.
-   ============================================================= */
-.bubble--user .bubble__name {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-mute);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  text-align: right;
-  margin-bottom: 4px;
-}
-.bubble--user.bubble--continued .bubble__name { display: none; }
+/* User bubbles render as a single right-aligned card — no avatar,
+   no name label. The active persona is already established by the
+   topbar pill + chapter avatar for the entire chapter run, so any
+   per-bubble identity chrome would just be redundant noise. The
+   legacy `.bubble__name { display: none }` rule from earlier in
+   the file still hides any stray name nodes, so this is mostly a
+   sanity comment for future readers. */
 
 /* =============================================================
    Inline metric-board step type

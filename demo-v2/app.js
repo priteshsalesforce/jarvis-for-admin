@@ -145,19 +145,16 @@
     return wrap;
   }
 
-  function userBubble(text, persona = CURRENT_PERSONA) {
+  function userBubble(text, _persona = CURRENT_PERSONA) {
     const wrap = document.createElement("div");
     const isContinued = lastPersona === "user";
     wrap.className = "bubble bubble--user" + (isContinued ? " bubble--continued" : "");
-    const name = (persona && persona.name) || "You";
-    // No avatar here on purpose — every chapter is already scoped to
-    // a single persona (the topbar pill + chapter avatar carry that
-    // identity), so showing the user a tiny picture of themselves
-    // next to every message is just noise. The name label above the
-    // card is enough to scan whose turn it was.
+    // Persona-scoped chapter view → no avatar, no name label. The
+    // topbar pill + chapter avatar already carry the active
+    // persona's identity for the entire run, so labeling each of
+    // their own messages with name + picture is just noise.
     wrap.innerHTML = `
       <div class="bubble__body">
-        <div class="bubble__name">${md(name)}</div>
         <div class="bubble__text">${md(text)}</div>
       </div>
     `;

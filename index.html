@@ -9,15 +9,24 @@
        assets, and styles can stay together as one self-contained
        experience. This root page just bounces visitors there so the
        Pages URL `priteshsalesforce.github.io/jarvis-for-admin/`
-       drops them straight into the demo. -->
-  <meta http-equiv="refresh" content="0; url=demo-v2/" />
+       drops them straight into the demo.
+
+       The redirect is JS-only on purpose: a <meta refresh> tag can't
+       carry the URL fragment (`#admin`, `#cto`, …) so any per-persona
+       share link would lose its hash before app.js could read it. By
+       running JS first we always forward `demo-v2/` + the live hash,
+       which is what the in-app router needs to deep-link straight
+       into a chapter. <noscript> users get a manual link instead. -->
   <script>
     // Forward to the demo. We append `location.hash` so per-persona
     // share links (e.g. `…/#admin`, `…/#cto`) survive the redirect
     // and land Sarah/Vikram/etc. directly in their chapter. Using
     // `replace()` keeps this bouncer out of the back stack.
-    window.location.replace("demo-v2/" + window.location.hash);
+    window.location.replace("demo-v2/" + window.location.search + window.location.hash);
   </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=demo-v2/" />
+  </noscript>
   <style>
     :root { color-scheme: light dark; }
     html, body { margin: 0; height: 100%; }

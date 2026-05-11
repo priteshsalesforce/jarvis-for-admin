@@ -12,9 +12,11 @@
        drops them straight into the demo. -->
   <meta http-equiv="refresh" content="0; url=demo-v2/" />
   <script>
-    // JS fallback for browsers that don't honour <meta refresh="0">.
-    // `replace()` (vs `assign`) keeps this page out of the back stack.
-    window.location.replace("demo-v2/");
+    // Forward to the demo. We append `location.hash` so per-persona
+    // share links (e.g. `…/#admin`, `…/#cto`) survive the redirect
+    // and land Sarah/Vikram/etc. directly in their chapter. Using
+    // `replace()` keeps this bouncer out of the back stack.
+    window.location.replace("demo-v2/" + window.location.hash);
   </script>
   <style>
     :root { color-scheme: light dark; }

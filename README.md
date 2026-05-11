@@ -8,6 +8,20 @@
 
 Pick any persona card to play that 60-second chapter, or click **Play all five chapters** for the full ~6-minute film.
 
+### Share a single persona
+
+Each chapter has its own shareable URL — just append a hash. Pasting any of these into Slack drops the recipient straight into that chapter, skipping the lobby:
+
+| Persona | Shareable link |
+|---|---|
+| **CTO Vikram** — The Sale | [`…/#cto`](https://priteshsalesforce.github.io/jarvis-for-admin/#cto) |
+| **Admin Sarah** — The Setup | [`…/#admin`](https://priteshsalesforce.github.io/jarvis-for-admin/#admin) |
+| **Employee Alex** — Zero-Ticket | [`…/#employee`](https://priteshsalesforce.github.io/jarvis-for-admin/#employee) |
+| **Manager David** — The Proactive Save | [`…/#manager`](https://priteshsalesforce.github.io/jarvis-for-admin/#manager) |
+| **Executive Marc** — The Wall Board | [`…/#exec`](https://priteshsalesforce.github.io/jarvis-for-admin/#exec) |
+
+First-name aliases (`#sarah`, `#vikram`, `#alex`, `#david`, `#marc`) and `#it-admin` also work. The URL bar updates as you switch chapters, so you can always copy what you're currently watching to share.
+
 ## A day in the life of Jarvis — five chapters
 
 | # | Persona | Title | Beat |

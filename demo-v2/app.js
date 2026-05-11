@@ -1271,8 +1271,103 @@
   });
 
   // -------------------------------------------------------------
+  // Persona deep-linking (hash-based routing)
+  //   Per-persona shareable URLs:
+  //     #cto       → CTO Vikram
+  //     #admin     → Admin Sarah        (aliases: #it-admin, #sarah)
+  //     #employee  → Employee Alex      (alias:   #alex)
+  //     #manager   → Manager David      (alias:   #david)
+  //     #exec      → Executive Marc     (aliases: #executive, #marc)
+  //   #lobby (or no hash) → lobby home.
+  //
+  //   On first paint we read the hash and auto-launch that chapter;
+  //   when a chapter starts/ends we replace the hash so the URL bar
+  //   is always shareable; `hashchange` re-routes when the user
+  //   uses back/forward or edits the URL by hand. Pure client-side
+  //   so it works on GitHub Pages with no rewrite rules.
+  // -------------------------------------------------------------
+  const PERSONA_SLUGS = Object.freeze({
+    cto:        "cto-vikram",
+    vikram:     "cto-vikram",
+    admin:      "admin-sarah",
+    "it-admin": "admin-sarah",
+    it_admin:   "admin-sarah",
+    sarah:      "admin-sarah",
+    employee:   "employee-alex",
+    alex:       "employee-alex",
+    manager:    "manager-david",
+    david:      "manager-david",
+    exec:       "exec-marc",
+    executive:  "exec-marc",
+    marc:       "exec-marc",
+  });
+  const CANONICAL_SLUG_FOR = Object.freeze({
+    "cto-vikram":    "cto",
+    "admin-sarah":   "admin",
+    "employee-alex": "employee",
+    "manager-david": "manager",
+    "exec-marc":     "exec",
+  });
+
+  function chapterIdFromHash() {
+    const raw = (location.hash || "").replace(/^#/, "").toLowerCase().trim();
+    if (!raw || raw === "lobby") return null;
+    if (PERSONA_SLUGS[raw]) return PERSONA_SLUGS[raw];
+    // Also accept the full canonical id (e.g. `#admin-sarah`) so links
+    // generated from the chapter id directly still work.
+    const direct = (window.CHAPTERS || []).find((c) => c.id === raw);
+    return direct ? direct.id : null;
+  }
+
+  let suppressHashSync = false;
+  function syncHashFor(chapterId) {
+    const target = chapterId
+      ? `#${CANONICAL_SLUG_FOR[chapterId] || chapterId}`
+      : "";
+    if (target === location.hash) return;
+    suppressHashSync = true;
+    // `replaceState` keeps the back stack clean — chapter switches
+    // shouldn't pile up history entries unless the user explicitly
+    // navigated (which `hashchange` already handles).
+    try {
+      history.replaceState(null, "",
+        `${location.pathname}${location.search}${target}`);
+    } catch (_) {
+      // very old browsers — fall back to assigning the hash directly
+      location.hash = target;
+    }
+    setTimeout(() => (suppressHashSync = false), 0);
+  }
+
+  const _startChapter = window.JARVIS.startChapter;
+  const _backToLobby  = window.JARVIS.backToLobby;
+  window.JARVIS.startChapter = function (id) {
+    _startChapter.call(window.JARVIS, id);
+    syncHashFor(id);
+  };
+  window.JARVIS.backToLobby = function () {
+    _backToLobby.call(window.JARVIS);
+    syncHashFor(null);
+  };
+
+  window.addEventListener("hashchange", () => {
+    if (suppressHashSync) return;
+    const id = chapterIdFromHash();
+    if (id && (!activeChapter || activeChapter.id !== id)) {
+      window.JARVIS.startChapter(id);
+    } else if (!id && activeChapter) {
+      window.JARVIS.backToLobby();
+    }
+  });
+
+  // -------------------------------------------------------------
   // Bootstrap — render the lobby once all story files have loaded
   // -------------------------------------------------------------
   renderLobbyGrid();
   renderSuggestChips();
+
+  // If the page was loaded with a persona slug in the URL, jump
+  // straight into that chapter instead of showing the lobby.
+  const initialChapterId = chapterIdFromHash();
+  if (initialChapterId) window.JARVIS.startChapter(initialChapterId);
 })();

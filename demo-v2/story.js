@@ -5,8 +5,16 @@
 
    Available step `type`s:
    ─────────────────────────────────────────────────────────────
-   "say"         → Jarvis says a line.
+   "say"         → Jarvis says a line (in-character, to the persona).
                    { text: "...", delay?: 600 }
+
+   "note"        → Director's note for the demo viewer (Pritesh).
+                   Renders in the bottom-right notification stack —
+                   NEVER in the Jarvis chat. Use this for any meta
+                   commentary, benchmarks, or "old world vs new"
+                   call-outs that aren't part of what the persona
+                   is experiencing.
+                   { title?: "Watch this", text: "...", sub?: "..." }
 
    "status"      → A status line with spinner → ✓ when done.
                    { text: "Checking licences", duration?: 1200, doneText?: "Licences validated" }
@@ -34,10 +42,16 @@
                    ], onPick: "splunk" } // optional auto-pick for demo
                    Use `goto` on each option to branch.
 
-   "browser"     → Open the right-side browser panel.
-                   { url: "https://login.splunk.com",
-                     page: "splunk-auth"         // see PAGES below
+   "browser"     → Open the right-side workspace panel.
+                   { url:   "https://login.splunk.com",  // kept for context, not shown
+                     page:  "splunk-auth",               // see PAGES below
+                     title: "Splunk · Single Sign-On"    // optional; falls back to
+                                                         // PAGE_TITLES[page] in app.js
                    }
+                   The panel has a title bar + a fullscreen toggle. The user
+                   can expand the panel to take the full workspace width
+                   (chat collapses) for content-heavy views, then ⎋ or
+                   click again to collapse back.
 
    "browser-close" → Close the browser panel.
 

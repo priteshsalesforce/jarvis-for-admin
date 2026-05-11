@@ -1,76 +1,103 @@
-# Jarvis for Admin · Proactive ITSM Demo
+# Jarvis for Admin · Proactive Agentic ITSM
 
-> Interactive demo of the **Proactive Agentic ITSM** narrative — Jarvis walks an admin through licence checks, CMDB install, observability pickup, and the live ITSM dashboard handoff.
+> Interactive demo of the **Proactive Agentic ITSM** vision — a cinematic, persona-switcher walkthrough designed to sell the future of autonomous IT to a Salesforce-style executive audience.
 
-## 🚀 Live demo
+## Live demo
 
-**https://priteshsalesforce.github.io/jarvis-for-admin/**
+**[priteshsalesforce.github.io/jarvis-for-admin](https://priteshsalesforce.github.io/jarvis-for-admin/)**
 
-Click **"Install IT Services"** (or whisper *"install IT services"*) on the welcome screen to play the flow.
+Pick any persona card to play that 60-second chapter, or click **Play all five chapters** for the full ~6-minute film.
 
-The previously separate dark (`/`) and light (`/v2/`) builds have been **merged into a single themable demo** at the root URL. The legacy `/v2/` URL has been retired — please use the root URL.
+## A day in the life of Jarvis — five chapters
 
-## 🌗 Light + Dark themes
+| # | Persona | Title | Beat |
+|---|---|---|---|
+| 1 | **CTO Vikram** | The Sale | 60-second Phase-0 Neural Scan reveals $3.24M of invisible waste; Legacy ↔ Optimized slider; Deploy CTA. |
+| 2 | **Admin Sarah** | The Setup | Install IT Services + CMDB + Splunk SSO + dashboard, then 1:00 PM personalized Slack reveal. |
+| 3 | **Employee Alex** | Zero-Ticket | Slack-first: "Need Figma access for NurtureAI" → granted in 4 seconds. |
+| 4 | **Manager David** | The Proactive Save | Burnout flag for a teammate, Splunk breach causal-mapped, one-click remediation, RCA broadcast. |
+| 5 | **Executive Marc** | The Wall Board | Boardroom view with animated counters and Why drill-downs grounding every number. |
 
-A moon/sun toggle in the top-bar right swaps the entire UI between two palettes:
+## Persistent Q&A (every screen)
 
-- **Light** — pastel SLDS-inspired surface, blue→violet brand gradient (default).
-- **Dark** — deep navy/violet surface, brighter accent variants for contrast.
+The whisper bar lives in the lobby and at the bottom of every chapter. Each chapter ships with:
 
-Implementation:
-- All design tokens live at `:root` (light) and are overridden by `[data-theme="dark"]` on `<html>`.
-- Component CSS uses semantic vars (`--bg-1`, `--bg-soft`, `--bg-chrome`, `--linkcard-grad`, `--whisper-ring`, `--orb-*`, …) — never hardcoded `white`/hex literals.
-- The user's choice is persisted in `localStorage["jarvis-theme"]`. An inline `<head>` script applies it before paint to avoid a flash.
-- The top bar uses an iOS-style frost (`backdrop-filter: saturate(180%) blur(24px)`) so the page gradient and ambient orbs bleed through.
+- **4–6 suggestion chips** above the whisper, tuned to CEO-pitch questions for that persona.
+- A **regex-matched FAQ** so free-text questions land on a guaranteed, on-script answer.
+- A **▸ Source disclosure** on every conversational reply (Rule C3 — explainability).
 
-## 🎬 What the demo covers
+Asking a question never breaks the running story — bubbles just append.
 
-1. Admin lands on the welcome screen and meets Jarvis.
-2. Clicks **Install IT Services** → licence check.
-3. Jarvis offers to install the **CMDB package**; admin approves.
-4. Jarvis asks which observability service to wire up — **Splunk** or **Datadog**.
-5. Splunk SSO opens in the right-side "browser" panel; admin signs in; tokens are exchanged.
-6. Pipelines provisioned, incident routing configured.
-7. Right-side panel auto-opens the **CMDB discovery dashboard** (CI inventory + animated discovery progress).
+## Design principles honored
 
-## 🧱 Project layout
+- **Ontology-driven** — every chapter visualizes the same Graph (CTO sees the Constellation, Manager sees the Causal Map, Executive sees the Wall Board derived from the same nodes).
+- **Persona-centricity** — five personas, five mental models; the chassis adapts (avatar, accent token, hero copy, side-panel chrome).
+- **Trust & transparency** — every Jarvis-driven action carries an Approve / Modify / Reject affordance; every metric carries a Why? grounding.
+- **Slack-first conversational UX** — the Employee + Manager chapters render real Block-Kit-shape elements in the side panel.
+- **Light + dark themes** — moon/sun toggle in the topbar; design tokens live at `:root` and are overridden under `[data-theme="dark"]` for WCAG-AA contrast in both palettes.
+
+## Project layout
 
 ```
 .
-├── index.html        ← markup + entry point (theme toggle in top-bar right)
-├── styles.css        ← themable design system (`:root` light, `[data-theme="dark"]` dark)
-├── story.js          ← THE demo script — edit to change narrative beats
-├── app.js            ← story engine + PAGES registry + theme + side-panel anim
-└── assets/
-    ├── jarvis-mark.png   (theme-agnostic Jarvis mark — favicon, hero, avatars)
-    ├── Splunk.png
-    └── datadog.png
+├── demo-v2/                ← the demo (served by GitHub Pages)
+│   ├── index.html          ← Lobby + Workspace shells
+│   ├── styles.css          ← themable design system (light + dark tokens)
+│   ├── app.js              ← chapter-aware story engine (window.JARVIS API)
+│   ├── stories/
+│   │   ├── 00-lobby.js     ← Lobby meta-FAQ + suggested questions
+│   │   ├── 01-cto-vikram.js
+│   │   ├── 02-admin-sarah.js
+│   │   ├── 03-employee-alex.js
+│   │   ├── 04-manager-david.js
+│   │   └── 05-exec-marc.js
+│   └── assets/             ← Jarvis mark, Splunk logo, Datadog logo
+├── context.md              ← project bootstrap (read this first when joining)
+├── memory.MD               ← war-room channel summary
+├── Autonomous ITSM Concept.md
+└── Proactive ITSM War Room Concept Specification.md
 ```
 
-## 🔧 Tech notes
-
-- Vanilla HTML / CSS / JS — no build step, no dependencies.
-- The whole flow lives in **`story.js`** as a `window.STORY` step array. Easy to iterate on beats.
-- Engine + step types (`say`, `status`, `progress`, `ask`, `choose`, `browser`, `browser-close`, `wait-for`, `link-card`, `user`, `goto`, `end`) live in **`app.js`** and rarely need editing.
-- Side-panel fake browser pages (Splunk SSO, CMDB dashboard) are registered under `window.PAGES` in `story.js`.
-- The right-side panel uses a stable two-track CSS Grid (`1fr 0px` ↔ `1fr 540px`) plus an absolutely-positioned, `translateX`-animated browser card, so opening/closing slides smoothly without disturbing the chat side.
-
-## 🛠 Run locally
+## Run locally
 
 ```bash
-# Any static server works; Python's is everywhere:
-python3 -m http.server 5174
-# then open http://127.0.0.1:5174/
+cd demo-v2
+python3 -m http.server 5176
+# open http://127.0.0.1:5176/
 ```
 
-Or just double-click `index.html` — there's no build step.
+No build step — pure vanilla HTML/CSS/JS, just refresh after any change.
 
-## 🗺️ Roadmap
+## Story engine — adding a chapter or beat
 
-Planned next iterations:
+Each chapter is a self-registering JS file under `demo-v2/stories/`. To add one:
 
-- **Vignette 2 — IT Landscape in the making**: live CMDB / service-graph view with CI discovery and node-detail drill-down.
-- **Vignette 3 — Control Tower & Observability**: Splunk threshold breach → agent-logged incident → remediation agent fix → stakeholder RCA notification.
-- **Vignette 4 — Agent orchestration**: multi-agent collaboration on a complex scenario (not just human-in-the-loop).
-- **Datadog branch** — currently a one-line placeholder; flesh it out as a parallel install path.
-- **"Vibe coding" agent creation** — admin describes the org in natural language and Jarvis assembles the agents.
+```js
+(function () {
+  const chapter = {
+    id: "your-chapter-id",
+    title: "Your Beat",
+    blurb: "One-sentence pitch shown on the lobby card.",
+    persona: { name: "Persona", role: "Role", avatarText: "P", accent: "var(--accent-1)" },
+    intentKeywords: ["persona", "shortcut"],
+    suggestedQuestions: ["…", "…"],
+    faqs: [{ match: /…/i, answer: "…", source: "where this comes from" }],
+    story: [
+      { type: "say", text: "Hi…" },
+      { type: "status", text: "Doing the thing", duration: 1800, doneText: "Done" },
+      // …
+      { type: "end" }
+    ]
+  };
+  (window.CHAPTERS = window.CHAPTERS || []).push(chapter);
+})();
+```
+
+Then add a `<script src="stories/06-your-file.js"></script>` to `demo-v2/index.html`.
+
+Available step types (defined in `demo-v2/app.js`): `say`, `status`, `progress`, `metric-board`, `slack-thread`, `ask`, `choose`, `browser`, `browser-close`, `wait-for`, `link-card`, `user`, `goto`, `end`.
+
+## Themes
+
+- Default theme is **light**. Toggle via the moon/sun button in the topbar; choice persists in `localStorage["jarvis-theme"]`.
+- All surface colors live as design tokens in `:root` (light) and `[data-theme="dark"]` overrides them. Component CSS uses semantic vars (`--bg-1`, `--bg-soft`, `--linkcard-grad`, `--whisper-ring`, `--orb-*`, `--persona-*`, …) — never hardcoded `white`/hex literals.

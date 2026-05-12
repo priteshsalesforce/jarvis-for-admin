@@ -827,7 +827,7 @@ body {
 }
 .card__header {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  padding: 10px 14px; border-bottom: none;
   font-size: 12px; color: var(--ink-mute); letter-spacing: 1px; text-transform: uppercase; font-weight: 600;
 }
 .card__header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-1); box-shadow: 0 0 10px rgba(47, 92, 255, .55); }
@@ -1066,6 +1066,33 @@ body {
   flex: 0 0 16px;
 }
 .auth-footer { font-size: 11px; color: var(--ink-mute); margin-top: 10px; }
+
+/* ----- The Cockpit (placeholder) -----
+   Intentionally minimal. The real cockpit design will replace
+   this block; the placeholder keeps the panel feeling
+   intentional (not broken/empty) until that ships. */
+.cockpit-placeholder {
+  min-height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(106, 77, 255, .08), transparent 60%),
+    radial-gradient(circle at 70% 80%, rgba(47, 92, 255, .06), transparent 55%),
+    var(--bg-1);
+}
+.cockpit-placeholder__inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; text-align: center;
+}
+.cockpit-placeholder__badge {
+  font-size: 13px; font-weight: 600; letter-spacing: .6px;
+  color: var(--ink-dim);
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--bg-2); border: 1px dashed var(--line-strong);
+}
+.cockpit-placeholder__hint {
+  font-size: 12px; color: var(--ink-mute);
+}
 
 /* Dashboard preview */
 .dash {

@@ -62,6 +62,7 @@
   const PAGE_TITLES = {
     "splunk-auth":    "Splunk · Single Sign-On",
     "itsm-dashboard": "CMDB · Discovery dashboard",
+    "cockpit":        "The Cockpit",
     "constellation":  "Neural Scan · Acme Health",
     "slack-page":     "Slack · #it-help",
     "team-health":    "Team Health · Platform",

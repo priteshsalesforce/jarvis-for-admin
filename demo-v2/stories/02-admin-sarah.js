@@ -1171,6 +1171,22 @@
         if (n >= target) { n = target; clearInterval(tick); }
         pctValue.textContent = n + "%";
       }, 40);
+    },
+
+    /* ---------- The Cockpit (placeholder) -------------------- */
+    // Intentionally blank for now — the full cockpit design will
+    // slot in here. We keep a registered factory (rather than
+    // letting the engine fall back to `<p>cockpit</p>`) so the
+    // viewport renders cleanly the moment Sarah opens it.
+    "cockpit": (panel) => {
+      panel.innerHTML = `
+        <div class="cockpit-placeholder">
+          <div class="cockpit-placeholder__inner">
+            <div class="cockpit-placeholder__badge">The Cockpit</div>
+            <div class="cockpit-placeholder__hint">Design coming soon</div>
+          </div>
+        </div>
+      `;
     }
   };
   Object.assign(window.PAGES = window.PAGES || {}, pages);
@@ -1186,8 +1202,8 @@
       avatarText: "S",
       accent: "var(--persona-admin)"
     },
-    intentKeywords: ["admin", "sarah", "setup", "install", "itsm", "cmdb", "splunk"],
-    endline: "Day 1 is over. The org is calmer — every employee just met Jarvis in Slack.",
+    intentKeywords: ["admin", "sarah", "setup", "install", "itsm", "cmdb", "splunk", "cockpit"],
+    endline: "ITSM is live. Sarah's Cockpit is ready — her day-1 control surface is one click away.",
 
     suggestedQuestions: [
       "Why install CMDB first?",
@@ -1402,51 +1418,27 @@
         text: "All set — **ITSM is live**. Your IT landscape stays on the right.",
         pause: 300 },
 
-      // ----- Day-1 Slack reveal — sample-first, single linear path.
-      //       Old flow offered "Send" as the primary CTA before Sarah
-      //       had even seen the message; for a 12,403-person blast,
-      //       always-show-sample-first is the safer default.
+      // Cockpit handoff — give Sarah an explicit, in-flow doorway to
+      // her control surface. The card is a single-click swap for the
+      // right pane (bootstrap reveal → Cockpit) so she can choose
+      // when to leave the install confirmation.
       { type: "say",
-        text: "**One last thing, Sarah.** Let me introduce myself to the company in Slack. Here's the sample I'll personalise per employee:",
+        text: "Whenever you're ready, here's your **control surface** — open it when you want to see what I'm watching, what's pending your sign-off, and where the org stands today.",
         pause: 250 },
 
-      { type: "slack-thread",
-        channel: "DM · jarvis",
-        meta: "Personalized · just now",
-        messages: [
-          {
-            from: "Jarvis", bot: true, fromColor: "var(--persona-cto)",
-            text:
-              "Hi Alex 👋 — I'm Jarvis, your new IT partner.\n" +
-              "I noticed your **laptop battery has dropped to 64% capacity** — I've ordered a replacement and shipped it to you in Bengaluru. Should arrive Wed.\n" +
-              "Need anything? Just message me here. No tickets, no forms."
-          }
-        ]
-      },
+      { type: "link-card",
+        title: "The Cockpit",
+        sub: "Your day-1 control surface · agents, signals & sign-offs",
+        icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`,
+        url:  "https://itsm.salesforce.com/cockpit",
+        page: "cockpit",
+        pause: 200 },
 
-      { type: "ask",
-        text: "Send to all **12,403 employees**?",
-        choices: [
-          { label: "Send the reveal", value: "send", primary: true, goto: "do-reveal" },
-          { label: "Hold off", value: "hold", goto: "hold-reveal" }
-        ]
-      },
-
-      { id: "hold-reveal", type: "say",
-        text: "Holding the reveal. You can trigger it any time from **Control Tower → Communications**. Day 1 ends quietly — I'll keep watching for anomalies in the background." },
-      { type: "goto", to: "wrap" },
-
-      { id: "do-reveal", type: "progress",
-        text: "Personalising 12,403 messages with employee context",
-        duration: 2600, doneText: "Reveal sent" },
-
-      // Closing assurance lives at the END now (was previously buried
-      // mid-flow before the Slack reveal, which felt like Jarvis was
-      // closing down and then re-opening the conversation).
-      { type: "say",
-        text: "**Done.** Every employee just met me. I'll keep watching for anomalies in the background — go grab a coffee, Sarah." },
-
-      { id: "wrap", type: "end" }
+      // End the chapter on the Cockpit handoff. The earlier Slack
+      // company-wide reveal beat used to live here; it's been pulled
+      // so install confirmation → control-surface handoff is the
+      // entire arc.
+      { type: "end" }
     ]
   };
 

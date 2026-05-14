@@ -44,6 +44,12 @@
   --accent-warn:#ff9a3d;
   --accent-ok:  #28c876;
 
+  /* v5 persona token — HR Admin (Priya). Slightly cooler than the
+     IT-admin lilac so the chapter-welcome glow reads as "people"
+     rather than "infra". Falls back to --accent-2 in chapters
+     that don't override it. */
+  --persona-hr: #5d7bff;
+
   --grad-jarvis: linear-gradient(90deg, #2f5cff 0%, #6a4dff 50%, #a25cff 100%);
   --grad-soft:   linear-gradient(135deg, rgba(47,92,255,.08), rgba(162,92,255,.10) 100%);
 
@@ -98,6 +104,10 @@
   --accent-2:   #8c7bff;
   --accent-3:   #b478ff;
 
+  /* HR persona accent — brightened for dark mode in line with the
+     other accents. */
+  --persona-hr: #8aa3ff;
+
   --grad-jarvis: linear-gradient(90deg, #6b8aff 0%, #8c7bff 50%, #b478ff 100%);
   --grad-soft:   linear-gradient(135deg, rgba(107,138,255,.10), rgba(180,120,255,.14) 100%);
 
@@ -144,7 +154,7 @@ body {
   width: 18px; height: 18px;
   flex-shrink: 0;
   color: var(--ink-dim);
-  background-color: currentColor;
+  background-color: var(--ink);
   -webkit-mask-position: center; mask-position: center;
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-size: contain;    mask-size: contain;
@@ -158,6 +168,7 @@ body {
 .icon--profile   { -webkit-mask-image: url("assets/icons/profile.svg");   mask-image: url("assets/icons/profile.svg"); }
 .icon--close     { -webkit-mask-image: url("assets/icons/Close.svg");     mask-image: url("assets/icons/Close.svg"); }
 .icon--history   { -webkit-mask-image: url("assets/icons/History.svg");   mask-image: url("assets/icons/History.svg"); }
+.icon--new-message { -webkit-mask-image: url("assets/icons/new_direct_message.svg"); mask-image: url("assets/icons/new_direct_message.svg"); }
 
 /* Context sizing — the chat-header buttons and the hamburger render
    slightly larger / smaller than the default sidenav nav glyph. */
@@ -478,6 +489,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   transition: opacity .2s ease;
+  color: var(--ink);
 }
 
 .sidenav__lock {
@@ -787,10 +799,11 @@ body {
   justify-content: flex-end;
   position: relative;
   z-index: 2;
-  /* Hairline that only shows once the chat has content scrolled
-     beneath it — keeps the welcome state perfectly clean. */
-  border-bottom: 1px solid transparent;
-  transition: border-color .24s ease;
+  /* Header sits flush against the chat thread — no hairline divider,
+     even when the history drawer is open. The drawer itself owns its
+     own visual separation via the search pill + list spacing. */
+  border-bottom: none;
+  border-image: none;
 }
 
 .stage__head-actions {
@@ -825,8 +838,8 @@ body {
 }
 /* Per-context glyph override — the global `.icon` rule sets 18×18
    (correct for the sidenav and inline list contexts); the stage
-   header wants a beefier glyph that matches the larger button. */
-.stage__head-icon .icon { width: 22px; height: 22px; }
+   header keeps the same 18×18 glyph for visual balance. */
+.stage__head-icon .icon { width: 18px; height: 18px; }
 .stage__head-icon:hover {
   background: var(--sidenav-hover);
   color: var(--ink);
@@ -1140,6 +1153,166 @@ body {
   border-bottom-right-radius: 6px;
 }
 
+/* Approval card — used when an incident needs the human in the loop.
+   Posted into the chat thread so it sits in the natural place a user
+   already looks for "things Jarvis is asking me", not buried in a
+   small status pill in the side panel. */
+.bubble--approval .bubble__body {
+  background: transparent;
+  border: 0;
+  padding: 4px 0 0;
+  width: 100%;
+  max-width: 100%;
+}
+.approval-card {
+  --approval-tone: var(--accent-warn);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--approval-tone) 38%, var(--line));
+  background: color-mix(in srgb, var(--approval-tone) 8%, var(--surface, #fff));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--approval-tone) 14%, transparent);
+}
+/* Once the user has answered, the card becomes a static record:
+   the action buttons are disabled in place, the user's choice
+   appears as a fresh user-side bubble below, and Jarvis's reply
+   follows. The card itself stays the colour it always was — no
+   green-completed transform — only its actions calm down so it
+   reads as "answered, not waiting on you". */
+.approval-card[data-approval="answered"] {
+  box-shadow: none;
+}
+
+.approval-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.approval-card__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--approval-tone);
+  color: #fff;
+  margin-top: 2px;
+}
+.approval-card__head-text { min-width: 0; }
+.approval-card__eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--approval-tone);
+  margin-bottom: 2px;
+}
+.approval-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.01em;
+  line-height: 1.3;
+}
+
+.approval-card__body { display: flex; flex-direction: column; gap: 10px; }
+.approval-card__lead {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.approval-card__meta {
+  list-style: none;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink-mute) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ink-mute) 16%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.approval-card__meta li {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.approval-card__meta li > span {
+  color: var(--ink-mute);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-size: 11px;
+  padding-top: 1px;
+}
+.approval-card__meta li > strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.approval-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.approval-card__btn {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-1);
+  color: var(--ink);
+  transition: background .15s ease, border-color .15s ease, transform .12s ease,
+              box-shadow .15s ease, color .15s ease;
+}
+.approval-card__btn:hover {
+  background: var(--bg-2);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.approval-card__btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.approval-card__btn--primary {
+  background: var(--accent-1);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(47, 92, 255, .22);
+}
+.approval-card__btn--primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  color: #fff;
+}
+.approval-card__btn:disabled,
+.approval-card__btn:disabled:hover {
+  cursor: default;
+  opacity: .55;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+/* Tighten on narrow chat columns so the meta grid doesn't squish. */
+@media (max-width: 560px) {
+  .approval-card__meta li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
 /* Typing indicator */
 .typing { display: inline-flex; align-items: center; gap: 6px; }
 .typing span {
@@ -1150,6 +1323,161 @@ body {
 .typing span:nth-child(2) { animation-delay: .15s; background: var(--accent-2); }
 .typing span:nth-child(3) { animation-delay: .3s; background: var(--accent-3); }
 @keyframes typing { 0%, 80%, 100% { transform: translateY(0); opacity: .5 } 40% { transform: translateY(-4px); opacity: 1 } }
+
+/* =============================================================
+   Add Agent wizard — chip rows, level list, preview card, buttons
+   ============================================================= */
+
+/* Chip row inside a Jarvis bubble — same .home__chiclet pill we use
+   on home + the dock, just left-aligned to match the bubble's text
+   and with a comfortable margin above so the prompt and chips read
+   as a single offer. */
+.bubble .home__chiclets.bubble__chiclets {
+  margin-top: 10px;
+  justify-content: flex-start;
+  max-width: 100%;
+}
+
+/* "Recommended / inferred" pill — soft accent-1 wash so the user
+   sees Jarvis's pick at a glance (transparency, Rule C3) without
+   the pill feeling pre-committed. */
+.home__chiclet--selected {
+  border-color: color-mix(in srgb, var(--accent-1) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent-1) 8%, var(--bg-1));
+  color: var(--accent-1);
+}
+.home__chiclet--selected .home__chiclet-icon { color: var(--accent-1); }
+.home__chiclet[disabled] {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none;
+}
+
+/* Compact bullet list used in Q4's autonomy-level blurb. Quiet
+   colour, tight line-height — the chips below carry the action. */
+.wizard__levels {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+.wizard__levels li { margin: 2px 0; }
+.wizard__levels li em { color: var(--accent-1); font-style: normal; font-weight: 600; }
+
+/* Preview card host — wraps the .agent card + the action row. The
+   .agent inside reuses cockpit visuals so the user sees exactly
+   what's about to land in their cockpit list. */
+.wizard__card {
+  margin-top: 12px;
+}
+.wizard__preview.agent {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--bg-1);
+  box-shadow: 0 2px 8px rgba(54, 67, 142, .05);
+}
+.wizard__actions {
+  display: inline-flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.wizard__btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+  color: var(--ink);
+  font: 600 13px/1 var(--font-ui);
+  padding: 9px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.wizard__btn:hover {
+  border-color: color-mix(in srgb, var(--accent-1) 40%, var(--line));
+  background: var(--bg-soft);
+  transform: translateY(-1px);
+}
+.wizard__btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.wizard__btn--primary {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+  color: #fff;
+}
+.wizard__btn--primary:hover {
+  background: color-mix(in srgb, var(--accent-1) 88%, #000);
+  border-color: color-mix(in srgb, var(--accent-1) 88%, #000);
+}
+.wizard__btn[disabled] {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Pre-flight evals — the row of checks that runs between the user
+   hitting "Create agent" and the agent actually landing in the
+   cockpit. Each row mirrors a .status-line: 22px tone-coloured
+   icon chip on the left (spinner while busy, green tick when
+   done) and a single-line label on the right. We fade rows in
+   as they post so the eye picks up that the list is GROWING,
+   not just dumping. The completed (.is-ok) state strengthens
+   the colour so the user can scan the column and confirm
+   everything is green. */
+.wizard__evals {
+  list-style: none;
+  margin: 12px 0 2px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.wizard__eval {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  opacity: 0;
+  transform: translateY(2px);
+  animation: wizEvalIn .25s ease forwards;
+  line-height: 1.4;
+}
+.wizard__eval.is-ok { color: var(--ink); }
+.wizard__eval-label { flex: 1; min-width: 0; }
+@keyframes wizEvalIn {
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wizard__eval { opacity: 1; transform: none; animation: none; }
+}
+
+/* Typewriter caret — sits at the end of a streaming Jarvis bubble
+   and blinks while text is being revealed. Removed by JS once the
+   stream finishes. Reduced-motion users get a hidden, non-animated
+   caret so the bubble doesn't shift on completion (Rule C9). */
+.stream-caret {
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: -2px;
+  background: var(--accent-1);
+  border-radius: 1px;
+  opacity: .9;
+  animation: streamCaretBlink 1s steps(2, end) infinite;
+}
+@keyframes streamCaretBlink { 50% { opacity: 0 } }
+@media (prefers-reduced-motion: reduce) {
+  .stream-caret { animation: none; opacity: 0; }
+}
 
 /* Status line */
 .status-line { display: flex; align-items: center; gap: 12px; }
@@ -1482,8 +1810,8 @@ body {
   color: var(--ink);
 }
 .cockpit__updated {
-  font-size: 11.5px; font-weight: 500;
-  color: var(--ink-mute);
+  font-size: 12px; font-weight: 500;
+  color: var(--ink-dim);
 }
 
 /* ---- "Awaiting your approval" lane ----------------------------- */
@@ -1505,8 +1833,10 @@ body {
   border-radius: 12px;
   background: color-mix(in srgb, var(--accent-ok) 8%, var(--bg-1));
   border: 1px solid color-mix(in srgb, var(--accent-ok) 22%, transparent);
-  color: color-mix(in srgb, var(--accent-ok) 70%, var(--ink));
-  font-size: 13px; font-weight: 500;
+  /* Darker green for AA contrast on the soft mint surface. Old value
+     mixed accent-ok with --ink which fell below readable threshold. */
+  color: #0d7a45;
+  font-size: 13px; font-weight: 600;
   display: flex; align-items: center; gap: 8px;
 }
 
@@ -1516,90 +1846,141 @@ body {
            [ Approve ] [ Defer ]                       */
 .signoff {
   position: relative;
-  padding: 10px 12px 10px 16px;
+  padding: 12px 14px 14px;
   border-radius: 12px;
   background: var(--bg-1);
   border: 1px solid var(--line);
   display: flex; flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
+  transition: border-color .18s ease, box-shadow .18s ease;
 }
-/* Left risk band — purely decorative; the .signoff__risk pill carries
-   the semantic meaning for screen readers. */
-.signoff::before {
-  content: "";
-  position: absolute; left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--accent-1);
+.signoff:hover {
+  border-color: color-mix(in srgb, var(--accent-1) 26%, var(--line));
+  box-shadow: 0 6px 18px rgba(54, 67, 142, 0.06);
 }
-.signoff[data-risk="high"]::before   { background: #e6453d; }
-.signoff[data-risk="medium"]::before { background: var(--accent-warn); }
-.signoff[data-risk="low"]::before    { background: var(--accent-ok); }
+/* Left risk stripe intentionally removed — the .signoff__risk pill
+   already carries the semantic risk cue; the additional 3px band
+   was visual weight without information gain. Kept the rule
+   commented in case we want to reintroduce a 1px hairline later. */
 
 .signoff__row {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 10px;
   min-width: 0;
 }
+/* Risk pill — promoted from 9.5px to 10.5px so the HIGH/MEDIUM/LOW
+   label is legible without leaning in, and tuned the foreground
+   colours to clear WCAG AA on the tinted pill backgrounds. */
 .signoff__risk {
   display: inline-flex; align-items: center;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 9.5px; font-weight: 700;
-  letter-spacing: .06em;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: .05em;
   text-transform: uppercase;
+  line-height: 1.35;
   flex: 0 0 auto;
 }
-.signoff__risk--high   { background: color-mix(in srgb, #e6453d 18%, transparent); color: #c92e26; }
-.signoff__risk--medium { background: color-mix(in srgb, var(--accent-warn) 22%, transparent); color: color-mix(in srgb, var(--accent-warn) 75%, #000); }
-.signoff__risk--low    { background: color-mix(in srgb, var(--accent-ok) 22%, transparent); color: color-mix(in srgb, var(--accent-ok) 70%, #000); }
+.signoff__risk--high   { background: color-mix(in srgb, #e6453d 18%, transparent); color: #b62820; }
+.signoff__risk--medium { background: color-mix(in srgb, var(--accent-warn) 22%, transparent); color: #a25411; }
+.signoff__risk--low    { background: color-mix(in srgb, var(--accent-ok) 20%, transparent); color: #0d7a45; }
+/* Agent meta — softer weight so it doesn't compete with the action
+   headline below. The action line is the thing the eye lands on. */
 .signoff__agent {
-  font-size: 12px; font-weight: 600;
+  font-size: 12px; font-weight: 500;
   color: var(--ink-dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   min-width: 0;
 }
 .signoff__deadline {
   margin-left: auto;
-  font-size: 11.5px; color: var(--ink-mute); font-weight: 500;
+  font-size: 12px; color: var(--ink-mute); font-weight: 500;
   white-space: nowrap;
   flex: 0 0 auto;
 }
 .signoff__action {
   margin: 0;
-  font-size: 13.5px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   color: var(--ink);
-  line-height: 1.35;
+  line-height: 1.4;
+  letter-spacing: -.005em;
 }
 .signoff__actions {
-  display: flex; gap: 6px;
-  margin-top: 2px;
+  display: flex; gap: 8px;
+  margin-top: 4px;
 }
+/* Shared button shell — both Approve and Defer share an identical
+   box (height/padding/radius/border) so the row reads as a paired
+   primary + secondary, not two arbitrary pills. The transparent
+   border on the primary is what keeps both pills exactly the same
+   height regardless of the secondary's visible 1px stroke. */
 .signoff__btn {
-  appearance: none; border: 0; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px;
+  appearance: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  min-height: 30px;
   border-radius: 999px;
+  border: 1px solid transparent;
   font-family: inherit;
-  font-size: 12px; font-weight: 600;
-  transition: background .18s ease, color .18s ease, border-color .18s ease;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: -.005em;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background .18s ease, color .18s ease,
+              border-color .18s ease, box-shadow .18s ease,
+              transform .12s ease;
+}
+/* Make the embedded check icon sit on the optical center of the
+   label rather than its text baseline — this is the fix for
+   "tick mark and approve text are not aligned". `display: block`
+   on the SVG removes the inline-baseline gap; any span that wraps
+   only an icon collapses to a zero-line-height flex shim, while a
+   span carrying actual text (e.g. .signoff__btn-label) keeps its
+   normal vertical metrics. */
+.signoff__btn > svg,
+.signoff__btn > span > svg { display: block; flex: 0 0 auto; }
+.signoff__btn > span:not(.signoff__btn-label) {
+  display: inline-flex; align-items: center;
+  line-height: 0;
+}
+.signoff__btn-label {
+  display: inline-flex; align-items: center;
+  line-height: 1;
 }
 .signoff__btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
+.signoff__btn:active { transform: translateY(1px); }
+/* Primary — brand purple with a subtle elevation so it always reads
+   first. Used everywhere the user is expected to commit (home strip,
+   Cockpit, Approvals page). */
 .signoff__btn--approve {
-  background: var(--accent-ok);
+  background: var(--accent-2);
+  border-color: var(--accent-2);
   color: #ffffff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .18) inset,
+    0 4px 10px color-mix(in srgb, var(--accent-2) 28%, transparent);
 }
-.signoff__btn--approve:hover { background: color-mix(in srgb, var(--accent-ok) 90%, #000); }
+.signoff__btn--approve:hover {
+  background: color-mix(in srgb, var(--accent-2) 92%, #000);
+  border-color: color-mix(in srgb, var(--accent-2) 92%, #000);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .22) inset,
+    0 6px 14px color-mix(in srgb, var(--accent-2) 35%, transparent);
+}
+/* Secondary — quiet ghost; same shape, none of the gravity. */
 .signoff__btn--defer {
   background: transparent;
   color: var(--ink-dim);
-  border: 1px solid var(--line-strong);
+  border-color: var(--line-strong);
 }
 .signoff__btn--defer:hover {
   color: var(--ink);
-  border-color: color-mix(in srgb, var(--accent-warn) 45%, var(--line-strong));
+  background: color-mix(in srgb, var(--ink-dim) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent-warn) 40%, var(--line-strong));
 }
 
 /* Quiet expand link ("See queue (1 more)") + the same shape for the
@@ -1623,6 +2004,44 @@ body {
   border-radius: 4px;
 }
 
+/* Section header action group — wraps the "+ Add Agent" pill and the
+   text-only "See all" link as a single trailing cluster. */
+.cockpit__section-actions {
+  display: inline-flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+
+/* "+ Add Agent" — a small primary-tinted pill next to "See all".
+   Sized to the same 30px height as the Approve/Defer signoff buttons
+   so any "click target" on this page reads as one consistent button
+   family. Soft accent-1 tint keeps it secondary to the purple
+   primary CTA on the sign-off cards above. */
+.cockpit__add {
+  appearance: none; border: 1px solid color-mix(in srgb, var(--accent-1) 30%, transparent);
+  background: color-mix(in srgb, var(--accent-1) 8%, transparent);
+  color: var(--accent-1);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 12px;
+  min-height: 30px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: -.005em;
+  line-height: 1;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+.cockpit__add:hover {
+  background: color-mix(in srgb, var(--accent-1) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-1) 55%, transparent);
+  transform: translateY(-1px);
+}
+.cockpit__add:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.cockpit__add svg { display: block; }
+
 /* ---- KPI strip ------------------------------------------------- */
 .cockpit__kpis {
   display: grid;
@@ -1643,9 +2062,13 @@ body {
   border-color: color-mix(in srgb, var(--accent-1) 35%, var(--line));
   box-shadow: 0 6px 18px rgba(54, 67, 142, 0.06);
 }
+/* KPI label — promoted to the same family of "card title" weight as
+   the Agent card's name, so the user reads "what this number is"
+   first and the value second. Was 12px / 500 / dim — too sleepy. */
 .kpi__label {
-  font-size: 12px; font-weight: 500;
-  color: var(--ink-dim);
+  font-size: 13px; font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.005em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .kpi__value {
@@ -1656,13 +2079,17 @@ body {
   color: var(--ink);
   margin-top: 2px;
 }
-.kpi__sub  { font-size: 12px; color: var(--ink-mute); margin-top: 2px; }
-.kpi__metas { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
-.kpi__meta { font-size: 12px; line-height: 1.35; font-weight: 500; display: inline-flex; align-items: center; }
-.kpi__meta--ok    { color: var(--accent-ok); }
-.kpi__meta--warn  { color: var(--accent-warn); }
-.kpi__meta--alert { color: #e6453d; }
-.kpi__meta--mute  { color: var(--ink-mute); }
+.kpi__sub  { font-size: 12px; color: var(--ink-mute); margin-top: 2px; font-weight: 500; }
+.kpi__metas { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.kpi__meta { font-size: 12px; line-height: 1.4; font-weight: 600; display: inline-flex; align-items: center; }
+/* AA-safe accent foregrounds on the white card surface. The raw
+   --accent-ok / --accent-warn tokens are tuned for fills (chips,
+   bars, dots), not body text — they fail WCAG AA on white. These
+   darker shades preserve the same hue family but pass contrast. */
+.kpi__meta--ok    { color: #0d7a45; }
+.kpi__meta--warn  { color: #a25411; }
+.kpi__meta--alert { color: #c92e26; }
+.kpi__meta--mute  { color: var(--ink-mute); font-weight: 500; }
 
 /* ---- Section header (AI Agents / The Team) -------------------- */
 .cockpit__section {
@@ -1686,9 +2113,10 @@ body {
   font-size: 13px; color: var(--ink-dim); font-weight: 500;
 }
 .cockpit__section-stat {
-  /* --ink-dim for WCAG AA on the 11px uppercase eyebrow text. */
-  font-size: 11px; letter-spacing: .06em;
-  color: var(--ink-dim); font-weight: 500;
+  /* --ink-dim + 11.5px keeps the eyebrow legible at uppercase scale
+     while staying visually subordinate to the section title. */
+  font-size: 11.5px; letter-spacing: .06em;
+  color: var(--ink-dim); font-weight: 600;
 }
 
 /* Domain filter chips (no counts — words read faster) ----------- */
@@ -1881,6 +2309,13 @@ body {
 [data-theme="dark"] .signoff__risk--high {
   color: #ff7a72;
 }
+/* On the dark surface, "low" green and the empty-state need a
+   brighter foreground so the same hue remains readable. */
+[data-theme="dark"] .signoff__risk--low,
+[data-theme="dark"] .kpi__meta--ok,
+[data-theme="dark"] .cockpit__signoffs-empty { color: #6ee5a3; }
+[data-theme="dark"] .signoff__risk--medium,
+[data-theme="dark"] .kpi__meta--warn { color: #ffb86b; }
 [data-theme="dark"] .agent[data-breach="1"] {
   border-color: color-mix(in srgb, #e6453d 40%, var(--line));
 }
@@ -2069,7 +2504,6 @@ body {
   --persona-employee:  #4a154b;   /* slack-aubergine — Slack-first chapter */
   --persona-manager:   #14b8a6;   /* teal — proactive ops */
   --persona-exec:      #c08a2e;   /* warm gold — wall board */
-  --persona-hr:        #6f5fff;   /* lilac — people / onboarding (v5) */
   --chapter-accent:    var(--accent-1);  /* set by JS on chapter start */
 }
 [data-theme="dark"] {
@@ -2078,7 +2512,6 @@ body {
   --persona-employee:  #d8a7d3;
   --persona-manager:   #5eead4;
   --persona-exec:      #f0c97c;
-  --persona-hr:        #b4a8ff;
 }
 
 /* =============================================================
@@ -2384,6 +2817,37 @@ body {
   flex-shrink: 0;
   scroll-snap-align: start;
   white-space: nowrap;
+}
+
+/* Dock chiclet rail — contextual quick actions tied to the right-panel
+   page (e.g. "Add Agent" / "Discover Agents" when Cockpit is open).
+   Reuses the home chiclet pill (.home__chiclet) verbatim so both
+   surfaces share the same design language; this block only handles
+   the dock-specific positioning: same 800px width as the whisper bar,
+   single horizontal row that scrolls when chips overflow. */
+.dock .dock-chiclets {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto 10px;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 4px 4px 6px;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+          mask-image:
+    linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+}
+.dock .dock-chiclets::-webkit-scrollbar { display: none; }
+.dock .dock-chiclets:empty { display: none; }
+.dock .dock-chiclets .home__chiclet {
+  flex-shrink: 0;
+  scroll-snap-align: start;
 }
 
 /* Every bubble — both Jarvis and user — renders without an avatar
@@ -4759,6 +5223,784 @@ section.lobby[hidden]  { display: none; }
 }
 
 /* =====================================================================
+   HOME — v4 steady-state landing surface (John · IndiaFirst Bank)
+   =====================================================================
+   Replaces the v3 Setup story for the default boot path. Lives inside
+   `.workspace--welcome .stage__main` so it inherits the same centred
+   layout the chapter-welcome uses — but unlike chapter-welcome, this
+   surface has its own composer, chiclets, and a bottom IT-manager
+   strip beneath the fold. Keeping the existing welcome-mode classes
+   (`.workspace--welcome .dock { display: none }` etc.) means we don't
+   have to invent new layout primitives — we just paint a richer hero.
+   ===================================================================== */
+.home {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 24px 36px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .42s ease, transform .42s ease;
+}
+.home--in      { opacity: 1; transform: translateY(0); }
+.home--leaving { opacity: 0; transform: translateY(-8px);
+                 transition: opacity .28s ease, transform .28s ease; }
+
+.home__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 22px;
+  width: 100%;
+}
+
+/* Greet + brand-gradient title — same visual language as the
+   chapter-welcome so John doesn't feel like he's in a different app. */
+.home__greet {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: .005em;
+}
+.home__name {
+  background: linear-gradient(90deg, #a25cff 0%, #6f5fff 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+}
+
+.home__title {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+  font-size: clamp(36px, 4.6vw, 56px);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-block: .08em;
+}
+.home__title-lead { color: var(--ink); }
+.home__title-tail {
+  background: linear-gradient(90deg, #2f5cff 0%, #6a4dff 50%, #a25cff 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: chapter-welcome-grad 8s ease-in-out infinite;
+  padding-bottom: .08em;
+}
+
+/* Chiclet row — pill shortcuts above the whisper. Each chiclet
+   reads as a Jarvis-suggested quick action via the leading sparkle. */
+.home__chiclets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 720px;
+}
+.home__chiclet {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 2px 6px rgba(54, 67, 142, .04);
+  transition: background .18s ease, border-color .18s ease,
+              transform .18s ease, box-shadow .22s ease;
+}
+.home__chiclet:hover {
+  border-color: color-mix(in srgb, var(--accent-2) 28%, var(--line));
+  background: var(--bg-1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(106, 77, 255, .12);
+}
+.home__chiclet:active { transform: translateY(0); }
+.home__chiclet:focus-visible {
+  outline: none;
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.home__chiclet-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-2);
+}
+.home__chiclet-label {
+  white-space: nowrap;
+}
+.home__chiclet-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-1) 14%, transparent);
+  color: var(--accent-1);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+/* Composer — uses the existing .whisper component verbatim,
+   sized to match the chapter-welcome's max-width so the visual
+   centre-of-gravity is consistent across boot paths. */
+.home__composer {
+  width: 100%;
+  max-width: 640px;
+}
+
+/* =====================================================================
+   IT-MANAGER STRIP — 3 cards beneath the composer
+   - Awaiting approval  (mirrors Cockpit's signoff vocabulary)
+   - Services to watch  (services moving in the wrong direction)
+   - Worth knowing today (quiet info, no action surface)
+   Equal-weight grid; collapses to 2 → 1 columns on narrow viewports.
+   ===================================================================== */
+.home__strip {
+  width: 100%;
+  max-width: 1080px;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  text-align: left;
+}
+
+/* ============================================
+   Home-strip type scale (informs every rule below)
+   - Section heading (e.g. "Awaiting your approval") → 14px bold
+   - Body  (action / service / description)         → 14px regular
+   - Assistive (agent · deadline · time · sub)      → 12px
+   - Severity pill (HIGH/MEDIUM/LOW)                → 10px caps
+   Each card has a divider under the heading so the section header
+   reads clearly separate from the rows below.
+   ============================================ */
+.home-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px 14px;
+  min-height: 0;
+}
+.home-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.home-card__eyebrow {
+  /* Section title — full-weight, native case, regular ink so it
+     reads as a real heading rather than the old all-caps label. */
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.005em;
+}
+.home-card__time {
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-weight: 500;
+}
+.home-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.home-card__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- Awaiting approval (home flavor) ----------
+   Hairline-separated list, no per-row card. Title (action) is the
+   primary 14px body line; the meta row above (severity + agent +
+   deadline) is 12px assistive. Approve uses the global brand purple. */
+.home-card--approvals .home-card__body { gap: 0; }
+.home-card--approvals .signoff {
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  gap: 6px;
+}
+.home-card--approvals .signoff:first-child { padding-top: 4px; }
+.home-card--approvals .signoff:last-child  { padding-bottom: 0; border-bottom: 0; }
+.home-card--approvals .signoff__row {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  align-items: center;
+}
+.home-card--approvals .signoff__risk {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  padding: 1px 7px;
+  height: 16px;
+  line-height: 16px;
+}
+.home-card--approvals .signoff__agent { font-weight: 500; }
+.home-card--approvals .signoff__deadline { font-size: 12px; }
+.home-card--approvals .signoff__action {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 2px 0 6px;
+}
+.home-card--approvals .signoff__actions { gap: 6px; margin-top: 4px; }
+.home-card--approvals .signoff__btn {
+  font-size: 12px;
+  padding: 5px 12px;
+}
+.home-card--approvals .signoff[data-state="approve"],
+.home-card--approvals .signoff[data-state="defer"]   { opacity: .55; }
+
+/* ---------- Services to watch ----------
+   Mirrors the awaiting-approval row shape so both cards read as
+   the same component family: top line = service + severity pill;
+   body = one-line risk description in plain English. No mono
+   font, no card-in-card, hairline separators only. */
+.home-trends {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+}
+.home-trends__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.home-trends__row:first-child { padding-top: 4px; }
+.home-trends__row:last-child  { padding-bottom: 0; border-bottom: 0; }
+.home-trends__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.home-trends__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.005em;
+  line-height: 1.4;
+  /* Allow the title to wrap to a second line on narrow cards — the
+     copy is intentionally a sentence, not a single-word label. */
+  min-width: 0;
+}
+.home-trends__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-mute);
+  line-height: 1.45;
+}
+
+/* Clickable trending row — the "high" tone Card payments item
+   doubles as the entry point into the live P1 incident page now
+   that we removed the auto-firing toast. Gives it the affordance
+   of a button (pointer cursor, hover/focus ring, trailing CTA
+   chip) without breaking the visual rhythm of the surrounding
+   read-only rows. */
+.home-trends__row--clickable {
+  cursor: pointer;
+  margin: 0 -8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: 8px;
+  border-bottom: 1px solid var(--line);
+  transition: background .15s ease, transform .15s ease;
+}
+.home-trends__row--clickable:hover {
+  background: var(--bg-soft);
+}
+.home-trends__row--clickable:hover .home-trends__title {
+  color: var(--accent-1);
+}
+.home-trends__row--clickable:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.home-trends__row--clickable .home-trends__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--accent-1);
+  text-transform: uppercase;
+  opacity: .85;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.home-trends__row--clickable:hover .home-trends__cta {
+  opacity: 1;
+  transform: translateX(2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-trends__row--clickable,
+  .home-trends__row--clickable .home-trends__cta {
+    transition: none;
+    transform: none !important;
+  }
+}
+
+/* ---------- Worth knowing today ----------
+   Bulleted rows. Dot is small (6px) and tone-coloured so the eye
+   picks up the type before reading. Same 14px body / 12px sub. */
+.home-digest {
+  display: grid;
+  grid-template-columns: 6px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.home-digest:first-child { padding-top: 4px; }
+.home-digest:last-child  { padding-bottom: 0; border-bottom: 0; }
+.home-digest__dot {
+  width: 6px; height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--accent-1);
+}
+.home-digest[data-tone="schedule"]   .home-digest__dot { background: var(--accent-2); }
+.home-digest[data-tone="compliance"] .home-digest__dot { background: var(--accent-ok); }
+.home-digest[data-tone="report"]     .home-digest__dot { background: var(--accent-1); }
+.home-digest__text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.home-digest__sub {
+  font-size: 12px;
+  color: var(--ink-mute);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+
+/* ---------- "See more →" CTA (per card) ----------
+   Quiet, left-aligned link with a subtle arrow nudge on hover.
+   Uses the brand purple to match the global primary action colour
+   (same vocabulary the Approve CTAs use). The dashed top divider
+   visually separates the CTA from the last row above without
+   feeling as heavy as a solid border. */
+.home-card__more {
+  appearance: none;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px dashed var(--line);
+  background: transparent;
+  color: var(--accent-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: stretch;
+  text-align: left;
+  transition: color .15s ease;
+}
+.home-card__more:hover { color: var(--accent-3); }
+.home-card__more:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: 6px;
+}
+.home-card__more-arrow {
+  transition: transform .18s ease;
+}
+.home-card__more:hover .home-card__more-arrow {
+  transform: translateX(3px);
+}
+
+/* Dark-mode polish — the strip cards need a touch more contrast so
+   they don't disappear into the panel translucency. */
+[data-theme="dark"] .home-card {
+  background: color-mix(in srgb, var(--bg-1) 92%, transparent);
+}
+
+/* Responsive — collapse the strip earlier than the chat workspace
+   does. At <960px the digest drops to a second row; <640px stacks
+   all three cards vertically. */
+@media (max-width: 960px) {
+  .home__strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-card--digest { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .home__strip { grid-template-columns: 1fr; }
+  .home-card--digest { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home, .home--leaving { transition: none; }
+  .home__title-tail     { animation: none; }
+}
+
+/* =====================================================================
+   V4 RIGHT-PANEL PAGES — Approvals · Recent incidents · Health check
+   =====================================================================
+   These mount when John clicks a home chiclet. They share a header
+   pattern (eyebrow + title + lead + head-actions) and a small button
+   vocabulary (v4-btn, ghost + primary) so the three pages feel like
+   one product surface even though they show different data shapes.
+   ===================================================================== */
+.v4-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px 28px 36px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.v4-page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.v4-page__eyebrow {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-mute);
+  margin-bottom: 6px;
+}
+.v4-page__title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.01em;
+}
+.v4-page__lead {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  max-width: 640px;
+  line-height: 1.5;
+}
+.v4-page__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.v4-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease,
+              transform .18s ease, box-shadow .22s ease;
+  border: 1px solid transparent;
+}
+.v4-btn--ghost {
+  background: var(--bg-1);
+  color: var(--ink-dim);
+  border-color: var(--line);
+}
+.v4-btn--ghost:hover {
+  background: var(--bg-2);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.v4-btn--primary {
+  background: var(--accent-1);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(47, 92, 255, .22);
+}
+.v4-btn--primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.v4-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ---------- Approvals page ---------- */
+.v4-approvals-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v4-approval.signoff {
+  padding: 14px 16px 14px 20px;
+  border-radius: 14px;
+}
+.v4-approval.signoff::before { width: 4px; }
+.v4-approval__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 2px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.v4-approval__meta strong {
+  color: var(--ink);
+  font-weight: 600;
+  margin-right: 4px;
+}
+.v4-approval .signoff__btn--reject {
+  background: transparent;
+  color: #c92e26;
+  border: 1px solid color-mix(in srgb, #e6453d 40%, var(--line));
+}
+.v4-approval .signoff__btn--reject:hover {
+  background: color-mix(in srgb, #e6453d 12%, transparent);
+}
+.v4-approval[data-state="approve"],
+.v4-approval[data-state="defer"],
+.v4-approval[data-state="reject"]   { opacity: .55; }
+
+/* ---------- Incidents page ---------- */
+.v4-incidents {
+  display: grid;
+  gap: 4px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 4px;
+}
+.v4-incidents__head,
+.v4-incidents__row {
+  display: grid;
+  grid-template-columns: 110px 160px 50px minmax(0, 1fr) 90px 80px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.v4-incidents__head {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-mute);
+  padding-top: 12px;
+  padding-bottom: 6px;
+}
+.v4-incidents__row {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  font-family: inherit;
+  transition: background .15s ease;
+}
+.v4-incidents__row:hover    { background: var(--bg-2); }
+.v4-incidents__row:focus-visible {
+  outline: none;
+  background: var(--bg-2);
+  box-shadow: inset 0 0 0 2px var(--accent-1);
+}
+.v4-incidents__row + .v4-incidents__row,
+.v4-incidents__head + .v4-incidents__row {
+  border-top: 1px solid var(--line);
+}
+.v4-incidents__when  { color: var(--ink-dim); font-size: 12.5px; }
+.v4-incidents__svc   { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+.v4-incidents__title { font-weight: 500; color: var(--ink);
+                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v4-incidents__status {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  justify-self: start;
+}
+.v4-incidents__status[data-state="open"] {
+  background: color-mix(in srgb, #e6453d 16%, transparent);
+  color: #c92e26;
+}
+.v4-incidents__status[data-state="resolved"] {
+  background: color-mix(in srgb, var(--accent-ok) 18%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 70%, #000);
+}
+.v4-incidents__mttr  { color: var(--ink-dim); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Health check page ---------- */
+.v4-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.v4-health-card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.v4-health-card__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.v4-health-card__dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--accent-ok);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-ok) 18%, transparent);
+  flex: 0 0 auto;
+}
+.v4-health-card[data-state="watch"]    .v4-health-card__dot {
+  background: var(--accent-warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-warn) 20%, transparent);
+}
+.v4-health-card[data-state="degraded"] .v4-health-card__dot {
+  background: #e6453d;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #e6453d 20%, transparent);
+  animation: v4-pulse 1.4s ease-in-out infinite;
+}
+@keyframes v4-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, #e6453d 20%, transparent); }
+  50%      { box-shadow: 0 0 0 7px color-mix(in srgb, #e6453d  0%, transparent); }
+}
+.v4-health-card__name {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.01em;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v4-health-card__state {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-ok) 18%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 70%, #000);
+  flex: 0 0 auto;
+}
+.v4-health-card[data-state="watch"]    .v4-health-card__state {
+  background: color-mix(in srgb, var(--accent-warn) 22%, transparent);
+  color: color-mix(in srgb, var(--accent-warn) 75%, #000);
+}
+.v4-health-card[data-state="degraded"] .v4-health-card__state {
+  background: color-mix(in srgb, #e6453d 18%, transparent);
+  color: #c92e26;
+}
+.v4-health-card__metrics {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px 18px;
+  align-items: center;
+}
+.v4-health-card__metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+.v4-health-card__metric-value {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+.v4-health-card__bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--progress-track);
+  overflow: hidden;
+}
+.v4-health-card__bar-fill {
+  position: absolute; inset: 0;
+  width: var(--bar, 0%);
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
+  border-radius: 999px;
+}
+.v4-health-card[data-state="watch"]    .v4-health-card__bar-fill { background: var(--accent-warn); }
+.v4-health-card[data-state="degraded"] .v4-health-card__bar-fill { background: #e6453d; }
+.v4-health-card__note {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+/* Responsive — drop the incidents table to a stacked row layout on
+   narrow viewports so MTTR + status don't truncate. */
+@media (max-width: 720px) {
+  .v4-incidents__head { display: none; }
+  .v4-incidents__row {
+    grid-template-columns: auto auto 1fr;
+    gap: 6px 10px;
+  }
+  .v4-incidents__title { grid-column: 1 / -1; }
+  .v4-incidents__mttr  { grid-column: 1 / -1; color: var(--ink-mute); }
+}
+
+/* =====================================================================
    CHAT-HISTORY DRAWER — overlays the chat thread + composer when the
    user taps the history icon in the stage header. The header itself
    stays visible so the icon doubles as a toggle (pressed state =
@@ -4777,7 +6019,6 @@ section.lobby[hidden]  { display: none; }
 .stage[data-history="1"] .stage__main,
 .stage[data-history="1"] .dock      { display: none; }
 .stage[data-history="1"] .chat-history { display: flex; }
-.stage[data-history="1"] .stage__head { border-bottom-color: var(--panel-hairline); }
 
 /* History icon pressed-state — mirrors the sidenav active token so the
    "this is open" cue feels like the rest of the chrome. */
@@ -4790,7 +6031,7 @@ section.lobby[hidden]  { display: none; }
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  padding: 2px 14px 14px;
+  padding: 16px;
   gap: 8px;
 }
 
@@ -4968,424 +6209,1595 @@ section.lobby[hidden]  { display: none; }
   .chat-history__item { transition: none; }
 }
 
-/* =====================================================================
-   v5 — APPROVAL CARD
-   ---------------------------------------------------------------------
-   Rich approval surface used by the Onboarding chapter when a hardware
-   request exceeds the L4 threshold. Lives inside a Jarvis bubble so it
-   reads as the agent presenting evidence + asking for a decision —
-   never as a system-level modal. Three CTAs (primary Approve, ghost
-   Decline, tertiary "Ask a question") sit on a single trailing row so
-   the action gravity reads left-to-right.
-   ===================================================================== */
-.approval {
-  margin: 8px 0 2px;
-  padding: 16px 18px 14px;
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--accent-2) 4%, var(--bg-1)) 0%,
-      var(--bg-1) 60%);
-  border: 1px solid color-mix(in srgb, var(--accent-2) 22%, var(--line));
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(54, 67, 142, 0.06);
-  display: flex; flex-direction: column;
-  gap: 10px;
-  max-width: 540px;
+/* =============================================================
+   PHASE 2 — Live incident flow
+   -------------------------------------------------------------
+   Surfaces:
+     1. Critical incident toast (director-note--critical variant)
+     2. Incident chiclet bar (.inc-bar) — pinned above the dock
+     3. Incident detail page (.inc-page) — right-panel page
+     4. Summary drawer (.inc-summary-drawer) — full-height slide-over
+   ============================================================= */
+
+/* ------ 1. CRITICAL TOAST -------------------------------- */
+.director-note.director-note--critical {
+  /* P1 toast — quiet card *envelope* (no border rail at all), with
+     the urgency carried entirely by the alert-triangle icon (red
+     chip with radiating-ring pulse) and the "P1 ALERT" badge.
+     This keeps the toast readable while still signalling
+     criticality. */
+  border: none;
+  padding: 16px;
+  box-shadow:
+    0 14px 40px rgba(239, 68, 68, .14),
+    0 0 0 1px rgba(239, 68, 68, .14) inset;
 }
 
-/* Eyebrow — small "who's asking" line above the title (e.g.
-   "Procurement Agent · Approval requested"). */
-.approval__eyebrow {
-  display: inline-flex; align-items: center;
-  gap: 8px;
-  font-size: 11.5px; font-weight: 600;
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--accent-2);
+/* Icon — red chip with a soft "breathing" glyph and two
+   radiating ring pulses (phase-offset) that fade outward. */
+.director-note--critical .director-note__icon {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  flex-shrink: 0;
 }
-.approval__eyebrow-dot {
-  width: 7px; height: 7px;
-  border-radius: 999px;
-  background: var(--accent-2);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 18%, transparent);
+.director-note--critical .director-note__icon svg {
+  position: relative;
+  z-index: 2;
+  animation: incAlertBreathe 1.8s ease-in-out infinite;
+}
+.director-note--critical .director-note__icon::before,
+.director-note--critical .director-note__icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  border: 2px solid #ef4444;
+  pointer-events: none;
+  z-index: 1;
+  animation: incAlertRing 1.8s cubic-bezier(.22, .61, .36, 1) infinite;
+}
+.director-note--critical .director-note__icon::after {
+  /* Phase-offset second ring so the pulse feels continuous. */
+  animation-delay: .9s;
+}
+@keyframes incAlertRing {
+  0%   { transform: scale(1);    opacity: .55; }
+  100% { transform: scale(1.95); opacity: 0;   }
+}
+@keyframes incAlertBreathe {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.08); }
 }
 
-.approval__title {
-  margin: 0;
-  font-size: 16px; font-weight: 700;
+/* Badge — transparent chip with red "INCIDENT" copy. The red
+   chip moved to the icon (which now carries all visual weight
+   for the P1), so the badge reads as a quiet text label. */
+.director-note--critical .director-note__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: .08em;
+}
+
+.director-note--critical .director-note__title {
+  font-weight: 700;
+  font-size: 14.5px;
   color: var(--ink);
   letter-spacing: -.005em;
   line-height: 1.3;
 }
-
-.approval__summary {
-  margin: 0;
-  font-size: 13.5px; line-height: 1.5;
+.director-note--critical .director-note__text {
+  font-size: 13px;
   color: var(--ink-dim);
+  line-height: 1.45;
+  margin-top: 2px;
 }
-
-/* Items — itemised cost breakdown. Three columns on a single line:
-   label · spec · cost. The label dominates; the spec is muted; the
-   cost is right-aligned and tabular for easy sum-checking. */
-.approval__items {
-  list-style: none;
-  margin: 4px 0 0;
-  padding: 10px 12px;
-  background: color-mix(in srgb, var(--accent-2) 4%, var(--bg-2));
-  border: 1px solid color-mix(in srgb, var(--accent-2) 12%, var(--line));
-  border-radius: 10px;
-  display: flex; flex-direction: column;
-  gap: 6px;
-}
-.approval__item {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: baseline;
-  gap: 12px;
-  font-size: 13px; line-height: 1.45;
-}
-.approval__item-label {
-  font-weight: 600;
-  color: var(--ink);
-}
-.approval__item-spec {
-  color: var(--ink-mute);
+.director-note--critical .director-note__sub {
   font-size: 12px;
-}
-.approval__item-cost {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--ink-dim);
+  color: var(--ink-mute);
+  margin-top: 4px;
 }
 
-/* Total row — sits below the items, clearly demarcated. */
-.approval__total {
-  display: flex; align-items: baseline; justify-content: flex-end;
+/* ------ 2. INCIDENT CHICLET BAR (above the dock) ---------- */
+.inc-bar {
+  /* Sits between the thread and the dock inside .stage. The bar
+     stays visible across navigation (Cockpit, Approvals, etc.)
+     so John always has the incident actions one tap away. White
+     surface so it reads as a focused control (the red sev pill
+     does the urgency lifting on its own). */
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  padding: 6px 12px 0;
+  margin: 0 14px 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
+  position: relative;
+  animation: incBarIn .28s cubic-bezier(.2, .8, .2, 1) both;
 }
-.approval__total-label {
-  font-size: 12px; font-weight: 600;
+@keyframes incBarIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+/* Hide the bar when the chat-history drawer is open or the chat
+   panel itself is collapsed — both swap the stage into a different
+   surface where the bar would be visually orphaned. */
+.stage[data-history="1"] .inc-bar,
+.workspace--chat-closed .inc-bar { display: none; }
+.inc-bar__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
   color: var(--ink-dim);
-  letter-spacing: .04em; text-transform: uppercase;
+  padding-left: 4px;
 }
-.approval__total-value {
-  font-size: 18px; font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  letter-spacing: -.01em;
-}
-
-.approval__reason {
-  margin: 4px 0 0;
-  font-size: 12.5px; line-height: 1.5;
-  color: var(--ink-dim);
-  padding: 8px 10px;
-  background: color-mix(in srgb, var(--accent-warn) 8%, transparent);
-  border-left: 3px solid color-mix(in srgb, var(--accent-warn) 60%, transparent);
+.inc-bar__sev {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 8px;
   border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  font-size: 10.5px;
+  background: #ef4444;
+  color: #fff;
 }
-.approval__reason strong { color: var(--ink); }
+.inc-bar__svc {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+}
+.inc-bar__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ink-mute);
+  opacity: .65;
+}
+.inc-bar__elapsed {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.inc-bar__open {
+  margin-left: auto;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent-2);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background .15s ease;
+}
+.inc-bar__open:hover { background: color-mix(in srgb, var(--accent-2) 8%, transparent); }
+.inc-bar__open:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
 
-/* Action row — primary, secondary (ghost), tertiary (text-only).
-   All three buttons share the same height & radius so the row reads
-   as one paired control. The Approve CTA wears the brand purple
-   filled treatment used everywhere a user is expected to commit. */
-.approval__actions {
-  display: flex; align-items: center; gap: 10px;
-  margin-top: 6px;
+.inc-bar__chiclets {
+  display: flex;
   flex-wrap: wrap;
-}
-.approval__btn {
-  appearance: none; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
   gap: 6px;
-  padding: 0 16px;
-  min-height: 34px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  font: inherit;
-  font-size: 13px; font-weight: 600;
-  letter-spacing: -.005em;
-  line-height: 1;
-  white-space: nowrap;
-  transition: background .18s ease, color .18s ease,
-              border-color .18s ease, box-shadow .18s ease,
-              transform .12s ease;
 }
-.approval__btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--focus-ring, rgba(47, 92, 255, .2));
+.inc-chiclet {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .15s ease, border-color .15s ease, transform .12s ease, color .15s ease;
 }
-.approval__btn:active { transform: translateY(1px); }
-.approval__btn[disabled] { opacity: .55; cursor: default; }
-
-/* Primary — filled brand purple with the same elevation pattern the
-   Cockpit Approve button uses. */
-.approval__btn--primary {
+.inc-chiclet:hover {
+  background: color-mix(in srgb, var(--accent-2) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-2) 25%, var(--line));
+}
+.inc-chiclet:active { transform: translateY(1px); }
+.inc-chiclet:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+.inc-chiclet--primary {
   background: var(--accent-2);
   border-color: var(--accent-2);
-  color: #ffffff;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, .18) inset,
-    0 4px 10px color-mix(in srgb, var(--accent-2) 28%, transparent);
+  color: #fff;
+  font-weight: 600;
 }
-.approval__btn--primary:hover {
-  background: color-mix(in srgb, var(--accent-2) 92%, #000);
-  border-color: color-mix(in srgb, var(--accent-2) 92%, #000);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, .22) inset,
-    0 6px 14px color-mix(in srgb, var(--accent-2) 35%, transparent);
+.inc-chiclet--primary:hover {
+  background: color-mix(in srgb, var(--accent-2) 88%, #000 12%);
+  border-color: color-mix(in srgb, var(--accent-2) 88%, #000 12%);
 }
-.approval__btn--primary.is-selected {
-  background: color-mix(in srgb, var(--accent-2) 80%, #000);
-}
-
-/* Secondary — ghost outline. Same height as primary so the pair
-   feels like one paired control. */
-.approval__btn--secondary {
-  background: transparent;
+.inc-chiclet--disabled {
+  cursor: progress;
+  opacity: .85;
+  background: var(--surface-alt);
+  border-color: var(--line);
   color: var(--ink-dim);
-  border-color: var(--line-strong, var(--line));
 }
-.approval__btn--secondary:hover {
+.inc-chiclet--disabled:hover { background: var(--surface-alt); border-color: var(--line); }
+.inc-chiclet__spin {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.6px solid color-mix(in srgb, var(--ink-mute) 35%, transparent);
+  border-top-color: var(--accent-2);
+  animation: incSpin .9s linear infinite;
+}
+@keyframes incSpin { to { transform: rotate(360deg); } }
+
+/* ------ 3. INCIDENT DETAIL PAGE -------------------------- */
+.inc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 22px 28px;
+  min-height: 100%;
+  background: var(--surface);
+}
+.inc-page__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.inc-page__head-lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.inc-page__sev {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 36px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .04em;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, .22);
+}
+.inc-page__head-text { min-width: 0; }
+.inc-page__eyebrow {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+}
+.inc-page__title {
+  margin: 4px 0 4px;
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -.01em;
   color: var(--ink);
-  background: color-mix(in srgb, var(--ink-dim) 5%, transparent);
-  border-color: color-mix(in srgb, var(--accent-warn) 40%, var(--line-strong, var(--line)));
+}
+.inc-page__sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+  max-width: 64ch;
+}
+.inc-page__head-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.inc-page__elapsed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+  color: #b91c1c;
+  border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.inc-page__elapsed::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: incPulseDot 1.5s ease-in-out infinite;
+}
+@keyframes incPulseDot {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%      { transform: scale(1.45); opacity: .55; }
+}
+/* Once resolved, the elapsed pill calms down. */
+.inc-page[data-phase="resolved"] .inc-page__elapsed {
+  background: color-mix(in srgb, #22c55e 10%, transparent);
+  color: #15803d;
+  border-color: color-mix(in srgb, #22c55e 24%, transparent);
+}
+.inc-page[data-phase="resolved"] .inc-page__elapsed::before {
+  background: #22c55e;
+  animation: none;
 }
 
-/* Tertiary — text-only "Ask a question" affordance. Reads as a
-   conversational fallback; no border, no fill. */
-.approval__btn--tertiary {
+/* Status banner — phase pipeline (horizontal stepper)
+   ----------------------------------------------------------
+   Stepper anatomy:
+     · The OL draws TWO horizontal lines via ::before / ::after
+       between the dot row's centers — one full-width grey track
+       and one purple "progress" overlay sized by the
+       `--progress` custom property (0 → 1). The JS layer sets
+       --progress = phaseIdx / (phases.length - 1) so the filled
+       bar grows by phase, never by sibling-relative CSS hacks.
+     · Each LI is a vertical [dot][label] stack on top of the
+       lines (z-index: 2). No per-step connector — the parent
+       owns it, which eliminates the line/label overlap that
+       was breaking the previous build.
+*/
+.inc-status {
+  padding: 18px 18px 16px;
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.inc-status__phases {
+  --progress: 0;
+  /* --phase-count is set by JS from snap.phases.length so the track
+     trims exactly at the first and last dot, regardless of how many
+     phases the engine defines. The inset accounts for the inter-dot
+     gap so the math stays exact even at narrow viewports. */
+  --phase-count: 6;
+  --phase-gap: 6px;
+  --track-inset: calc((100% - (var(--phase-count) - 1) * var(--phase-gap)) / (var(--phase-count) * 2));
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--phase-gap);
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+}
+/* Grey track behind all dots */
+.inc-status__phases::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: var(--track-inset);
+  right: var(--track-inset);
+  height: 2px;
+  background: var(--line);
+  z-index: 0;
+  border-radius: 2px;
+}
+/* Purple progress overlay — width drives "how far we are" */
+.inc-status__phases::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: var(--track-inset);
+  width: calc(var(--progress) * (100% - (var(--track-inset) * 2)));
+  height: 2px;
+  background: var(--accent-2);
+  z-index: 1;
+  border-radius: 2px;
+  transition: width .45s cubic-bezier(.2, .8, .2, 1);
+}
+.inc-status__phase {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+}
+.inc-status__phase-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid var(--line);
+  flex: 0 0 auto;
+  transition: background .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+.inc-status__phase-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  text-align: center;
+  letter-spacing: -.005em;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.inc-status__phase[data-state="done"] .inc-status__phase-dot {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+.inc-status__phase[data-state="done"] .inc-status__phase-label {
+  color: var(--ink-dim);
+}
+.inc-status__phase[data-state="active"] .inc-status__phase-dot {
+  background: #fff;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 22%, transparent);
+  animation: incPhaseActive 1.6s ease-in-out infinite;
+}
+.inc-status__phase[data-state="active"] .inc-status__phase-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+@keyframes incPhaseActive {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-2) 22%, transparent); }
+  50%      { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent-2) 10%, transparent); }
+}
+.inc-status__caption {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+}
+/* Narrow right panel: shrink the label so 7 phases keep fitting. */
+@media (max-width: 1000px) {
+  .inc-status__phase-label { font-size: 10.5px; }
+}
+
+/* Body: two-column timeline + agent graph */
+.inc-body {
+  display: grid;
+  /* Agents column on the LEFT (fixed-ish), timeline on the RIGHT
+     takes the remaining space. The left column is a stacked
+     wrapper so the post-incident summary can sit directly under
+     the agents panel without breaking out of the grid. */
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.inc-body__col--left {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Sticky lives on the column wrapper now (not on .inc-graph), so
+     the agents panel + summary card scroll-pin together as the
+     timeline scrolls past on the right. */
+  position: sticky;
+  top: 20px;
+}
+@media (max-width: 920px) {
+  .inc-body { grid-template-columns: minmax(0, 1fr); }
+  .inc-body__col--left { position: static; }
+}
+
+.inc-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.inc-section__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.005em;
+}
+.inc-section__count {
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Timeline */
+.inc-timeline {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.inc-timeline__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.inc-timeline__entry {
+  --agent-tone: #8b94b3;
+  display: grid;
+  grid-template-columns: 52px 14px minmax(0, 1fr);
+  gap: 8px 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  align-items: flex-start;
+  animation: incEntryIn .35s ease both;
+}
+.inc-timeline__entry:last-child { border-bottom: 0; }
+.inc-timeline__at {
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  padding-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.inc-timeline__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--agent-tone);
+  margin-top: 4px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-tone) 18%, transparent);
+}
+.inc-timeline__entry.is-latest .inc-timeline__dot {
+  animation: incPulseDot 1.5s ease-in-out infinite;
+}
+.inc-timeline__body { min-width: 0; }
+.inc-timeline__agent {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--agent-tone);
+  letter-spacing: -.005em;
+  margin-bottom: 1px;
+}
+.inc-timeline__text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  letter-spacing: -.005em;
+}
+@keyframes incEntryIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Live activity row
+   ----------------------------------------------------------
+   Sits at the bottom of the timeline whenever an agent is
+   mid-action. Stronger pulse than `is-latest`, accent-tinted
+   verb chip, and three bouncing dots that read as "typing".
+   Three semantic states are styled:
+     · working  → typing dots animate, dot pulses fast
+     · waiting  → no typing dots, dot pulses slow
+     · handoff  → muted neutral chip, dot pulses slow */
+.inc-timeline__live {
+  --agent-tone: #8b94b3;
+  display: grid;
+  grid-template-columns: 52px 14px minmax(0, 1fr);
+  gap: 8px 10px;
+  padding: 12px 0 4px;
+  margin-top: 4px;
+  align-items: flex-start;
+  border-top: none;
+  animation: incEntryIn .35s ease both;
+}
+.inc-timeline__at--live {
+  color: var(--agent-tone);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-size: 11px;
+  padding-top: 2px;
+}
+.inc-timeline__dot--live {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--agent-tone);
+  margin-top: 3px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--agent-tone) 22%, transparent);
+  animation: incLiveDot 1.3s ease-in-out infinite;
+}
+.inc-timeline__live-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-size: 13px;
+  color: var(--ink);
+  margin-top: 1px;
+}
+.inc-timeline__verb {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--agent-tone);
+  background: color-mix(in srgb, var(--agent-tone) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--agent-tone) 28%, transparent);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.inc-timeline__live-text {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.4;
+}
+.inc-timeline__typing {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 2px;
+  align-items: flex-end;
+  height: 12px;
+}
+.inc-timeline__typing i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--agent-tone);
+  animation: incTyping 1.1s ease-in-out infinite;
+}
+.inc-timeline__typing i:nth-child(2) { animation-delay: .15s; }
+.inc-timeline__typing i:nth-child(3) { animation-delay: .30s; }
+
+.inc-timeline__live--waiting .inc-timeline__dot--live,
+.inc-timeline__live--handoff .inc-timeline__dot--live {
+  animation-duration: 2.4s;
+}
+.inc-timeline__live--waiting .inc-timeline__typing,
+.inc-timeline__live--handoff .inc-timeline__typing {
+  display: none;
+}
+.inc-timeline__live--handoff .inc-timeline__verb {
+  color: var(--ink-dim);
+  background: color-mix(in srgb, var(--ink-dim) 10%, transparent);
+  border-color: color-mix(in srgb, var(--ink-dim) 22%, transparent);
+}
+
+@keyframes incLiveDot {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%      { transform: scale(1.45); opacity: .55; }
+}
+@keyframes incTyping {
+  0%, 80%, 100% { transform: translateY(0);   opacity: .35; }
+  40%           { transform: translateY(-3px); opacity: 1;   }
+}
+
+/* Section header — live status pill (right of the count) */
+.inc-section__head-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.inc-section__live {
+  --agent-tone: #8b94b3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--agent-tone);
+  padding: 3px 8px 3px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--agent-tone) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--agent-tone) 28%, transparent);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inc-section__live[hidden] { display: none; }
+.inc-section__live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--agent-tone);
+  flex: 0 0 auto;
+  animation: incLiveDot 1.3s ease-in-out infinite;
+}
+.inc-section__live-text { color: var(--agent-tone); font-weight: 700; }
+.inc-section__live-verb {
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--ink-mute);
+  font-weight: 700;
+  font-size: 10px;
+}
+.inc-section__live[data-state="waiting"] .inc-section__live-dot,
+.inc-section__live[data-state="handoff"] .inc-section__live-dot {
+  animation-duration: 2.4s;
+}
+
+/* Agent graph (chip cloud) */
+.inc-graph {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.inc-graph__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.inc-graph__node {
+  --agent-tone: #8b94b3;
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) 18px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
   background: transparent;
-  color: var(--accent-1);
-  border-color: transparent;
-  padding: 0 6px;
-  margin-left: auto;
+  opacity: .45;
+  transition: background .2s ease, opacity .25s ease, transform .15s ease;
 }
-.approval__btn--tertiary:hover {
-  color: color-mix(in srgb, var(--accent-1) 80%, #000);
-  background: color-mix(in srgb, var(--accent-1) 6%, transparent);
+.inc-graph__node.is-active {
+  opacity: 1;
+  background: color-mix(in srgb, var(--agent-tone) 8%, transparent);
+}
+.inc-graph__node.is-current {
+  background: color-mix(in srgb, var(--agent-tone) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--agent-tone) 35%, transparent) inset;
+}
+.inc-graph__node-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--agent-tone);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-tone) 18%, transparent);
+}
+.inc-graph__node.is-current .inc-graph__node-dot {
+  animation: incPulseDot 1.5s ease-in-out infinite;
+}
+.inc-graph__node-text { min-width: 0; }
+.inc-graph__node-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.005em;
+}
+.inc-graph__node-role {
+  font-size: 11.5px;
+  color: var(--ink-mute);
+}
+.inc-graph__node-verb {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--agent-tone);
+  background: color-mix(in srgb, var(--agent-tone) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--agent-tone) 28%, transparent);
+  border-radius: 999px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+.inc-graph__node-verb[data-state="waiting"],
+.inc-graph__node-verb[data-state="handoff"] {
+  color: var(--ink-dim);
+  background: color-mix(in srgb, var(--ink-dim) 10%, transparent);
+  border-color: color-mix(in srgb, var(--ink-dim) 22%, transparent);
+}
+.inc-graph__node-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--agent-tone);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.inc-graph__caption {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  line-height: 1.4;
 }
 
-/* Dark theme — soften the warn tint on the rationale callout and
-   give the items panel a slightly punchier surface contrast. */
+/* Resolved summary card */
+.inc-summary-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #22c55e 28%, var(--line));
+  background: color-mix(in srgb, #22c55e 6%, var(--surface));
+  animation: incEntryIn .45s ease both;
+}
+/* Without this, our explicit `display: flex` overrides the user-agent
+   `[hidden] { display: none }` rule and the card stays visible from
+   page load, even when JS sets the hidden attribute on it. */
+.inc-summary-card[hidden] { display: none; }
+.inc-summary-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.inc-summary-card__check {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.inc-summary-card__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.inc-summary-card__sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+  max-width: 50ch;
+}
+.inc-summary-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Stacked variant — used when the card lives inside the narrow
+   left column under the agents panel. Forces a single-column
+   layout and full-width buttons so nothing crams or truncates. */
+.inc-summary-card--stacked {
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.inc-summary-card--stacked .inc-summary-card__head {
+  flex: 1 1 auto;
+}
+.inc-summary-card--stacked .inc-summary-card__sub {
+  max-width: none;
+}
+.inc-summary-card--stacked .inc-summary-card__actions {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+}
+.inc-summary-card--stacked .inc-summary-card__actions .v4-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ------ 4. SUMMARY DRAWER (slide-over) ----------------- */
+.inc-summary-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+.inc-summary-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, .42);
+  opacity: 0;
+  transition: opacity .22s ease;
+  pointer-events: auto;
+}
+.inc-summary-drawer__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(680px, 92vw);
+  background: var(--surface);
+  box-shadow: -16px 0 40px rgba(15, 23, 42, .18);
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.2, .8, .2, 1);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  border-left: 1px solid var(--line);
+}
+.inc-summary-drawer--in .inc-summary-drawer__scrim { opacity: 1; }
+.inc-summary-drawer--in .inc-summary-drawer__panel { transform: translateX(0); }
+
+.inc-summary-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.inc-summary-drawer__eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.inc-summary-drawer__title {
+  margin: 4px 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.inc-summary-drawer__meta {
+  font-size: 12px;
+  color: var(--ink-dim);
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+}
+.inc-summary-drawer__close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-mute);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s ease, color .15s ease;
+}
+.inc-summary-drawer__close:hover { background: var(--surface-alt); color: var(--ink); }
+.inc-summary-drawer__close:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+
+.inc-summary-drawer__body {
+  padding: 20px 22px 8px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.inc-summary-block h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.inc-summary-block p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.55;
+}
+.inc-summary-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inc-summary-timeline li {
+  display: grid;
+  grid-template-columns: 50px 130px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.inc-summary-timeline li:last-child { border-bottom: 0; }
+.inc-summary-timeline__at {
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+}
+.inc-summary-timeline__agent {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.inc-summary-timeline__text {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+}
+.inc-summary-followup {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.inc-summary-drawer__foot {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-alt);
+}
+.inc-summary-drawer__btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .15s ease, border-color .15s ease, transform .12s ease;
+}
+.inc-summary-drawer__btn:hover {
+  background: color-mix(in srgb, var(--accent-2) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent-2) 25%, var(--line));
+}
+.inc-summary-drawer__btn:active { transform: translateY(1px); }
+.inc-summary-drawer__btn--primary {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+.inc-summary-drawer__btn--primary:hover {
+  background: color-mix(in srgb, var(--accent-2) 88%, #000 12%);
+  border-color: color-mix(in srgb, var(--accent-2) 88%, #000 12%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .director-note--critical .director-note__icon svg,
+  .director-note--critical .director-note__icon::before,
+  .director-note--critical .director-note__icon::after,
+  .inc-page__elapsed::before,
+  .inc-status__phase[data-state="active"] .inc-status__phase-dot,
+  .inc-status__phases::after,
+  .inc-timeline__entry.is-latest .inc-timeline__dot,
+  .inc-timeline__dot--live,
+  .inc-timeline__typing i,
+  .inc-section__live-dot,
+  .inc-graph__node.is-current .inc-graph__node-dot {
+    animation: none;
+    transition: none;
+  }
+  .inc-summary-drawer__panel { transition: none; }
+}
+
+/* =================================================================
+   v5 — Approval card (in-chat)
+   -----------------------------------------------------------------
+   Itemised approval surface used by the HR onboarding chapter.
+   Sits inside a Jarvis bubble like a link-card / metric-board.
+   Visual hierarchy: eyebrow (agent + pulse) → title → summary →
+   itemised list → total → rationale → 3 CTAs.
+   ================================================================= */
+.approval {
+  margin-top: 12px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--persona-hr) 6%, var(--bg-1)) 0%,
+      var(--bg-1) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .55) inset,
+    0 8px 24px rgba(54, 67, 142, .06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
 [data-theme="dark"] .approval {
   background:
     linear-gradient(180deg,
-      color-mix(in srgb, var(--accent-2) 8%, var(--bg-1)) 0%,
-      var(--bg-1) 60%);
-  border-color: color-mix(in srgb, var(--accent-2) 32%, var(--line));
-}
-[data-theme="dark"] .approval__items {
-  background: color-mix(in srgb, var(--accent-2) 8%, var(--bg-2));
-  border-color: color-mix(in srgb, var(--accent-2) 22%, var(--line));
-}
-[data-theme="dark"] .approval__reason {
-  background: color-mix(in srgb, var(--accent-warn) 14%, transparent);
+      color-mix(in srgb, var(--persona-hr) 14%, var(--bg-1)) 0%,
+      var(--bg-1) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .04) inset,
+    0 12px 36px rgba(0, 0, 0, .35);
 }
 
-@media (max-width: 520px) {
-  .approval__item { grid-template-columns: 1fr auto; }
-  .approval__item-spec { grid-column: 1 / -1; }
-  .approval__btn--tertiary { margin-left: 0; }
-}
-
-/* =====================================================================
-   v5 — TASK-LIST GRID
-   ---------------------------------------------------------------------
-   The "what just happened" outcome grid that lands once Priya approves
-   the hardware request. Three columns (Task · Agent · Status) with one
-   row per delivered outcome and a status pill that animates from
-   "Queued" to its final state as each agent reports back. The whole
-   surface lives inside a Jarvis bubble so it reads as the agent
-   speaking, not as a separate page.
-   ===================================================================== */
-.task-list {
-  margin: 8px 0 2px;
-  padding: 14px 16px 12px;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(54, 67, 142, 0.06);
-  display: flex; flex-direction: column;
+.approval__eyebrow {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--persona-hr);
+}
+
+.approval__eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--persona-hr);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--persona-hr) 22%, transparent);
+}
+
+.approval__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.005em;
+  color: var(--ink);
+}
+
+.approval__summary {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.approval__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft-2, var(--bg-1));
+  padding: 10px 12px;
+}
+
+.approval__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+
+.approval__item-label {
+  grid-column: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.approval__item-spec {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+
+.approval__item-cost {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.approval__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.approval__total-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-mute);
+}
+
+.approval__total-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.approval__reason {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--persona-hr) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--persona-hr) 22%, transparent);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+[data-theme="dark"] .approval__reason {
+  background: color-mix(in srgb, var(--persona-hr) 12%, transparent);
+  border-color: color-mix(in srgb, var(--persona-hr) 30%, transparent);
+}
+
+.approval__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.approval__btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .005em;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.approval__btn:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+.approval__btn--primary {
+  background: var(--persona-hr);
+  border-color: var(--persona-hr);
+  color: #fff;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--persona-hr) 28%, transparent);
+}
+
+.approval__btn--primary:hover {
+  background: color-mix(in srgb, var(--persona-hr) 92%, #000);
+  border-color: color-mix(in srgb, var(--persona-hr) 92%, #000);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--persona-hr) 35%, transparent);
+}
+
+.approval__btn--secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.approval__btn--secondary:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.approval__btn--tertiary {
+  background: transparent;
+  color: var(--ink-dim);
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.approval__btn--tertiary:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.approval__btn:disabled {
+  cursor: default;
+  opacity: .55;
+  box-shadow: none;
+  transform: none;
+}
+
+.approval__btn.is-picked {
+  opacity: 1;
+  outline: 2px solid color-mix(in srgb, var(--persona-hr) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.approval__confirm {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent-ok) 12%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 70%, var(--ink));
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+[data-theme="dark"] .approval__confirm {
+  background: color-mix(in srgb, var(--accent-ok) 22%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 78%, #fff);
+}
+
+/* =================================================================
+   v5 — Task list (in-chat)
+   -----------------------------------------------------------------
+   Multi-agent execution grid. Three columns: Task / Agent / Status.
+   Each row reveals progressively (.is-revealed) and then settles
+   (.is-resolved) — the status pill animates from "Queued" to its
+   final state, replacing the queued pill in place.
+   ================================================================= */
+.task-list {
+  margin-top: 12px;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .55) inset,
+    0 8px 24px rgba(54, 67, 142, .06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   max-width: 640px;
 }
 
-.task-list__eyebrow {
-  display: inline-flex; align-items: center;
-  gap: 8px;
-  font-size: 11.5px; font-weight: 600;
-  letter-spacing: .04em; text-transform: uppercase;
-  color: var(--accent-2);
-  margin-bottom: 2px;
-}
-.task-list__eyebrow-dot {
-  width: 7px; height: 7px;
-  border-radius: 999px;
-  background: var(--accent-2);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 18%, transparent);
+[data-theme="dark"] .task-list {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .04) inset,
+    0 12px 36px rgba(0, 0, 0, .35);
 }
 
-/* Header row — column titles. Same grid template as the data rows
-   so the columns stay aligned regardless of viewport width. */
-.task-list__head,
+.task-list__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--persona-hr);
+}
+
+.task-list__eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--persona-hr);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--persona-hr) 22%, transparent);
+}
+
+.task-list__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.005em;
+  color: var(--ink);
+}
+
+.task-list__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .task-list__row {
   display: grid;
-  grid-template-columns: 1fr 160px 110px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, .8fr);
   gap: 12px;
-  padding: 8px 4px;
-  min-width: 0;
-}
-.task-list__head {
+  padding: 10px 0;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 8px;
+  align-items: center;
 }
-.task-list__col {
-  font-size: 11px; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase;
+
+.task-list__row:last-child { border-bottom: none; }
+
+.task-list__row--head {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-strong);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
   color: var(--ink-mute);
 }
-.task-list__rows { display: flex; flex-direction: column; }
-.task-list__row {
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  /* Pre-reveal state — hidden by default; the engine adds
-     `is-revealed` after a small per-row stagger. */
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity .22s ease, transform .22s ease;
+
+.task-list__col {
+  font-weight: 600;
 }
-.task-list__row.is-revealed {
+
+.task-list__rows-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.task-list__rows-wrap > .task-list__row {
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 280ms ease,
+    transform 280ms ease;
+}
+
+.task-list__rows-wrap > .task-list__row.is-revealed {
   opacity: 1;
   transform: translateY(0);
 }
-.task-list__row:last-child { border-bottom: 0; }
 
 .task-list__cell {
-  min-width: 0;
   font-size: 13px;
   color: var(--ink);
   line-height: 1.4;
+  min-width: 0;
 }
-.task-list__cell--task { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.task-list__task {
+
+.task-list__task-label {
   font-weight: 600;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  color: var(--ink);
 }
+
 .task-list__note {
+  margin-top: 2px;
   font-size: 11.5px;
   color: var(--ink-mute);
-  font-weight: 500;
 }
-.task-list__cell--agent {
+
+.task-list__agent {
+  font-weight: 600;
   color: var(--ink-dim);
-  font-weight: 500;
   font-size: 12.5px;
 }
 
-/* Status pill — anchored container that holds both the "Queued"
-   state and the final state on top of each other. We crossfade
-   them when the row is revealed so the status visibly settles. */
+/* Status pills — the "Queued" pill is shown by default; once the
+   row resolves, the queued pill fades out and the final pill fades
+   in. We render both in the DOM so the transition is purely CSS. */
 .task-list__pill {
-  position: relative;
-  display: inline-flex; align-items: center;
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
   padding: 3px 10px;
   border-radius: 999px;
-  font-size: 11.5px; font-weight: 700;
-  letter-spacing: .03em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
   white-space: nowrap;
-  /* Pre-reveal: queued tint. */
-  background: color-mix(in srgb, var(--ink-mute) 14%, transparent);
-  color: var(--ink-dim);
-  transition: background .25s ease, color .25s ease;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
 }
-.task-list__pill-dot {
-  width: 7px; height: 7px;
-  border-radius: 999px;
-  background: var(--ink-mute);
-  transition: background .25s ease, box-shadow .25s ease;
+
+.task-list__pill--queued {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink-mute);
+  border: 1px solid var(--line);
 }
-.task-list__pill-label,
-.task-list__pill-final {
-  transition: opacity .25s ease;
-}
-.task-list__pill-final {
-  position: absolute;
-  inset: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 3px 10px;
+
+.task-list__pill--final {
   opacity: 0;
-}
-.task-list__pill-final::before {
-  content: "";
-  width: 7px; height: 7px;
-  border-radius: 999px;
-  background: currentColor;
-  display: inline-block;
+  transform: translateY(2px);
+  margin-left: -6px; /* sit roughly where the queued pill was */
+  border: 1px solid transparent;
 }
 
-/* Once the row is revealed, fade out the queued label and fade in
-   the final-status pill on top. Each final tone gets its own
-   accessible foreground (matches the v4 cockpit risk-pill family). */
-.is-revealed .task-list__pill { background: transparent; }
-.is-revealed .task-list__pill-label,
-.is-revealed .task-list__pill-dot { opacity: 0; }
-
-.is-revealed .task-list__pill-final { opacity: 1; }
-.task-list__pill-final[data-status="done"] {
-  background: color-mix(in srgb, var(--accent-ok) 18%, transparent);
-  color: #0d7a45;
+.task-list__row.is-resolved .task-list__pill--queued {
+  opacity: 0;
+  transform: translateY(-2px);
 }
-.task-list__pill-final[data-status="pending"] {
+
+.task-list__row.is-resolved .task-list__pill--final {
+  opacity: 1;
+  transform: translateY(0);
+  margin-left: 0;
+}
+
+.task-list__pill--done {
+  background: color-mix(in srgb, var(--accent-ok) 14%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 78%, var(--ink));
+  border-color: color-mix(in srgb, var(--accent-ok) 32%, transparent);
+}
+
+.task-list__pill--ordered {
+  background: color-mix(in srgb, var(--persona-hr) 14%, transparent);
+  color: color-mix(in srgb, var(--persona-hr) 78%, var(--ink));
+  border-color: color-mix(in srgb, var(--persona-hr) 32%, transparent);
+}
+
+.task-list__pill--pending {
+  background: color-mix(in srgb, var(--accent-warn) 14%, transparent);
+  color: color-mix(in srgb, var(--accent-warn) 78%, var(--ink));
+  border-color: color-mix(in srgb, var(--accent-warn) 32%, transparent);
+}
+
+[data-theme="dark"] .task-list__pill--done {
+  background: color-mix(in srgb, var(--accent-ok) 22%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 90%, #fff);
+  border-color: color-mix(in srgb, var(--accent-ok) 38%, transparent);
+}
+
+[data-theme="dark"] .task-list__pill--ordered {
+  background: color-mix(in srgb, var(--persona-hr) 22%, transparent);
+  color: color-mix(in srgb, var(--persona-hr) 92%, #fff);
+  border-color: color-mix(in srgb, var(--persona-hr) 40%, transparent);
+}
+
+[data-theme="dark"] .task-list__pill--pending {
   background: color-mix(in srgb, var(--accent-warn) 22%, transparent);
-  color: #a25411;
-}
-.task-list__pill-final[data-status="ordered"] {
-  background: color-mix(in srgb, var(--accent-1) 14%, transparent);
-  color: var(--accent-1);
+  color: color-mix(in srgb, var(--accent-warn) 90%, #fff);
+  border-color: color-mix(in srgb, var(--accent-warn) 38%, transparent);
 }
 
-[data-theme="dark"] .task-list__pill-final[data-status="done"]    { color: #6ee5a3; }
-[data-theme="dark"] .task-list__pill-final[data-status="pending"] { color: #ffb86b; }
-
-/* Footnote — quiet line under the grid (e.g. "Done in 11 seconds"). */
 .task-list__foot {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--line);
-  font-size: 12.5px;
-  color: var(--ink-dim);
-  font-weight: 500;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-style: italic;
 }
-.task-list__foot strong { color: var(--ink); font-weight: 700; }
 
-@media (max-width: 640px) {
-  .task-list__head,
-  .task-list__row { grid-template-columns: 1fr 120px 100px; gap: 10px; }
-  .task-list__cell--agent { font-size: 12px; }
-}
-@media (max-width: 480px) {
-  .task-list__head,
+@media (max-width: 600px) {
   .task-list__row {
     grid-template-columns: 1fr;
     gap: 4px;
+    padding: 12px 0;
   }
-  .task-list__col--agent,
-  .task-list__col--status,
-  .task-list__head { display: none; }
-  .task-list__cell--agent::before {
-    content: "Agent · ";
+  .task-list__row--head { display: none; }
+  .task-list__cell { font-size: 13px; }
+  .task-list__agent::before {
+    content: "Agent: ";
     color: var(--ink-mute);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    font-weight: 700;
+    font-weight: 500;
   }
-  .task-list__cell--status { margin-top: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list__rows-wrap > .task-list__row,
+  .task-list__pill,
+  .task-list__pill--final {
+    transition: none;
+  }
 }

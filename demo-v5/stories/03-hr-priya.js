@@ -3,39 +3,37 @@
    -------------------------------------------------------------
    Persona: Priya Menon, HR Admin at TechCorp.
 
-   Beat
-     • Welcome hero — "Welcome, Priya! · Start with Agentic HR
-       Operations". One CTA + a composer that hints at the canonical
-       onboarding command.
-     • Priya types: "Onboard Rohan, PL-13234 …" → Jarvis acknowledges
-       and fans out to the Onboarding Orchestrator agent.
-     • Jarvis pulls the position listing, resolves role + start date,
-       then surfaces a hardware-approval card (the Mac Pro spec
-       exceeds the standard L4 budget).
-     • Priya taps Approve → 9 specialist agents execute in parallel.
-       The chat lands on a structured "task · agent · status" grid
-       with one row per delivered outcome.
-     • Closes with the punchline: 11 seconds, no tickets, no chasing.
+   Beat (chat-only — the home composer renders the welcome
+   greet + Priya's typed message; this chapter picks up the
+   moment Jarvis starts working):
+     • Two short status lines as the orchestrator pulls the
+       position listing and reads role requirements.
+     • Plain-English acknowledgement from Jarvis — "Got it,
+       I've kicked it off, here's what needs your eye…".
+     • Approval card — itemised hardware spec, total, rationale,
+       and three CTAs (Approve / Decline / Ask a question).
+     • Branches: decline → soft-close · ask → breakdown + re-ask
+       · approve → multi-agent fan-out grid.
+     • Task-list: 9 specialist agents executing in parallel,
+       progressive row reveal + status pills.
+     • Punchline: 11 seconds, no tickets, no chasing.
 
    The chapter uses two engine extensions added in app.js for v5:
      • `approval-card`  — rich approval surface with rationale,
-                          itemised cost breakdown, and three CTAs
-                          (Approve / Decline / Ask a question).
+                          itemised cost breakdown, and three CTAs.
      • `task-list`      — multi-row outcome grid with progressive
-                          row reveal and status pills, used to make
-                          the agent fan-out feel real-time.
+                          row reveal and status pills.
 
-   Side panel pages: none. The whole flow lives in the chat thread,
-   matching the "fullscreen chat" feel the v3 layout already gives
-   us when no `browser` step is played.
+   Side panel pages: none. The whole flow lives in the chat
+   thread on top of v4's IT-manager home shell (greet +
+   chiclets + composer + 3-card "today at a glance" strip).
    ============================================================= */
 
 (function () {
   // -----------------------------------------------------------------
-  // Chapter registration. Mirrors the shape v3's app.js expects:
-  // `id` (used by findChapter), `persona` (drives the welcome hero
-  // greet line + accent), `welcome` (cinematic hero copy), and
-  // `story` (the linear beat list runStory walks through).
+  // Chapter registration. v5's app.js looks up "hr-priya" via
+  // findChapter() from runHrChapter() (home composer / Onboard
+  // chiclet) and from startSetup() (#setup escape hatch).
   // -----------------------------------------------------------------
   const chapter = {
     id: "hr-priya",
@@ -102,41 +100,47 @@
           "Sharma → Activity), and a one-click revert undoes anything that " +
           "shouldn't have been provisioned (e.g. wrong team channel).",
       },
+      {
+        match: /approv|today|queue|wait/i,
+        answer:
+          "**4 items** are waiting for you today: Rohan's hardware (most " +
+          "time-sensitive — ships from Singapore), Vikram's I-9 counter-sign " +
+          "(work auth expires May 24), Maya's Workday admin grant, and " +
+          "Karthik's final-pay calculation. Open the **Awaiting your " +
+          "approval** card on the home to triage.",
+      },
+      {
+        match: /joiner|joining|next week|this week/i,
+        answer:
+          "**3 joiners** start Monday May 25: Rohan Sharma (Software " +
+          "Architect, Platform Eng), Aditi Rao (Senior Designer, Product), " +
+          "and Samir Khanna (Sr. FinOps Analyst). All three have logged " +
+          "into the pre-boarding portal; welcome kits dispatched; day-1 " +
+          "calendar invites scheduled for 9:30 AM IST.",
+      },
+      {
+        match: /policy|remote|hybrid|wfh/i,
+        answer:
+          "**Hybrid baseline** — 3 days in office in the first 90 days, " +
+          "then team-led after that. India-specific clauses: ergonomic " +
+          "stipend (₹15K) and a connectivity allowance (₹2K/mo) for fully " +
+          "remote arrangements. Platform Eng has a role-level exception " +
+          "for senior ICs hired into geo-distributed pods.",
+      },
     ],
 
-    // Cinematic welcome shown when the chapter loads.
-    //   • greeting + name → "Welcome, Priya!"
-    //   • titleLead/Tail → "Start with Agentic HR Operations"
-    //   • placeholder    → seeds the canonical command so a viewer
-    //                       grasps the demo's "ask" before the chat
-    //                       even starts. The composer's Send button
-    //                       (or Enter / the CTA) dismisses the hero
-    //                       and runStory moves on to the `begin`
-    //                       step which renders the user's typed line.
-    welcome: {
-      greeting: "Welcome,",
-      name: "Priya!",
-      titleLead: "Start with",
-      titleTail: "Agentic HR Operations",
-      cta: "Onboard a new hire",
-      placeholder:
-        "Try \u201cOnboard Rohan, PL-13234, he has accepted the offer letter.\u201d",
-      goto: "begin",
-    },
-
+    // -----------------------------------------------------------------
+    // Story — picks up *after* Priya has typed her message in the
+    // home composer. The home transition has already rendered the
+    // user bubble and torn down the welcome view, so this list
+    // starts directly with Jarvis's first move.
+    //
+    // Goto IDs in use: "approval", "declined", "ask-q", "execute",
+    // "soft-end". Branches converge on "soft-end" so the chapter
+    // always lands on a clean closing beat regardless of path.
+    // -----------------------------------------------------------------
     story: [
-      // 0 — Cinematic welcome hero. Engine renders the hero, waits for
-      //     a click on CTA / Send, then advances to "begin".
-      { type: "welcome", goto: "begin" },
-
-      // 1 — Priya's typed message. Replays the canonical command as a
-      //     user bubble so the chat reads as "Priya types → Jarvis
-      //     replies", regardless of what she actually typed in the
-      //     hero composer.
-      { id: "begin", type: "user",
-        text: "Onboard Rohan, PL-13234, he has accepted the offer letter." },
-
-      // 2 — Resolve the position listing. Two short status lines so
+      // 1 — Resolve the position listing. Two short status lines so
       //     the page feels alive while the orchestrator does its work.
       { type: "status",
         text: "Pulling Position Listing PL-13234",
@@ -148,11 +152,9 @@
         duration: 1100,
         doneText: "Start date · Monday, May 25 · Joining Platform Engineering" },
 
-      // 3 — Jarvis acknowledges in plain English. The "kicked off"
-      //     framing makes it clear the orchestrator has already
-      //     started fanning out to specialist agents in the
-      //     background — the approval card below is a *gate*, not a
-      //     start signal.
+      // 2 — Jarvis acknowledges in plain English. Frames the approval
+      //     card as a *gate* (not a start signal) — the orchestrator
+      //     has already begun fanning out under the hood.
       { type: "say",
         text:
           "Got it! I've kicked off **Rohan's** onboarding for **PL-13234** — Software Architect. " +
@@ -160,7 +162,7 @@
           "this role and routed an approval request to you. I'll keep you posted.",
         pause: 250 },
 
-      // 4 — Approval card. Itemised so Priya can audit at a glance,
+      // 3 — Approval card. Itemised so Priya can audit at a glance,
       //     three CTAs so she doesn't have to switch surfaces to ask
       //     a question.
       { id: "approval", type: "approval-card",
@@ -170,25 +172,28 @@
           "A new Software Architect (Rohan Sharma, PL-13234) joining May 25 " +
           "requires specialised hardware:",
         items: [
-          { label: "Mac Pro 14\" M3 Max", spec: "Apple silicon",       cost: "$2,800" },
-          { label: "32GB RAM upgrade",     spec: "Configure-to-order",  cost: "$200"   },
-          { label: "2× external monitors", spec: "27\" 4K, USB-C dock", cost: "$1,200" },
+          { label: "Mac Pro 14\" M3 Max",   spec: "Apple silicon",        cost: "$2,800" },
+          { label: "32GB RAM upgrade",        spec: "Configure-to-order",   cost: "$200"   },
+          { label: "2\u00d7 external monitors", spec: "27\" 4K, USB-C dock",  cost: "$1,200" },
         ],
         total: "$4,200",
-        reason:
-          "This exceeds the standard **$3,000** L4 hardware threshold. Approval " +
-          "routes the order; decline holds it pending an alternate spec.",
-        choices: [
-          { label: "Approve",         value: "approve",  primary: true,  goto: "execute"  },
-          { label: "Decline",         value: "decline",                  goto: "declined" },
-          { label: "Ask a question",  value: "ask",      tertiary: true, goto: "ask-q"    },
+        rationale:
+          "This exceeds the standard **$3,000** L4 hardware threshold. " +
+          "Approving releases the order to Procurement (ETA May 22); " +
+          "declining holds it pending an alternate spec.",
+        actions: [
+          { id: "approve", label: "Approve",        kind: "primary",   goto: "execute",
+            confirmation: "**Approved** \u2014 routed to Procurement. ETA May 22." },
+          { id: "decline", label: "Decline",        kind: "secondary", goto: "declined",
+            confirmation: "**Declined** \u2014 hardware order on hold pending an alternate spec." },
+          { id: "ask",     label: "Ask a question", kind: "tertiary",  goto: "ask-q" },
         ],
       },
 
       // ----- Decline branch ------------------------------------------------
       { id: "declined", type: "say",
         text:
-          "Understood — I've put the hardware order on hold and pinged " +
+          "Understood \u2014 I've put the hardware order on hold and pinged " +
           "**Procurement** to discuss alternate specs that fit the standard " +
           "L4 budget. I'll come back with options before EOD.",
         pause: 200 },
@@ -200,10 +205,10 @@
       // approve / decline / rescope without rewinding.
       { id: "ask-q", type: "say",
         text:
-          "Sure — here's the math:\n\n" +
-          "• **Mac Pro 14\" M3 Max** · $2,800\n" +
-          "• **32GB RAM upgrade** · $200\n" +
-          "• **2× external monitors** · $1,200\n\n" +
+          "Sure \u2014 here's the math:\n\n" +
+          "\u2022 **Mac Pro 14\" M3 Max** \u00b7 $2,800\n" +
+          "\u2022 **32GB RAM upgrade** \u00b7 $200\n" +
+          "\u2022 **2\u00d7 external monitors** \u00b7 $1,200\n\n" +
           "**Total $4,200**, against an L4 hardware budget of **$3,000**. " +
           "The $1,200 overage is driven entirely by the dual-monitor " +
           "requirement noted in the Software Architect role spec.",
@@ -212,41 +217,41 @@
       { type: "ask",
         text: "How would you like to proceed?",
         choices: [
-          { label: "Approve as-is",                  value: "approve",  primary: true, goto: "execute"  },
-          { label: "Approve, drop one monitor",      value: "rescope",                  goto: "execute"  },
-          { label: "Decline",                        value: "decline",                  goto: "declined" },
+          { label: "Approve as-is",             value: "approve", goto: "execute"  },
+          { label: "Approve, drop one monitor", value: "rescope", goto: "execute"  },
+          { label: "Decline",                   value: "decline", goto: "declined" },
         ],
       },
 
       // ----- Execute branch — multi-agent fan-out --------------------------
       { id: "execute", type: "say",
         text:
-          "Approved. Releasing the orchestrator — **9 agents** are picking " +
+          "Approved. Releasing the orchestrator \u2014 **9 agents** are picking " +
           "up the work in parallel.",
         pause: 200 },
 
-      // The structured "task · agent · status" grid. The engine reveals
-      // rows progressively (~120ms each) so the fan-out feels live.
+      // The structured "task · agent · status" grid. Rows reveal
+      // progressively (~220ms each) so the fan-out feels live. The
+      // pill animates from "Queued" to its final state mid-row.
       { type: "task-list",
-        eyebrow: "Onboarding Orchestrator · 9 agents",
+        eyebrow: "Onboarding Orchestrator \u00b7 9 agents",
         rows: [
-          { task: "Background check initiated",                                agent: "Compliance Agent",     status: "done" },
-          { task: "I-9 & tax forms sent",                                      agent: "HR Forms Agent",       status: "done" },
-          { task: "Mac Pro order placed",                                      agent: "Procurement Agent",    status: "done",     note: "ETA May 22" },
-          { task: "Workspace assigned — Desk 4B, Floor 2",                     agent: "Facilities Agent",     status: "done" },
-          { task: "Laptop enrolment in MDM",                                   agent: "IT Config Agent",      status: "pending",  note: "Pending delivery" },
-          { task: "Email ID created — rohan.sharma@techcorp.com",              agent: "Identity Agent",       status: "done" },
-          { task: "GitHub Enterprise access provisioned",                      agent: "Access Agent",         status: "done" },
-          { task: "AWS Dev credentials configured",                            agent: "Cloud Access Agent",   status: "done" },
-          { task: "Slack account created & added to #platform-eng",            agent: "Comms Agent",          status: "done" },
+          { task: "Background check initiated",                       agent: "Compliance Agent",   status: "done" },
+          { task: "I-9 & tax forms sent",                              agent: "HR Forms Agent",     status: "done" },
+          { task: "Mac Pro order placed",                              agent: "Procurement Agent",  status: "ordered", final: "Ordered \u2014 ETA May 22", sub: "Ships from Singapore facility" },
+          { task: "Workspace assigned \u2014 Desk 4B, Floor 2",        agent: "Facilities Agent",   status: "done" },
+          { task: "Laptop enrolment in MDM",                           agent: "IT Config Agent",    status: "pending", final: "Pending", sub: "Auto-enrols on first sign-in" },
+          { task: "Email ID created \u2014 rohan.sharma@techcorp.com", agent: "Identity Agent",     status: "done" },
+          { task: "GitHub Enterprise access provisioned",              agent: "Access Agent",       status: "done" },
+          { task: "AWS Dev credentials configured",                    agent: "Cloud Access Agent", status: "done" },
+          { task: "Slack account created & added to #platform-eng",   agent: "Comms Agent",        status: "done" },
         ],
-        // Reveal cadence + the headline number that lands once every
-        // row has completed.
-        revealMs: 120,
-        footnote: "Done in **11 seconds**.",
+        stagger: 220,
+        settle:  360,
+        footnote: "Done in **11 seconds** \u00b7 1 item pending delivery.",
       },
 
-      // 7 — Punchline. Quiet, in Priya's voice ("no tickets, no chasing").
+      // 4 — Punchline. Quiet, in Priya's voice ("no tickets, no chasing").
       { type: "say",
         text:
           "**No tickets. No back-and-forth emails. No chasing.**\n\n" +

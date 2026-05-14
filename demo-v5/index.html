@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jarvis · Agentic HR · Onboarding Day</title>
+  <title>Jarvis · Agentic HR Operations · Onboarding Day</title>
   <link rel="icon" type="image/png" href="assets/jarvis-mark.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,12 +34,9 @@
          SIDE NAV — Gemini-style.
          Sections, top → bottom:
            1. Hamburger (collapse / expand)
-           2. Workspace items, gated and intentionally hidden in v5 — the
-              fullscreen-chat experience doesn't need workspace surfaces.
-              The markup stays in place so the engine wiring is shared
-              with v3, but the items never reveal because the chapter
-              never calls `applySidenavGating({ animate: true })`.
-           3. Profile (Priya Menon · HR Admin)
+           2. Workspace items, gated until Setup completes:
+                Tower · Insight · Horizon (New) · Lens
+           3. Settings (active during Setup), Profile (inline below)
            4. Spacer
            5. Jarvis — pinned to the bottom. Click toggles the chat panel
               (open ↔ closed). This replaces the previous floating FAB.
@@ -103,15 +100,9 @@
           <span class="sidenav__label">Lens</span>
         </button>
 
-        <!-- Settings item is intentionally hidden in v5. The HR
-             onboarding chapter doesn't need a settings surface, and
-             showing a "Settings" tab with nothing behind it would be
-             chrome for chrome's sake. The element stays in the DOM so
-             the engine's `setActiveNavItem("settings")` calls remain
-             harmless no-ops, just like the other gated items. -->
-        <button class="sidenav__item is-locked"
+        <button class="sidenav__item is-active"
                 type="button" id="navSettings" data-nav="settings"
-                hidden>
+                aria-current="page">
           <span class="sidenav__icon" aria-hidden="true">
             <i class="icon icon--settings"></i>
           </span>
@@ -162,10 +153,18 @@
            ================================================================= -->
       <section class="stage" id="stage">
         <header class="stage__head" id="stageHead">
-          <!-- Trailing action group — history (left) + close (right).
-               History opens the chat-history drawer; close dismisses
-               the chat panel and hands the canvas to the right panel. -->
+          <!-- Trailing action group — new chat + history + close.
+               • New chat starts a fresh session and drops the user
+                 back on the welcome screen (clears the thread, closes
+                 the right panel, and re-renders the home view).
+               • History opens the chat-history drawer.
+               • Close dismisses the chat panel and hands the canvas
+                 to the right panel. -->
           <div class="stage__head-actions">
+            <button class="stage__head-icon stage__head-new" id="stageNewChat" type="button"
+                    title="Start a new chat" aria-label="Start a new chat">
+              <i class="icon icon--new-message" aria-hidden="true"></i>
+            </button>
             <button class="stage__head-icon stage__head-history" id="stageHistory" type="button"
                     title="Chat history" aria-label="Open chat history"
                     aria-pressed="false" aria-controls="chatHistory">
@@ -183,6 +182,15 @@
         </div>
 
         <div class="dock" id="dock">
+          <!-- Contextual chiclet rail — quick actions tied to the
+               page currently mounted in the right panel (e.g. "Add
+               Agent" / "Discover Agents" when Cockpit is open).
+               Reuses the home chiclet pill (.home__chiclet) so the
+               two surfaces share one design language. Populated by
+               app.js via renderDockChiclets(pageKey); the dock
+               override below hides the rail when empty. -->
+          <div class="home__chiclets dock-chiclets" id="dockChiclets"
+               role="group" aria-label="Quick actions"></div>
           <div class="whisper" id="whisper">
             <div class="whisper__row whisper__row--input">
               <input class="whisper__input" id="whisperInput"
@@ -285,8 +293,10 @@
        role="region" aria-live="polite"
        aria-label="System notifications"></div>
 
-  <!-- Story registry. v5 ships a single chapter: the HR onboarding
-       flow for Priya Menon at TechCorp. -->
+  <!-- Story registry. v5 ships a single chapter: the HR Admin's
+       onboarding-day flow (Priya · TechCorp). The home composer
+       routes onboarding intents into this chapter and falls back
+       to FAQ for everything else. -->
   <script src="stories/03-hr-priya.js"></script>
   <script src="app.js"></script>
 </body>

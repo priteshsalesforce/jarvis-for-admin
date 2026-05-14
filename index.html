@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jarvis · Proactive ITSM</title>
-  <link rel="icon" type="image/png" href="demo-v4/assets/jarvis-mark.png" />
-  <!-- The canonical demo lives in /demo-v4 so the chapter stories,
+  <link rel="icon" type="image/png" href="demo-v6/assets/jarvis-mark.png" />
+  <!-- The canonical demo lives in /demo-v6 so the chapter stories,
        assets, and styles can stay together as one self-contained
        experience. This root page just bounces visitors there so the
        Pages URL `priteshsalesforce.github.io/jarvis-for-admin/`
@@ -18,11 +18,11 @@
        which is what the in-app router needs to deep-link straight
        into a chapter. <noscript> users get a manual link instead. -->
   <script>
-    // Forward to the demo. We append `location.hash` so per-persona
-    // share links (e.g. `…/#admin`, `…/#cto`) survive the redirect
-    // and land Sarah/Vikram/etc. directly in their chapter. Using
-    // `replace()` keeps this bouncer out of the back stack.
-    window.location.replace("demo-v4/" + window.location.search + window.location.hash);
+    // Forward to the v6 demo. We append `location.hash` so any
+    // share link (e.g. `…/#lens`, `…/#workitem`) survives the
+    // redirect and lands the viewer directly on the right surface.
+    // Using `replace()` keeps this bouncer out of the back stack.
+    window.location.replace("demo-v6/" + window.location.search + window.location.hash);
   </script>
   <noscript>
     <meta http-equiv="refresh" content="0; url=demo-v4/" />
@@ -75,7 +75,7 @@
     <div class="mark" aria-hidden="true"></div>
     <h1>Jarvis · Proactive ITSM</h1>
     <p>Loading the demo…</p>
-    <a class="btn" href="demo-v4/">Open the demo</a>
+    <a class="btn" href="demo-v6/">Open the demo</a>
   </div>
 </body>
 </html>

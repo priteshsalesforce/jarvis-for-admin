@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvis · The Lens · IT Manager (John)</title>
+  <link rel="icon" type="image/png" href="assets/jarvis-mark.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("jarvis-theme");
+        if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body>
+  <!-- Ambient background orb glow -->
+  <div class="bg-orb bg-orb--a"></div>
+  <div class="bg-orb bg-orb--b"></div>
+
+  <!-- ======================================================================
+       APP SHELL — left sidenav + main workspace.
+       The sidenav is the only persistent global chrome (no topbar). It
+       collapses to an icon rail and expands to show labels + chat sessions.
+       ====================================================================== -->
+  <div class="app-shell" id="appShell">
+
+    <!-- =====================================================================
+         SIDE NAV — Gemini-style.
+         Sections, top → bottom:
+           1. Hamburger (collapse / expand)
+           2. Workspace items, gated until Setup completes:
+                Tower · Insight · Horizon (New) · Lens
+           3. Settings (active during Setup), Profile (inline below)
+           4. Spacer
+           5. Jarvis — pinned to the bottom. Click toggles the chat panel
+              (open ↔ closed). This replaces the previous floating FAB.
+         ===================================================================== -->
+    <aside class="sidenav" id="sidenav"
+           data-collapsed="false"
+           role="navigation"
+           aria-label="Primary navigation">
+
+      <!-- Header: hamburger -->
+      <div class="sidenav__head">
+        <button class="sidenav__hamburger" id="navToggle" type="button"
+                aria-label="Collapse sidebar" aria-expanded="true"
+                aria-controls="sidenav">
+          <i class="icon icon--hamburger" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <!-- Workspace items.
+           Tower / Insight / Horizon / Lens start with `is-locked` which
+           hides them until the IT admin completes Setup; the JS strips
+           that class on `setup complete` and the items reveal in place.
+           Settings is the only nav item visible during Setup, and it's
+           marked active for the entire flow. Profile sits inline below
+           Settings (always visible). -->
+      <nav class="sidenav__group" aria-label="Workspace">
+        <button class="sidenav__item is-locked"
+                type="button" id="navTower" data-nav="tower"
+                hidden>
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--tower"></i>
+          </span>
+          <span class="sidenav__label">Tower</span>
+        </button>
+
+        <button class="sidenav__item is-locked"
+                type="button" id="navInsight" data-nav="insight"
+                hidden>
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--insight"></i>
+          </span>
+          <span class="sidenav__label">Insight</span>
+        </button>
+
+        <button class="sidenav__item is-locked"
+                type="button" id="navHorizon" data-nav="horizon"
+                hidden>
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--horizon"></i>
+          </span>
+          <span class="sidenav__label">Horizon</span>
+        </button>
+
+        <button class="sidenav__item is-locked"
+                type="button" id="navLens" data-nav="lens"
+                hidden>
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--lens"></i>
+          </span>
+          <span class="sidenav__label">Lens</span>
+        </button>
+
+        <button class="sidenav__item is-active"
+                type="button" id="navSettings" data-nav="settings"
+                aria-current="page">
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--settings"></i>
+          </span>
+          <span class="sidenav__label">Settings</span>
+        </button>
+
+        <button class="sidenav__item"
+                type="button" id="navProfile" data-nav="profile"
+                aria-label="Open your profile · John Mathew, IT Manager">
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--profile"></i>
+          </span>
+          <span class="sidenav__label">Profile</span>
+        </button>
+      </nav>
+
+      <!-- Spacer: flex-grows to push Jarvis to the bottom of the rail -->
+      <div class="sidenav__spacer" aria-hidden="true"></div>
+
+      <!-- Jarvis — pinned bottom. Click toggles the chat panel open/closed.
+           Replaces the previous floating FAB so the chat affordance lives
+           in the same rail as the rest of the navigation. -->
+      <div class="sidenav__foot">
+        <button class="sidenav__jarvis" id="navJarvis" type="button"
+                title="Open Jarvis"
+                aria-label="Open Jarvis chat panel"
+                aria-pressed="true">
+          <span class="sidenav__jarvis-mark" aria-hidden="true">
+            <img src="assets/jarvis-mark.png" alt="" />
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- =====================================================================
+         WORKSPACE — chat thread + side-panel browser.
+         The setup chapter auto-runs on first paint (welcome hero → setup
+         story). The whisper bar in the dock stays visible throughout so the
+         IT admin can interrupt to ask Jarvis a question.
+         ===================================================================== -->
+    <main class="workspace" id="workspace">
+      <!-- =================================================================
+           CHAT PANEL — the stage holds the Jarvis thread + whisper composer.
+           Its compact header carries a Jarvis avatar (decorative anchor)
+           and a close button. The X collapses the panel into a floating
+           Jarvis FAB so the user can keep working in the workspace pages
+           without the chat taking up screen real estate.
+           ================================================================= -->
+      <section class="stage" id="stage">
+        <header class="stage__head" id="stageHead">
+          <!-- Trailing action group — new chat + history + close.
+               • New chat starts a fresh session and drops the user
+                 back on the welcome screen (clears the thread, closes
+                 the right panel, and re-renders the home view).
+               • History opens the chat-history drawer.
+               • Close dismisses the chat panel and hands the canvas
+                 to the right panel. -->
+          <div class="stage__head-actions">
+            <button class="stage__head-icon stage__head-new" id="stageNewChat" type="button"
+                    title="Start a new chat" aria-label="Start a new chat">
+              <i class="icon icon--new-message" aria-hidden="true"></i>
+            </button>
+            <button class="stage__head-icon stage__head-history" id="stageHistory" type="button"
+                    title="Chat history" aria-label="Open chat history"
+                    aria-pressed="false" aria-controls="chatHistory">
+              <i class="icon icon--history" aria-hidden="true"></i>
+            </button>
+            <button class="stage__head-icon stage__head-close" id="stageClose" type="button"
+                    title="Close chat" aria-label="Close chat panel" aria-expanded="true">
+              <i class="icon icon--close" aria-hidden="true"></i>
+            </button>
+          </div>
+        </header>
+
+        <div class="stage__main" id="stageMain">
+          <div class="thread" id="thread"></div>
+        </div>
+
+        <div class="dock" id="dock">
+          <!-- Contextual chiclet rail — quick actions tied to the
+               page currently mounted in the right panel (e.g. "Add
+               Agent" / "Discover Agents" when Cockpit is open).
+               Reuses the home chiclet pill (.home__chiclet) so the
+               two surfaces share one design language. Populated by
+               app.js via renderDockChiclets(pageKey); the dock
+               override below hides the rail when empty. -->
+          <div class="home__chiclets dock-chiclets" id="dockChiclets"
+               role="group" aria-label="Quick actions"></div>
+          <div class="whisper" id="whisper">
+            <div class="whisper__row whisper__row--input">
+              <input class="whisper__input" id="whisperInput"
+                     placeholder="Ask Jarvis anything…"
+                     aria-label="Ask Jarvis a question" />
+            </div>
+            <div class="whisper__row whisper__row--actions">
+              <div class="whisper__actions whisper__actions--left">
+                <button class="whisper__icon" type="button" title="Add attachment" aria-label="Add attachment">
+                  <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
+                    <path d="M9.0769 8.80767H13.5192C13.7346 8.80767 13.9231 8.61921 13.9231 8.40383V7.59614C13.9231 7.38075 13.7346 7.19229 13.5192 7.19229H9.0769C8.91537 7.19229 8.80767 7.0846 8.80767 6.92306V2.48075C8.80767 2.26537 8.61921 2.0769 8.40383 2.0769H7.59614C7.38075 2.0769 7.19229 2.26537 7.19229 2.48075V6.92306C7.19229 7.0846 7.0846 7.19229 6.92306 7.19229H2.48075C2.26537 7.19229 2.0769 7.38075 2.0769 7.59614V8.40383C2.0769 8.61921 2.26537 8.80767 2.48075 8.80767H6.92306C7.0846 8.80767 7.19229 8.91537 7.19229 9.0769V13.5192C7.19229 13.7346 7.38075 13.9231 7.59614 13.9231H8.40383C8.61921 13.9231 8.80767 13.7346 8.80767 13.5192V9.0769C8.80767 8.91537 8.91537 8.80767 9.0769 8.80767Z"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="whisper__actions whisper__actions--right">
+                <button class="whisper__icon whisper__mic" type="button" title="Voice input" aria-label="Voice input">
+                  <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
+                    <path d="M11.9899 5.90001C11.8228 5.90001 11.6626 5.96639 11.5444 6.08454C11.4263 6.20268 11.3599 6.36293 11.3599 6.53001V7.58001C11.3599 9.42801 9.84788 10.94 7.99988 10.94C6.15188 10.94 4.63988 9.42801 4.63988 7.58001V6.53001C4.63988 6.17301 4.36688 5.90001 4.00988 5.90001C3.65288 5.90001 3.37988 6.17301 3.37988 6.53001V7.58001C3.3796 8.69638 3.78356 9.77508 4.51705 10.6167C5.25054 11.4583 6.26395 12.0058 7.36988 12.158V13.04H6.31988C5.96288 13.04 5.68988 13.313 5.68988 13.67C5.68988 14.027 5.96288 14.3 6.31988 14.3H9.67988C10.0369 14.3 10.3099 14.027 10.3099 13.67C10.3099 13.313 10.0369 13.04 9.67988 13.04H8.62988V12.158C9.73582 12.0058 10.7492 11.4583 11.4827 10.6167C12.2162 9.77508 12.6202 8.69638 12.6199 7.58001V6.53001C12.6199 6.36293 12.5535 6.20268 12.4354 6.08454C12.3172 5.96639 12.157 5.90001 11.9899 5.90001ZM7.99988 9.68001C8.55684 9.68001 9.09098 9.45876 9.48481 9.06494C9.87863 8.67111 10.0999 8.13697 10.0999 7.58001V3.77901C10.0999 3.22763 9.88085 2.69883 9.49096 2.30894C9.10107 1.91905 8.57227 1.70001 8.02088 1.70001H7.97888C7.4275 1.70001 6.8987 1.91905 6.50881 2.30894C6.11892 2.69883 5.89988 3.22763 5.89988 3.77901V7.58001C5.89988 8.13697 6.12113 8.67111 6.51496 9.06494C6.90879 9.45876 7.44293 9.68001 7.99988 9.68001Z"/>
+                  </svg>
+                </button>
+                <button class="whisper__send" id="whisperSend" type="button" title="Send" aria-label="Send">
+                  <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" clip-rule="evenodd"
+                          d="M1.5655 12.9808L2.75011 8.59229H7.7578C7.89242 8.59229 8.02704 8.45767 8.02704 8.32306V7.7846C8.02704 7.64998 7.89242 7.51537 7.7578 7.51537H2.75011L1.59242 3.20767C1.5655 3.15383 1.53857 3.07306 1.53857 2.99229C1.53857 2.80383 1.72704 2.61537 1.94242 2.64229C1.99627 2.64229 2.02319 2.66921 2.07704 2.66921L14.1924 7.64998C14.354 7.70383 14.4617 7.86537 14.4617 8.0269C14.4617 8.18844 14.354 8.32306 14.2193 8.3769L2.07704 13.4923C2.02319 13.5192 1.96934 13.5192 1.9155 13.5192C1.70011 13.4923 1.53857 13.3308 1.53857 13.1154C1.53857 13.0615 1.53857 13.0346 1.5655 12.9808Z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- =============================================================
+             Chat-history drawer — slides over the thread + dock when
+             the user clicks the history icon in the stage header. The
+             stage header itself stays visible so the icon doubles as a
+             toggle (re-click to close). Rendered client-side from a
+             demo data array in app.js; in production this would be the
+             paginated list of past Jarvis conversations.
+             ============================================================= -->
+        <aside class="chat-history" id="chatHistory" aria-hidden="true" aria-label="Chat history">
+          <header class="chat-history__head">
+            <!-- Inline search replaces the static title — at this point in
+                 the flow the panel is unmistakably "history" (the icon's
+                 pressed-state already says so), and search is what the user
+                 actually came to do once the list grows past a screenful. -->
+            <label class="chat-history__search" for="chatHistorySearch">
+              <svg class="chat-history__search-icon" viewBox="0 0 16 16"
+                   width="14" height="14" fill="none" stroke="currentColor"
+                   stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                <circle cx="7" cy="7" r="4.5"/>
+                <path d="M10.4 10.4 13.5 13.5"/>
+              </svg>
+              <input id="chatHistorySearch" type="search" autocomplete="off"
+                     class="chat-history__search-input"
+                     placeholder="Search history"
+                     aria-label="Search chat history"/>
+            </label>
+            <div class="chat-history__head-actions">
+              <button class="chat-history__filter" type="button"
+                      aria-label="Filter chat history" title="Filter">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none"
+                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                     aria-hidden="true">
+                  <path d="M2.5 4h11M4.5 8h7M6.5 12h3"/>
+                </svg>
+                <svg viewBox="0 0 12 12" width="9" height="9" fill="currentColor"
+                     aria-hidden="true">
+                  <path d="M6 8.6 2.2 4.8 3 4l3 3 3-3 .8.8L6 8.6Z"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+          <div class="chat-history__body" id="chatHistoryBody" role="list">
+            <!-- Rendered by app.js (renderChatHistory). -->
+          </div>
+        </aside>
+      </section>
+
+      <!-- =================================================================
+           RIGHT-SIDE PANEL — workspace pages mount here (Tower, Insight,
+           Horizon, Lens, plus the in-story Splunk auth / ITSM bootstrap
+           pages). Pure surface: no chrome, no title bar, no close icon.
+           When the user dismisses the chat (X in the chat header, or a
+           tap on the sidenav Jarvis tile), the chat column collapses
+           and this panel takes the entire workspace canvas.
+           ================================================================= -->
+      <aside class="sidepanel" id="sidepanel" aria-hidden="true" inert>
+        <div class="browser">
+          <div class="browser__viewport" id="browserViewport"></div>
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+  <!-- Director's notes stack — fixed bottom-right, for quiet inline
+       toasts (e.g. "Setup complete — Cockpit unlocked"). Lives outside
+       the app shell so it floats over both sidenav + workspace. -->
+  <div class="director-stack" id="directorStack"
+       role="region" aria-live="polite"
+       aria-label="System notifications"></div>
+
+  <!-- Story registry. v6 ships a single chapter: the IT Manager's
+       Lens flow (John · IndiaFirst Bank). The Lens page lists every
+       work item handled by John's digital agents; clicking a row
+       drills into the orchestration timeline (KYC → CIBIL → Account
+       check → Sanction → Sanction letter). -->
+  <script src="stories/04-it-john.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

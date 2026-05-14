@@ -6690,22 +6690,26 @@ section.lobby[hidden]  { display: none; }
 
 /* Live activity row
    ----------------------------------------------------------
-   Sits at the bottom of the timeline whenever an agent is
-   mid-action. Stronger pulse than `is-latest`, accent-tinted
-   verb chip, and three bouncing dots that read as "typing".
-   Three semantic states are styled:
+   Sits at the TOP of the timeline (newest-first ordering)
+   whenever an agent is mid-action. Stronger pulse than
+   `is-latest`, accent-tinted verb chip, and three bouncing
+   dots that read as "typing". Three semantic states are styled:
      · working  → typing dots animate, dot pulses fast
      · waiting  → no typing dots, dot pulses slow
-     · handoff  → muted neutral chip, dot pulses slow */
+     · handoff  → muted neutral chip, dot pulses slow
+
+   Padding + border-bottom give it a clean separator from the
+   first settled entry below; no top margin since it's already
+   at the top of the panel. */
 .inc-timeline__live {
   --agent-tone: #8b94b3;
   display: grid;
   grid-template-columns: 52px 14px minmax(0, 1fr);
   gap: 8px 10px;
-  padding: 12px 0 4px;
-  margin-top: 4px;
+  padding: 4px 0 12px;
+  margin-bottom: 4px;
   align-items: flex-start;
-  border-top: none;
+  border-bottom: 1px solid var(--line);
   animation: incEntryIn .35s ease both;
 }
 .inc-timeline__at--live {

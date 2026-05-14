@@ -2228,6 +2228,36 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
+    // Timeline timestamp helpers ----------------------------------
+    // Phase entries record their offset from the incident detection
+    // ("+0s", "+2s", "+1m" …). The agent timeline shows real wall-
+    // clock times instead, anchored to a fixed demo base time so the
+    // sequence is reproducible across sessions and reads like an
+    // actual incident log (13:14:01 IST · 13:14:03 IST · …) rather
+    // than a stopwatch.
+    //
+    // 13:14:01 IST is chosen because the narration claims build
+    // v3.7.1 went live at 09:02 IST and the SLA breach was caught
+    // 4h 12m later — so detection lands at ~13:14.
+    const incBaseTimeMs = (() => {
+      const d = new Date();
+      d.setHours(13, 14, 1, 0);
+      return d.getTime();
+    })();
+    const formatIncAt = (rel) => {
+      // Accepts "+0s", "+12s", "+1m", "+1m30s" — resilient to authors
+      // mixing m and s in the same offset. Falls back to the raw
+      // string if the pattern doesn't match (e.g. legacy "Now").
+      const m = String(rel || "").match(/^\+(?:(\d+)m)?(?:(\d+)s)?$/);
+      if (!m) return String(rel || "");
+      const secs = (parseInt(m[1] || "0", 10) * 60) + parseInt(m[2] || "0", 10);
+      const t = new Date(incBaseTimeMs + secs * 1000);
+      const hh = String(t.getHours()).padStart(2, "0");
+      const mm = String(t.getMinutes()).padStart(2, "0");
+      const ss = String(t.getSeconds()).padStart(2, "0");
+      return `${hh}:${mm}:${ss}`;
+    };
+
     function renderPhases(snap) {
       const host = panel.querySelector("#incStatusPhases");
       if (!host) return;
@@ -2269,16 +2299,24 @@
         ? (snap.agents[snap.activity.agent] || { tone: "#8b94b3", role: "" })
         : null;
 
-      const entriesHtml = snap.timeline.map((e, idx) => {
+      // Newest-first ordering: with reverse chronological order the
+      // most recent activity is always at the top of the panel and
+      // older context streams downward. snap.timeline is kept in
+      // chronological order (other surfaces — graph, summary —
+      // depend on that), so we reverse a copy at render time.
+      const orderedTimeline = snap.timeline.slice().reverse();
+
+      const entriesHtml = orderedTimeline.map((e, idx) => {
         const agent = snap.agents[e.agent] || { tone: "#8b94b3", role: "" };
         // The "latest" pulse is for when nothing further is happening.
         // While the live activity row is visible, IT carries the pulse,
-        // so the most recent entry should read as settled.
-        const isLatest = !showLive && idx === snap.timeline.length - 1;
+        // so the most recent entry should read as settled. With the
+        // reversed list, the most recent entry is at idx 0.
+        const isLatest = !showLive && idx === 0;
         return `
           <li class="inc-timeline__entry${isLatest ? " is-latest" : ""}"
               style="--agent-tone:${agent.tone}">
-            <span class="inc-timeline__at">${escI(e.at)}</span>
+            <span class="inc-timeline__at">${escI(formatIncAt(e.at))}</span>
             <span class="inc-timeline__dot" aria-hidden="true"></span>
             <div class="inc-timeline__body">
               <div class="inc-timeline__agent">${escI(e.agent)}</div>
@@ -2289,10 +2327,11 @@
       }).join("");
 
       // Live activity row — what an agent is doing RIGHT NOW.
-      // Stays at the bottom of the list, has a pulsing dot, a verb
-      // chip, and three typing dots. For "waiting" / "handoff" states
-      // the typing dots are suppressed (see CSS) so the row reads as
-      // paused vs. actively working.
+      // With the reversed list, "Now" is the newest beat and goes
+      // at the TOP of the timeline (above the most recent settled
+      // entry). For "waiting" / "handoff" states the typing dots
+      // are suppressed (see CSS) so the row reads as paused vs.
+      // actively working.
       const liveHtml = showLive ? `
         <li class="inc-timeline__live inc-timeline__live--${escI(snap.activity.state || "working")}"
             role="status" aria-live="polite"
@@ -2312,7 +2351,7 @@
         </li>
       ` : "";
 
-      list.innerHTML = entriesHtml + liveHtml;
+      list.innerHTML = liveHtml + entriesHtml;
 
       if (count) {
         count.textContent = `${snap.timeline.length} entr${snap.timeline.length === 1 ? "y" : "ies"}`;
@@ -2335,13 +2374,16 @@
         }
       }
 
-      // Scroll to the latest item only when a new entry actually
+      // Scroll to the newest item only when a new entry actually
       // appended (not on activity refreshes), so the live row stays
-      // in view without fighting the user's scroll position.
+      // in view without fighting the user's scroll position. With
+      // newest-first ordering, the freshest beat is the first
+      // child (the live "Now" row when present, otherwise the
+      // top settled entry).
       if (snap.timeline.length > previousEntries) {
-        const lastEl = list.lastElementChild;
-        if (lastEl && typeof lastEl.scrollIntoView === "function") {
-          lastEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        const firstEl = list.firstElementChild;
+        if (firstEl && typeof firstEl.scrollIntoView === "function") {
+          firstEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
       }
     }

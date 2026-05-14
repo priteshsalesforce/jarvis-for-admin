@@ -1371,7 +1371,9 @@
       // ----- Agents ------------------------------------------------------
       // `barRisk` >= SLA_THRESHOLD shows the card as "At risk". All other
       // status badges are silenced — the bar + colour is enough.
-      const agents = [
+      // `let` (not `const`) so the Add Agent wizard can `unshift` a new
+      // agent into the list when the user confirms creation.
+      let agents = [
         { name: "RemediationAgent", level: "L3", instances: 3, domain: "reliability",
           body: "Watching checkout-api; deferred 1 rollback to a human.",
           trust: 90, trend: "down", load: 0.46, barRisk: 22, tone: "cool", status: "new" },
@@ -1462,7 +1464,7 @@
           <div class="signoff__actions">
             <button class="signoff__btn signoff__btn--approve" type="button"
                     data-signoff-action="approve" data-signoff-id="${esc(s.id)}">
-              <span aria-hidden="true">${ICON_CHECK}</span> Approve
+              ${ICON_CHECK}<span class="signoff__btn-label">Approve</span>
             </button>
             <button class="signoff__btn signoff__btn--defer" type="button"
                     data-signoff-action="defer" data-signoff-id="${esc(s.id)}">Defer</button>
@@ -1591,8 +1593,20 @@
                   <h2 class="cockpit__section-title">AI Agents</h2>
                   <span class="cockpit__section-stat">25 agents · 23 active · 1 outlier</span>
                 </div>
-                <button class="cockpit__see" type="button"
-                        data-cockpit-action="see-all-agents">See all</button>
+                <div class="cockpit__section-actions">
+                  <button class="cockpit__add" type="button"
+                          data-cockpit-action="add-agent"
+                          aria-label="Add a new agent">
+                    <svg viewBox="0 0 16 16" width="12" height="12" fill="none"
+                         stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 3v10M3 8h10"/>
+                    </svg>
+                    <span>Add Agent</span>
+                  </button>
+                  <button class="cockpit__see" type="button"
+                          data-cockpit-action="see-all-agents">See all</button>
+                </div>
               </header>
               <div class="cockpit__chips" role="tablist" aria-label="Filter by domain">
                 ${domains.map(renderDomainChip).join("")}
@@ -1733,18 +1747,29 @@
       }
       wireMoreActions();
 
-      // Section "See all" links
+      // Section header CTAs ("See all" links + "Add Agent")
       panel.querySelectorAll("[data-cockpit-action]").forEach((el) => {
         // Skip ones already wired (signoff actions, more buttons)
         if (el.dataset.wired === "1") return;
         const action = el.getAttribute("data-cockpit-action");
-        if (!["see-all-agents", "see-all-team"].includes(action)) return;
+        if (!["see-all-agents", "see-all-team", "add-agent"].includes(action)) return;
         el.dataset.wired = "1";
         el.addEventListener("click", (ev) => {
           ev.preventDefault();
+          if (action === "add-agent") {
+            // Kicks off the conversational Add Agent wizard in the
+            // chat panel. `__startAddAgent` is exposed by app.js;
+            // it's the same entry point as the dock chiclet.
+            if (typeof window.__startAddAgent === "function") {
+              window.__startAddAgent();
+            } else {
+              note("Add a new agent — opening the agent builder.");
+            }
+            return;
+          }
           const msg = {
-            "see-all-agents":   "Showing all 25 agents across the 4 ITXM domains.",
-            "see-all-team":     "Opening the full rotation — 4 on shift, 3 active."
+            "see-all-agents": "Showing all 25 agents across the 4 ITXM domains.",
+            "see-all-team":   "Opening the full rotation — 4 on shift, 3 active.",
           }[action];
           if (msg) note(msg);
         });
@@ -1768,6 +1793,49 @@
       }
       wireAgentCards();
 
+      // Targeted update for the "AI Agents" KPI value — used when the
+      // Add Agent wizard adds a new agent. Locates the KPI card by
+      // its label, parses the current number, applies delta. Live
+      // count stays in sync with the actual `agents.length`.
+      const bumpAgentKpi = (delta) => {
+        const labels = panel.querySelectorAll(".kpi__label");
+        for (const lbl of labels) {
+          if ((lbl.textContent || "").trim() === "AI Agents") {
+            const val = lbl.parentElement?.querySelector(".kpi__value");
+            if (!val) return;
+            const cur = parseInt((val.textContent || "0").replace(/[^\d-]/g, ""), 10) || 0;
+            val.textContent = String(cur + delta);
+            return;
+          }
+        }
+      };
+
+      // Subscribe to the Add Agent wizard's commit event. The chat
+      // side dispatches this on the sidepanel after the user clicks
+      // "Create agent" in the preview card. We unshift the new agent
+      // so it lands at the top with the existing "New" badge, and
+      // reset the domain filter so the user sees it regardless of
+      // what they had selected.
+      const sidepanel = panel.closest(".sidepanel") || panel.parentNode;
+      const onAddAgent = (e) => {
+        const a = (e && e.detail) || null;
+        if (!a || !a.name) return;
+        agents.unshift({
+          name:  a.name,
+          level: a.level || "L2",
+          instances: 1,
+          domain: a.domain || "reliability",
+          body:  a.body  || "New agent — warming up.",
+          trust: 88, trend: "flat", load: 0.05, barRisk: 5,
+          tone:  "cool", status: "new",
+        });
+        activeDomain = "all";
+        rerenderChips();
+        rerenderAgents();
+        bumpAgentKpi(+1);
+      };
+      sidepanel.addEventListener("cockpit:add-agent", onAddAgent);
+
       // "Updated X ago" auto-tick. Self-cleans when the panel is unmounted.
       const tickUpdated = () => {
         const rel = panel.querySelector("[data-cockpit-updated-rel]");
@@ -1776,16 +1844,618 @@
       const updatedTimer = setInterval(() => {
         if (!panel.querySelector("[data-cockpit-updated-rel]")) {
           clearInterval(updatedTimer);
+          // Cockpit is gone — release the sidepanel listener so
+          // re-mounting the cockpit doesn't pile up stale handlers.
+          sidepanel.removeEventListener("cockpit:add-agent", onAddAgent);
           return;
         }
         tickUpdated();
       }, 15000);
     }
   };
+  // -----------------------------------------------------------------
+  // v4 chiclet destinations
+  // -----------------------------------------------------------------
+  // Light right-panel pages mounted when John taps a home chiclet:
+  //   • approvals   — full queue of items awaiting his decision
+  //   • incidents   — last 7 days, scoped to IndiaFirst Bank services
+  //   • healthcheck — live status across the critical service set
+  //
+  // Each one is intentionally self-contained (own escape helper, own
+  // data array, own render fns) so it stays readable next to the
+  // much bigger cockpit factory above.
+  // -----------------------------------------------------------------
+  const escV4 = (s) => String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+  pages.approvals = (panel) => {
+    // Approvals queue — the home strip showed 3 of these; this page
+    // is the full list with one extra deferred item for context.
+    const APPROVALS = [
+      {
+        id: "appr-1", risk: "high",
+        agent: "RemediationAgent",  deadline: "in 12 min",
+        action: "Roll back payments-gateway to v2.4.1",
+        rationale: "Latency p95 climbed to 1.4s after the v2.4.3 deploy. Rolling back restores known-good performance and unblocks the end-of-day batch.",
+        impact: "~340 merchants affected · 12 active checkouts will retry once.",
+      },
+      {
+        id: "appr-2", risk: "medium",
+        agent: "ChangeAgent", deadline: "by 18:00 IST",
+        action: "Postpone Saturday's onboarding launch — clashes with the core-banking patch",
+        rationale: "Saturday's onboarding flow touches core-banking, which is in a maintenance window 04:00–06:00 IST that morning.",
+        impact: "Reschedules 1,200 onboarding invites by 24 hours.",
+      },
+      {
+        id: "appr-3", risk: "high",
+        agent: "PatchAgent", deadline: "tonight 02:00 IST",
+        action: "Emergency patch for core-banking — fix the connection-pool leak",
+        rationale: "ComplianceAgent caught a memory leak in build 8.4.1 that breaches the 99.95% SLO under load.",
+        impact: "10-minute brownout during apply. Affects net-banking and ATM.",
+      },
+      {
+        id: "appr-4", risk: "low",
+        agent: "AccessAgent", deadline: "by Fri",
+        action: "Grant Wispr Flow access to 3 treasury-ops users",
+        rationale: "Three treasury analysts requested Wispr; their manager pre-approved. ComplianceAgent confirmed no separation-of-duty conflict.",
+        impact: "License headroom: 47 of 60 seats still available.",
+      },
+    ];
+
+    panel.innerHTML = `
+      <div class="page v4-page v4-page--approvals">
+        <header class="v4-page__head">
+          <div>
+            <div class="v4-page__eyebrow">Today's queue</div>
+            <h2 class="v4-page__title">Approvals waiting on you</h2>
+            <p class="v4-page__lead">
+              ${APPROVALS.length} items, sorted by deadline. Approve to release the agent's
+              plan, defer to buy 24 hours, or reject to send it back.
+            </p>
+          </div>
+          <div class="v4-page__head-actions">
+            <button class="v4-btn v4-btn--ghost" type="button" data-v4-action="filter">Filter</button>
+          </div>
+        </header>
+        <ul class="v4-approvals-list">
+          ${APPROVALS.map((a) => `
+            <li class="v4-approval signoff" data-risk="${escV4(a.risk)}" data-signoff-id="${escV4(a.id)}">
+              <div class="signoff__row">
+                <span class="signoff__risk signoff__risk--${escV4(a.risk)}">${escV4(a.risk)}</span>
+                <span class="signoff__agent">${escV4(a.agent)}</span>
+                <span class="signoff__deadline">${escV4(a.deadline)}</span>
+              </div>
+              <p class="signoff__action">${escV4(a.action)}</p>
+              <div class="v4-approval__meta">
+                <div class="v4-approval__rationale">
+                  <strong>Why:</strong> ${escV4(a.rationale)}
+                </div>
+                <div class="v4-approval__impact">
+                  <strong>Impact:</strong> ${escV4(a.impact)}
+                </div>
+              </div>
+              <div class="signoff__actions">
+                <button class="signoff__btn signoff__btn--approve" type="button"
+                        data-v4-action="approve" data-id="${escV4(a.id)}">Approve</button>
+                <button class="signoff__btn signoff__btn--defer" type="button"
+                        data-v4-action="defer" data-id="${escV4(a.id)}">Defer 24h</button>
+                <button class="signoff__btn signoff__btn--reject" type="button"
+                        data-v4-action="reject" data-id="${escV4(a.id)}">Reject</button>
+              </div>
+            </li>
+          `).join("")}
+        </ul>
+      </div>
+    `;
+
+    panel.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-v4-action]");
+      if (!btn) return;
+      const action = btn.getAttribute("data-v4-action");
+      if (action === "filter") {
+        window.directorNote?.({ title: "Filters", text: "Filter UI lands in Phase 2." });
+        return;
+      }
+      const card = btn.closest(".v4-approval");
+      if (!card) return;
+      const label = card.querySelector(".signoff__action")?.textContent?.trim() || "Sign-off";
+      card.setAttribute("data-state", action);
+      window.directorNote?.({
+        title:
+          action === "approve" ? "Approved" :
+          action === "defer"   ? "Deferred 24h"  :
+                                 "Rejected",
+        text: label,
+        autoDismiss: 2400,
+      });
+    });
+  };
+
+  pages.incidents = (panel) => {
+    // 7-day incident log scoped to IndiaFirst Bank services. Each row
+    // can drill into a detailed agent timeline (Phase 2 feature —
+    // for now clicking the row pings a director note).
+    const INCIDENTS = [
+      { date: "Today 09:14", service: "payments-gateway",   sev: "P1", title: "Payments slowing down during the end-of-day batch", status: "open",      mttr: "—"        },
+      { date: "May 13",      service: "payments-gateway",   sev: "P2", title: "Throughput dipped during peak hours",               status: "resolved",  mttr: "18m"      },
+      { date: "May 12",      service: "card-auth",          sev: "P3", title: "Intermittent card declines (~0.4% of transactions)", status: "resolved",  mttr: "42m"      },
+      { date: "May 11",      service: "loan-origination",   sev: "P2", title: "Connection pool ran out under load",                status: "resolved",  mttr: "1h 12m"   },
+      { date: "May 9",       service: "atm-network",        sev: "P3", title: "3 ATMs in Mumbai West failed withdrawals",          status: "resolved",  mttr: "28m"      },
+      { date: "May 8",       service: "net-banking-portal", sev: "P2", title: "Session store flapped during the failover drill",  status: "resolved",  mttr: "1h 04m"   },
+      { date: "May 7",       service: "fraud-detection",    sev: "P3", title: "Too many false positives on UPI payments over ₹50k", status: "resolved",  mttr: "2h 18m"   },
+    ];
+
+    const STATUS_LABEL = { open: "Open", resolved: "Resolved" };
+    const sevToneFor = (s) => s === "P1" ? "high" : s === "P2" ? "medium" : "low";
+
+    panel.innerHTML = `
+      <div class="page v4-page v4-page--incidents">
+        <header class="v4-page__head">
+          <div>
+            <div class="v4-page__eyebrow">Last 7 days</div>
+            <h2 class="v4-page__title">Recent incidents</h2>
+            <p class="v4-page__lead">
+              ${INCIDENTS.length} events across your critical services. Tap any row to see
+              what happened, who fixed it, and how long it took.
+            </p>
+          </div>
+          <div class="v4-page__head-actions">
+            <button class="v4-btn v4-btn--ghost" type="button" data-v4-action="filter">Filter</button>
+          </div>
+        </header>
+        <div class="v4-incidents">
+          <div class="v4-incidents__head" role="row">
+            <span>When</span>
+            <span>Service</span>
+            <span>Sev</span>
+            <span>Title</span>
+            <span>Status</span>
+            <span>MTTR</span>
+          </div>
+          ${INCIDENTS.map((i) => `
+            <button class="v4-incidents__row" type="button" role="row" data-v4-action="open-incident">
+              <span class="v4-incidents__when">${escV4(i.date)}</span>
+              <span class="v4-incidents__svc">${escV4(i.service)}</span>
+              <span class="v4-incidents__sev">
+                <span class="signoff__risk signoff__risk--${sevToneFor(i.sev)}">${escV4(i.sev)}</span>
+              </span>
+              <span class="v4-incidents__title">${escV4(i.title)}</span>
+              <span class="v4-incidents__status" data-state="${escV4(i.status)}">${escV4(STATUS_LABEL[i.status] || i.status)}</span>
+              <span class="v4-incidents__mttr">${escV4(i.mttr)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+
+    panel.addEventListener("click", (e) => {
+      const row = e.target.closest("[data-v4-action='open-incident']");
+      if (!row) return;
+      const title = row.querySelector(".v4-incidents__title")?.textContent?.trim() || "Incident";
+      window.directorNote?.({
+        title: "Drilldown",
+        text: title,
+        sub: "Per-incident timeline ships in Phase 2.",
+        autoDismiss: 2600,
+      });
+    });
+  };
+
+  pages.healthcheck = (panel) => {
+    // Live-status grid across the critical service set. Three states:
+    //   healthy   · within SLO
+    //   watch     · drifting toward SLO breach but not yet over
+    //   degraded  · actively breaching or close to it
+    // SLA % and load are static for the demo, but the "Re-run scan"
+    // button cycles a couple of values so the page doesn't feel
+    // frozen mid-demo.
+    const SERVICES = [
+      { name: "payments-gateway",   state: "healthy",  sla: "99.97%", load: 0.43, note: "All agents are reporting green." },
+      { name: "card-auth",          state: "watch",    sla: "99.94%", load: 0.31, note: "Error rate has been climbing for 24h. DiagnosticsAgent is digging in." },
+      { name: "core-banking",       state: "degraded", sla: "99.81%", load: 0.78, note: "Connection-pool exhaustion. PatchAgent has an emergency fix waiting on your approval." },
+      { name: "loan-origination",   state: "healthy",  sla: "99.92%", load: 0.52, note: "Slightly slow but still inside the SLO." },
+      { name: "net-banking-portal", state: "healthy",  sla: "99.99%", load: 0.28, note: "Steady. Last failover drill came back green." },
+      { name: "fraud-detection",    state: "healthy",  sla: "99.96%", load: 0.36, note: "Model retrained last night. False positives are down 14%." },
+      { name: "atm-network",        state: "watch",    sla: "99.88%", load: 0.55, note: "A handful of withdrawal failures on 3 Mumbai-West ATMs." },
+    ];
+
+    const STATE_LABEL = { healthy: "Healthy", watch: "Watch", degraded: "Degraded" };
+
+    panel.innerHTML = `
+      <div class="page v4-page v4-page--healthcheck">
+        <header class="v4-page__head">
+          <div>
+            <div class="v4-page__eyebrow">Live scan · just now</div>
+            <h2 class="v4-page__title">Health check</h2>
+            <p class="v4-page__lead">
+              Live status across your critical services. Hit Re-run scan to ask each
+              agent for a fresh probe.
+            </p>
+          </div>
+          <div class="v4-page__head-actions">
+            <button class="v4-btn v4-btn--primary" type="button" data-v4-action="rescan">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none"
+                   stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M13.5 7.5A5.5 5.5 0 1 0 8 13"/>
+                <path d="M10.5 4.5 13.5 7.5 10.5 10.5"/>
+              </svg>
+              Re-run scan
+            </button>
+          </div>
+        </header>
+        <div class="v4-health-grid">
+          ${SERVICES.map((s) => `
+            <article class="v4-health-card" data-state="${escV4(s.state)}">
+              <div class="v4-health-card__top">
+                <span class="v4-health-card__dot" aria-hidden="true"></span>
+                <span class="v4-health-card__name">${escV4(s.name)}</span>
+                <span class="v4-health-card__state">${escV4(STATE_LABEL[s.state])}</span>
+              </div>
+              <div class="v4-health-card__metrics">
+                <div class="v4-health-card__metric">
+                  <div class="v4-health-card__metric-label">SLA</div>
+                  <div class="v4-health-card__metric-value">${escV4(s.sla)}</div>
+                </div>
+                <div class="v4-health-card__metric">
+                  <div class="v4-health-card__metric-label">Load</div>
+                  <div class="v4-health-card__metric-value">
+                    <div class="v4-health-card__bar" style="--bar:${(s.load * 100).toFixed(0)}%">
+                      <span class="v4-health-card__bar-fill"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="v4-health-card__note">${escV4(s.note)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </div>
+    `;
+
+    panel.querySelector("[data-v4-action='rescan']")?.addEventListener("click", () => {
+      const eyebrow = panel.querySelector(".v4-page__eyebrow");
+      if (eyebrow) eyebrow.textContent = "Live scan · re-running…";
+      setTimeout(() => {
+        if (eyebrow) eyebrow.textContent = "Live scan · just now";
+        window.directorNote?.({
+          title: "Health check",
+          text: "Probes complete · 1 service watch, 1 degraded.",
+          autoDismiss: 2600,
+        });
+      }, 1400);
+    });
+  };
+
+  // -------------------------------------------------------------
+  // INCIDENT-LIVE (Phase 2) — live incident detail page.
+  //
+  // Receives a snapshot from app.js via window.__incPageSync()
+  // every time the orchestration engine advances a phase or
+  // appends timeline entries. The page is self-contained: it
+  // re-renders sub-regions in place rather than blowing away the
+  // whole panel so that scroll position survives updates.
+  //
+  // Layout (single column on narrow widths, two on wider):
+  //   • Header: sev pill + INC id + title + sub + elapsed counter
+  //   • Status banner: phase pipeline (Detected → Resolved)
+  //   • Body, two columns:
+  //       Left:  Agent timeline (chronological, agents colour-coded)
+  //       Right: Agents on this incident (chip cloud, with handoff lines)
+  //   • Summary card: visible only once resolved
+  // -------------------------------------------------------------
+  pages["incident-live"] = (panel) => {
+    panel.innerHTML = `
+      <div class="page v4-page inc-page" id="incPage" data-phase="">
+        <header class="inc-page__head">
+          <div class="inc-page__head-lead">
+            <span class="inc-page__sev" data-sev="P1">P1</span>
+            <div class="inc-page__head-text">
+              <div class="inc-page__eyebrow" id="incPageEyebrow">—</div>
+              <h2 class="inc-page__title" id="incPageTitle">Live incident</h2>
+              <p class="inc-page__sub" id="incPageSub"></p>
+            </div>
+          </div>
+          <div class="inc-page__head-actions">
+            <div class="inc-page__elapsed" id="incPageElapsed" aria-live="polite">Live · 00:00</div>
+          </div>
+        </header>
+
+        <section class="inc-status" id="incStatusSection" aria-label="Incident progress">
+          <ol class="inc-status__phases" id="incStatusPhases" role="list"></ol>
+          <p class="inc-status__caption" id="incStatusCaption">—</p>
+        </section>
+
+        <div class="inc-body">
+          <div class="inc-body__col inc-body__col--left">
+            <aside class="inc-graph" aria-labelledby="incGraphHd">
+              <header class="inc-section__head">
+                <h3 id="incGraphHd" class="inc-section__title">Agents on this incident</h3>
+              </header>
+              <ul class="inc-graph__list" id="incGraphList" role="list"></ul>
+              <div class="inc-graph__caption">
+                Highlighted agents have acted on this incident. Lines show recent handoffs.
+              </div>
+            </aside>
+
+            <section class="inc-summary-card inc-summary-card--stacked" id="incSummaryCard" hidden>
+              <header class="inc-summary-card__head">
+                <span class="inc-summary-card__check" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" width="16" height="16" fill="none"
+                       stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m3.5 8.5 3 3 6-7"/>
+                  </svg>
+                </span>
+                <div>
+                  <h3 class="inc-summary-card__title">Post-incident summary is ready</h3>
+                  <p class="inc-summary-card__sub">
+                    ComplianceAgent drafted a full RCA with timeline, root cause, and follow-up actions.
+                  </p>
+                </div>
+              </header>
+              <div class="inc-summary-card__actions">
+                <button class="v4-btn v4-btn--primary" type="button" data-inc-action="view-summary">
+                  View summary
+                </button>
+                <button class="v4-btn v4-btn--ghost" type="button" data-inc-action="download-summary">
+                  Download (.md)
+                </button>
+                <button class="v4-btn v4-btn--ghost" type="button" data-inc-action="share-slack">
+                  Share to Slack
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <section class="inc-timeline" aria-labelledby="incTimelineHd">
+            <header class="inc-section__head">
+              <h3 id="incTimelineHd" class="inc-section__title">Agent timeline</h3>
+              <div class="inc-section__head-meta">
+                <span class="inc-section__live" id="incTimelineLive" hidden></span>
+                <span class="inc-section__count" id="incTimelineCount">0 entries</span>
+              </div>
+            </header>
+            <ol class="inc-timeline__list" id="incTimelineList" role="list"></ol>
+          </section>
+        </div>
+      </div>
+    `;
+
+    // Render hooks ------------------------------------------------
+    const escI = (v) => String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+    function renderPhases(snap) {
+      const host = panel.querySelector("#incStatusPhases");
+      if (!host) return;
+      // --progress drives the purple overlay width via CSS. We clamp
+      // to [0, 1] so the bar never overshoots on edge phases.
+      // --phase-count drives the track inset so the line trims
+      // exactly at the first and last dot rather than leaking past.
+      const total = Math.max(1, snap.phases.length - 1);
+      const idx   = Math.max(0, Math.min(snap.phaseIdx, total));
+      const progress = idx / total;
+      host.style.setProperty("--progress", String(progress));
+      host.style.setProperty("--phase-count", String(snap.phases.length));
+      host.innerHTML = snap.phases.map((p, i) => {
+        const state = i <  snap.phaseIdx ? "done"
+                    : i === snap.phaseIdx ? "active"
+                    : "pending";
+        return `
+          <li class="inc-status__phase" data-state="${state}">
+            <span class="inc-status__phase-dot" aria-hidden="true"></span>
+            <span class="inc-status__phase-label">${escI(p.label)}</span>
+          </li>
+        `;
+      }).join("");
+    }
+
+    function renderTimeline(snap) {
+      const list = panel.querySelector("#incTimelineList");
+      const count = panel.querySelector("#incTimelineCount");
+      const livePill = panel.querySelector("#incTimelineLive");
+      if (!list) return;
+
+      // Use the entry count (not children count) to decide on
+      // scroll-into-view, so activity-only updates don't yank scroll.
+      const previousEntries = parseInt(list.dataset.entryCount || "0", 10);
+      list.dataset.entryCount = String(snap.timeline.length);
+
+      const showLive = !!snap.activity && !snap.resolved;
+      const liveAgent = showLive
+        ? (snap.agents[snap.activity.agent] || { tone: "#8b94b3", role: "" })
+        : null;
+
+      const entriesHtml = snap.timeline.map((e, idx) => {
+        const agent = snap.agents[e.agent] || { tone: "#8b94b3", role: "" };
+        // The "latest" pulse is for when nothing further is happening.
+        // While the live activity row is visible, IT carries the pulse,
+        // so the most recent entry should read as settled.
+        const isLatest = !showLive && idx === snap.timeline.length - 1;
+        return `
+          <li class="inc-timeline__entry${isLatest ? " is-latest" : ""}"
+              style="--agent-tone:${agent.tone}">
+            <span class="inc-timeline__at">${escI(e.at)}</span>
+            <span class="inc-timeline__dot" aria-hidden="true"></span>
+            <div class="inc-timeline__body">
+              <div class="inc-timeline__agent">${escI(e.agent)}</div>
+              <div class="inc-timeline__text">${escI(e.text)}</div>
+            </div>
+          </li>
+        `;
+      }).join("");
+
+      // Live activity row — what an agent is doing RIGHT NOW.
+      // Stays at the bottom of the list, has a pulsing dot, a verb
+      // chip, and three typing dots. For "waiting" / "handoff" states
+      // the typing dots are suppressed (see CSS) so the row reads as
+      // paused vs. actively working.
+      const liveHtml = showLive ? `
+        <li class="inc-timeline__live inc-timeline__live--${escI(snap.activity.state || "working")}"
+            role="status" aria-live="polite"
+            style="--agent-tone:${liveAgent.tone}">
+          <span class="inc-timeline__at inc-timeline__at--live">Now</span>
+          <span class="inc-timeline__dot inc-timeline__dot--live" aria-hidden="true"></span>
+          <div class="inc-timeline__body">
+            <div class="inc-timeline__agent">${escI(snap.activity.agent)}</div>
+            <div class="inc-timeline__live-line">
+              <span class="inc-timeline__verb">${escI(snap.activity.verb)}</span>
+              <span class="inc-timeline__live-text">${escI(snap.activity.text)}</span>
+              <span class="inc-timeline__typing" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </span>
+            </div>
+          </div>
+        </li>
+      ` : "";
+
+      list.innerHTML = entriesHtml + liveHtml;
+
+      if (count) {
+        count.textContent = `${snap.timeline.length} entr${snap.timeline.length === 1 ? "y" : "ies"}`;
+      }
+
+      if (livePill) {
+        if (showLive) {
+          livePill.hidden = false;
+          livePill.dataset.state = snap.activity.state || "working";
+          livePill.style.setProperty("--agent-tone", liveAgent.tone);
+          livePill.innerHTML = `
+            <span class="inc-section__live-dot" aria-hidden="true"></span>
+            <span class="inc-section__live-text">${escI(snap.activity.agent)}</span>
+            <span class="inc-section__live-verb">${escI(snap.activity.verb)}</span>
+          `;
+        } else {
+          livePill.hidden = true;
+          livePill.removeAttribute("data-state");
+          livePill.innerHTML = "";
+        }
+      }
+
+      // Scroll to the latest item only when a new entry actually
+      // appended (not on activity refreshes), so the live row stays
+      // in view without fighting the user's scroll position.
+      if (snap.timeline.length > previousEntries) {
+        const lastEl = list.lastElementChild;
+        if (lastEl && typeof lastEl.scrollIntoView === "function") {
+          lastEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    }
+
+    function renderGraph(snap) {
+      const host = panel.querySelector("#incGraphList");
+      if (!host) return;
+      const order = Object.keys(snap.agents);
+      // Determine the most recent two agents that acted (for the handoff line).
+      const recent = snap.timeline.slice(-3).map((e) => e.agent);
+      const currentAgent = recent[recent.length - 1] || null;
+
+      // If the live activity is on this agent, surface its verb so the
+      // chip reads "Working: Correlating…" instead of just a quiet pulse.
+      const liveOn = (snap.activity && !snap.resolved) ? snap.activity : null;
+
+      host.innerHTML = order.map((name) => {
+        const meta = snap.agents[name];
+        const active = snap.activeAgents.includes(name);
+        const isCurrent = name === currentAgent && !snap.resolved;
+        const isLive = !!liveOn && liveOn.agent === name;
+        const liveBadge = isLive
+          ? `<span class="inc-graph__node-verb" data-state="${escI(liveOn.state || "working")}">${escI(liveOn.verb)}</span>`
+          : "";
+        return `
+          <li class="inc-graph__node${active ? " is-active" : ""}${isCurrent ? " is-current" : ""}${isLive ? " is-live" : ""}"
+              style="--agent-tone:${meta.tone}">
+            <span class="inc-graph__node-dot" aria-hidden="true"></span>
+            <div class="inc-graph__node-text">
+              <div class="inc-graph__node-name">${escI(name)}</div>
+              <div class="inc-graph__node-role">${escI(meta.role)}</div>
+              ${liveBadge}
+            </div>
+            ${active ? `<span class="inc-graph__node-check" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none"
+                   stroke="currentColor" stroke-width="2.4"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3.5 8.5 3 3 6-7"/>
+              </svg>
+            </span>` : ""}
+          </li>
+        `;
+      }).join("");
+    }
+
+    function applyHeader(snap) {
+      const phase = snap.phases[Math.max(0, snap.phaseIdx)];
+      const eyebrow = panel.querySelector("#incPageEyebrow");
+      const title = panel.querySelector("#incPageTitle");
+      const sub = panel.querySelector("#incPageSub");
+      const caption = panel.querySelector("#incStatusCaption");
+      const root = panel.querySelector("#incPage");
+      if (eyebrow) eyebrow.textContent = `${snap.incident.id} · ${snap.incident.service} · ${snap.incident.region}`;
+      if (title) title.textContent = snap.incident.title;
+      if (sub) sub.textContent = `${snap.incident.sub} ${snap.incident.affected}.`;
+      if (caption && phase) caption.textContent = phase.caption;
+      // The "resolved" data-phase value greens the elapsed pill via
+      // CSS — only apply it once the engine has actually flagged the
+      // incident as resolved (i.e. after the resolved-phase entries
+      // have finished posting). While we're inside the resolved phase
+      // but still verifying, fall back to a transitional 'resolving'
+      // value so the pill keeps reading "Live · …" without flashing
+      // green prematurely.
+      const phaseId = phase ? phase.id : "";
+      const dataPhase = (phaseId === "resolved" && !snap.resolved) ? "resolving" : phaseId;
+      if (root) root.setAttribute("data-phase", dataPhase);
+    }
+
+    function applySummary(snap) {
+      const card = panel.querySelector("#incSummaryCard");
+      if (!card) return;
+      // `snap.resolved` is now ONLY true once the resolved-phase
+      // entries have all posted (see finishPhaseEntries), so the
+      // summary card and the wrap-up chiclets reveal in lock-step.
+      if (snap.resolved) card.removeAttribute("hidden");
+      else card.setAttribute("hidden", "");
+    }
+
+    // Public hook the engine calls every time state advances.
+    window.__incPageSync = (snap) => {
+      try {
+        applyHeader(snap);
+        renderPhases(snap);
+        renderTimeline(snap);
+        renderGraph(snap);
+        applySummary(snap);
+      } catch (err) {
+        console.warn("incident page sync failed", err);
+      }
+    };
+
+    // First paint — pull current state if the engine has already started.
+    if (typeof window.__incGetSnapshot === "function") {
+      const snap = window.__incGetSnapshot();
+      if (snap) window.__incPageSync(snap);
+    }
+
+    // Click delegation for the summary card actions.
+    panel.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-inc-action]");
+      if (!t) return;
+      const action = t.getAttribute("data-inc-action");
+      // Defer to the global handler in app.js so all incident
+      // chiclet semantics live in one place.
+      if (typeof window.__incHandleAction === "function") {
+        window.__incHandleAction(action);
+      }
+    });
+  };
+
   Object.assign(window.PAGES = window.PAGES || {}, pages);
   // Tower is the active nav item that opens the Cockpit. Aliasing it
   // here means the workspace placeholder in app.js stays untouched
-  // while Sarah lands on her control surface the moment she taps
+  // while John lands on his control surface the moment he taps
   // Tower in the sidenav.
   window.PAGES.tower = window.PAGES.cockpit;
 
@@ -1851,7 +2521,7 @@
       greeting: "Welcome,",
       name: "Sarah!",
       titleLead: "Start with",
-      titleTail: "Autonomous ITSM",
+      titleTail: "Agentic IT Service",
       cta: "Get Started",
       placeholder: "Ask anything",
       goto: "begin"

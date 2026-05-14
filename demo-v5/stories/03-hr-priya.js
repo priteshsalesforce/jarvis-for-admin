@@ -182,11 +182,10 @@
           "Approving releases the order to Procurement (ETA May 22); " +
           "declining holds it pending an alternate spec.",
         actions: [
-          { id: "approve", label: "Approve",        kind: "primary",   goto: "execute",
-            confirmation: "**Approved** \u2014 routed to Procurement. ETA May 22." },
-          { id: "decline", label: "Decline",        kind: "secondary", goto: "declined",
-            confirmation: "**Declined** \u2014 hardware order on hold pending an alternate spec." },
-          { id: "ask",     label: "Ask a question", kind: "tertiary",  goto: "ask-q" },
+          { id: "approve", label: "Approve",        kind: "primary",   goto: "execute" },
+          { id: "decline", label: "Decline",        kind: "secondary", goto: "declined" },
+          { id: "ask",     label: "Ask a question", kind: "tertiary",  goto: "ask-q",
+            userText: "Why does this exceed the budget?" },
         ],
       },
 

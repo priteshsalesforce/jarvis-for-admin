@@ -748,13 +748,13 @@
             b.disabled = true;
           });
           btn.classList.add("is-picked");
-          // Optional inline confirmation text (e.g. "Approved · routed to Procurement").
-          if (action?.confirmation) {
-            const note = document.createElement("p");
-            note.className = "approval__confirm";
-            note.innerHTML = md(action.confirmation);
-            card.appendChild(note);
-          }
+          // Mirror renderAsk / renderChoose: surface the chosen action
+          // as a user-side bubble so the chat reads as a normal back-
+          // and-forth ("Priya: Approve" → "Jarvis: Approved. Releasing
+          // the orchestrator…"). Authors can override the bubble text
+          // via `action.userText` for cards where the label alone
+          // doesn't read like a natural utterance.
+          userBubble(action?.userText || action?.label || "");
           resolve({ id, goto: action?.goto });
         });
       });

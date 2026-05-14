@@ -1,0 +1,264 @@
+/* =============================================================
+   03-hr-priya.js — Chapter 3: "Onboarding Day"
+   -------------------------------------------------------------
+   Persona: Priya Menon, HR Admin at TechCorp.
+
+   Beat
+     • Welcome hero — "Welcome, Priya! · Start with Agentic HR
+       Operations". One CTA + a composer that hints at the canonical
+       onboarding command.
+     • Priya types: "Onboard Rohan, PL-13234 …" → Jarvis acknowledges
+       and fans out to the Onboarding Orchestrator agent.
+     • Jarvis pulls the position listing, resolves role + start date,
+       then surfaces a hardware-approval card (the Mac Pro spec
+       exceeds the standard L4 budget).
+     • Priya taps Approve → 9 specialist agents execute in parallel.
+       The chat lands on a structured "task · agent · status" grid
+       with one row per delivered outcome.
+     • Closes with the punchline: 11 seconds, no tickets, no chasing.
+
+   The chapter uses two engine extensions added in app.js for v5:
+     • `approval-card`  — rich approval surface with rationale,
+                          itemised cost breakdown, and three CTAs
+                          (Approve / Decline / Ask a question).
+     • `task-list`      — multi-row outcome grid with progressive
+                          row reveal and status pills, used to make
+                          the agent fan-out feel real-time.
+
+   Side panel pages: none. The whole flow lives in the chat thread,
+   matching the "fullscreen chat" feel the v3 layout already gives
+   us when no `browser` step is played.
+   ============================================================= */
+
+(function () {
+  // -----------------------------------------------------------------
+  // Chapter registration. Mirrors the shape v3's app.js expects:
+  // `id` (used by findChapter), `persona` (drives the welcome hero
+  // greet line + accent), `welcome` (cinematic hero copy), and
+  // `story` (the linear beat list runStory walks through).
+  // -----------------------------------------------------------------
+  const chapter = {
+    id: "hr-priya",
+    title: "Onboarding Day",
+    blurb:
+      "Priya onboards a new joiner in 11 seconds — nine specialist agents " +
+      "executing in parallel, no tickets, no back-and-forth.",
+    persona: {
+      name: "Priya",
+      role: "HR Admin · TechCorp",
+      avatarText: "P",
+      // HR accent — same brand purple family as the rest of the app
+      // so v5 feels at-home in Jarvis, but slightly cooler so the
+      // welcome glow reads as "people" rather than "infra".
+      accent: "var(--persona-hr, var(--accent-2))",
+    },
+    intentKeywords: ["priya", "hr", "onboard", "rohan", "joiner", "techcorp"],
+    endline:
+      "11 seconds. Nine agents. One coffee. Rohan's Day-1 setup is already " +
+      "waiting for him.",
+
+    suggestedQuestions: [
+      "Why did procurement need approval?",
+      "What does each agent actually do?",
+      "Can I see what Rohan will see on May 25?",
+      "Can I roll any of this back?",
+    ],
+
+    faqs: [
+      {
+        match: /why.*approv|procurement|threshold|budget/i,
+        answer:
+          "The standard L4 hardware budget is **$3,000**. Rohan's role " +
+          "spec calls for a Mac Pro 14\" M3 Max + 32GB RAM + dual external " +
+          "monitors, which totals **$4,200**. Anything above the budget is " +
+          "routed to you for sign-off — the threshold is configurable per " +
+          "role-level under Settings → Procurement policies.",
+      },
+      {
+        match: /agent.*do|what.*agent|nine.*agent|9.*agent/i,
+        answer:
+          "Each agent owns one outcome: **Compliance** runs the background " +
+          "check, **HR Forms** sends I-9 + tax forms, **Procurement** places " +
+          "the hardware order, **Facilities** assigns the desk, **IT Config** " +
+          "queues the MDM enrolment, **Identity** mints the email, **Access** " +
+          "provisions GitHub, **Cloud Access** issues AWS dev credentials, " +
+          "and **Comms** creates the Slack handle and adds Rohan to " +
+          "#platform-eng. The Onboarding Orchestrator is the conductor.",
+      },
+      {
+        match: /day ?1|may 25|first day|see/i,
+        answer:
+          "On May 25, Rohan gets a personalised Slack DM from Jarvis at his " +
+          "first sign-in: laptop already enrolled, Jarvis introduces itself, " +
+          "his team channel is pre-joined, his calendar already shows the " +
+          "first-week welcome syncs. No portal hunt, no \"submit a ticket to " +
+          "get GitHub\" loop.",
+      },
+      {
+        match: /roll ?back|undo|reverse|cancel/i,
+        answer:
+          "**Yes — every action.** Each agent's write is reversible for 30 " +
+          "days. The audit trail is one click away (Onboarding → Rohan " +
+          "Sharma → Activity), and a one-click revert undoes anything that " +
+          "shouldn't have been provisioned (e.g. wrong team channel).",
+      },
+    ],
+
+    // Cinematic welcome shown when the chapter loads.
+    //   • greeting + name → "Welcome, Priya!"
+    //   • titleLead/Tail → "Start with Agentic HR Operations"
+    //   • placeholder    → seeds the canonical command so a viewer
+    //                       grasps the demo's "ask" before the chat
+    //                       even starts. The composer's Send button
+    //                       (or Enter / the CTA) dismisses the hero
+    //                       and runStory moves on to the `begin`
+    //                       step which renders the user's typed line.
+    welcome: {
+      greeting: "Welcome,",
+      name: "Priya!",
+      titleLead: "Start with",
+      titleTail: "Agentic HR Operations",
+      cta: "Onboard a new hire",
+      placeholder:
+        "Try \u201cOnboard Rohan, PL-13234, he has accepted the offer letter.\u201d",
+      goto: "begin",
+    },
+
+    story: [
+      // 0 — Cinematic welcome hero. Engine renders the hero, waits for
+      //     a click on CTA / Send, then advances to "begin".
+      { type: "welcome", goto: "begin" },
+
+      // 1 — Priya's typed message. Replays the canonical command as a
+      //     user bubble so the chat reads as "Priya types → Jarvis
+      //     replies", regardless of what she actually typed in the
+      //     hero composer.
+      { id: "begin", type: "user",
+        text: "Onboard Rohan, PL-13234, he has accepted the offer letter." },
+
+      // 2 — Resolve the position listing. Two short status lines so
+      //     the page feels alive while the orchestrator does its work.
+      { type: "status",
+        text: "Pulling Position Listing PL-13234",
+        duration: 1300,
+        doneText: "Position resolved · Software Architect · Platform Engineering" },
+
+      { type: "status",
+        text: "Reading role requirements & start date",
+        duration: 1100,
+        doneText: "Start date · Monday, May 25 · Joining Platform Engineering" },
+
+      // 3 — Jarvis acknowledges in plain English. The "kicked off"
+      //     framing makes it clear the orchestrator has already
+      //     started fanning out to specialist agents in the
+      //     background — the approval card below is a *gate*, not a
+      //     start signal.
+      { type: "say",
+        text:
+          "Got it! I've kicked off **Rohan's** onboarding for **PL-13234** — Software Architect. " +
+          "His start date is **May 25**. I've identified specialised hardware requirements for " +
+          "this role and routed an approval request to you. I'll keep you posted.",
+        pause: 250 },
+
+      // 4 — Approval card. Itemised so Priya can audit at a glance,
+      //     three CTAs so she doesn't have to switch surfaces to ask
+      //     a question.
+      { id: "approval", type: "approval-card",
+        eyebrow: "Procurement Agent · Approval requested",
+        title: "Hardware approval needed",
+        summary:
+          "A new Software Architect (Rohan Sharma, PL-13234) joining May 25 " +
+          "requires specialised hardware:",
+        items: [
+          { label: "Mac Pro 14\" M3 Max", spec: "Apple silicon",       cost: "$2,800" },
+          { label: "32GB RAM upgrade",     spec: "Configure-to-order",  cost: "$200"   },
+          { label: "2× external monitors", spec: "27\" 4K, USB-C dock", cost: "$1,200" },
+        ],
+        total: "$4,200",
+        reason:
+          "This exceeds the standard **$3,000** L4 hardware threshold. Approval " +
+          "routes the order; decline holds it pending an alternate spec.",
+        choices: [
+          { label: "Approve",         value: "approve",  primary: true,  goto: "execute"  },
+          { label: "Decline",         value: "decline",                  goto: "declined" },
+          { label: "Ask a question",  value: "ask",      tertiary: true, goto: "ask-q"    },
+        ],
+      },
+
+      // ----- Decline branch ------------------------------------------------
+      { id: "declined", type: "say",
+        text:
+          "Understood — I've put the hardware order on hold and pinged " +
+          "**Procurement** to discuss alternate specs that fit the standard " +
+          "L4 budget. I'll come back with options before EOD.",
+        pause: 200 },
+      { type: "goto", to: "soft-end" },
+
+      // ----- Ask-a-question branch ----------------------------------------
+      // Answers the most likely "why am I being asked?" question with the
+      // breakdown, then loops back to a slimmed re-ask so Priya can still
+      // approve / decline / rescope without rewinding.
+      { id: "ask-q", type: "say",
+        text:
+          "Sure — here's the math:\n\n" +
+          "• **Mac Pro 14\" M3 Max** · $2,800\n" +
+          "• **32GB RAM upgrade** · $200\n" +
+          "• **2× external monitors** · $1,200\n\n" +
+          "**Total $4,200**, against an L4 hardware budget of **$3,000**. " +
+          "The $1,200 overage is driven entirely by the dual-monitor " +
+          "requirement noted in the Software Architect role spec.",
+        pause: 250 },
+
+      { type: "ask",
+        text: "How would you like to proceed?",
+        choices: [
+          { label: "Approve as-is",                  value: "approve",  primary: true, goto: "execute"  },
+          { label: "Approve, drop one monitor",      value: "rescope",                  goto: "execute"  },
+          { label: "Decline",                        value: "decline",                  goto: "declined" },
+        ],
+      },
+
+      // ----- Execute branch — multi-agent fan-out --------------------------
+      { id: "execute", type: "say",
+        text:
+          "Approved. Releasing the orchestrator — **9 agents** are picking " +
+          "up the work in parallel.",
+        pause: 200 },
+
+      // The structured "task · agent · status" grid. The engine reveals
+      // rows progressively (~120ms each) so the fan-out feels live.
+      { type: "task-list",
+        eyebrow: "Onboarding Orchestrator · 9 agents",
+        rows: [
+          { task: "Background check initiated",                                agent: "Compliance Agent",     status: "done" },
+          { task: "I-9 & tax forms sent",                                      agent: "HR Forms Agent",       status: "done" },
+          { task: "Mac Pro order placed",                                      agent: "Procurement Agent",    status: "done",     note: "ETA May 22" },
+          { task: "Workspace assigned — Desk 4B, Floor 2",                     agent: "Facilities Agent",     status: "done" },
+          { task: "Laptop enrolment in MDM",                                   agent: "IT Config Agent",      status: "pending",  note: "Pending delivery" },
+          { task: "Email ID created — rohan.sharma@techcorp.com",              agent: "Identity Agent",       status: "done" },
+          { task: "GitHub Enterprise access provisioned",                      agent: "Access Agent",         status: "done" },
+          { task: "AWS Dev credentials configured",                            agent: "Cloud Access Agent",   status: "done" },
+          { task: "Slack account created & added to #platform-eng",            agent: "Comms Agent",          status: "done" },
+        ],
+        // Reveal cadence + the headline number that lands once every
+        // row has completed.
+        revealMs: 120,
+        footnote: "Done in **11 seconds**.",
+      },
+
+      // 7 — Punchline. Quiet, in Priya's voice ("no tickets, no chasing").
+      { type: "say",
+        text:
+          "**No tickets. No back-and-forth emails. No chasing.**\n\n" +
+          "Rohan will get a personalised welcome from me on **May 25**, his " +
+          "laptop will be at his desk, and his Day-1 setup will already be " +
+          "waiting for him. I'll ping you if any of the **pending** items " +
+          "(MDM enrolment) need a nudge.",
+        pause: 250 },
+
+      { id: "soft-end", type: "end" },
+    ],
+  };
+
+  (window.CHAPTERS = window.CHAPTERS || []).push(chapter);
+})();

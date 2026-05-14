@@ -1025,7 +1025,8 @@
     const t = (text || "").toLowerCase();
     const hit = (...keys) => keys.some((k) => t.includes(k));
     if (hit("cost", "spend", "budget", "license", "idle", "aws cost", "gcp cost")) return "cost";
-    if (hit("access", "mfa", "role", "permission", "principal", "sso", "okta")) return "identity";
+    if (hit("onboard", "new hire", "new user", "signup", "sign-up", "provision",
+            "access", "mfa", "role", "permission", "principal", "sso", "okta")) return "identity";
     if (hit("audit", "sox", "gdpr", "hipaa", "evidence", "control", "attestation", "compliance")) return "compliance";
     if (hit("latency", "uptime", "sla", "p95", "outage", "downtime", "breach", "error rate")) return "reliability";
     return "reliability";
@@ -1037,7 +1038,7 @@
   function suggestName(jtbd) {
     const t = (jtbd || "").toLowerCase();
     const map = [
-      [/(latency|p95|response time)/,        "LatencyAgent"],
+      [/(onboard|new hire|new user|signup|sign-up|provision)/, "OnboardingAgent"],
       [/(uptime|outage|downtime|availability)/, "UptimeAgent"],
       [/(spend|cost|budget)/,                "SpendAgent"],
       [/(license|seat|idle)/,                "LicenseAgent"],
@@ -1047,6 +1048,7 @@
       [/(slack|teams|channel)/,              "ChannelAgent"],
       [/(rollback|release|deploy)/,          "ReleaseAgent"],
       [/(sla|breach)/,                       "SLAAgent"],
+      [/(latency|p95|response time)/,        "LatencyAgent"],
     ];
     for (const [re, name] of map) if (re.test(t)) return name;
     return "CustomAgent";
@@ -1107,7 +1109,7 @@
       this.pendingText = (text) => this.captureJTBD(text);
       streamJarvis(md(
         "Let's build you an agent. In one sentence — **what should it do**? " +
-        "e.g. *\"watch Salesforce login latency and alert me at 800ms p95\"*."
+        "e.g. *\"onboard new hires in Salesforce — provision access on day one and notify their manager\"*."
       ));
       lastPersona = "jarvis";
     },
@@ -1254,10 +1256,93 @@
     },
 
     // ----- Commit -------------------------------------------------
+    // Two-step deploy: first we run a short series of pre-flight
+    // **evals** (intent check, ontology bindings, tool scopes,
+    // guardrails, audit trail, trust calibration) so the user can
+    // see the agent has been validated end-to-end before it lands
+    // in their cockpit. Once every check is green we hand off to
+    // `_finalizeCommit()` which actually slots the agent.
     commit() {
+      userBubble("Create agent");
+      this._runEvalsThenFinalize();
+    },
+
+    // List of pre-deploy checks the agent must pass. Order matters
+    // — earlier rows read "are we even pointing at the right thing?"
+    // (intent / ontology) and later rows are the runtime guardrails
+    // (tool scopes / safety / audit / trust). Each entry pairs the
+    // in-flight verb ("Validating intent…") with a completion line
+    // ("Intent and domain mapping validated").
+    _evals: [
+      { busy: "Validating intent and domain mapping",
+        done: "Intent and domain mapping validated" },
+      { busy: "Resolving ontology bindings for selected domain",
+        done: "Ontology bindings resolved" },
+      { busy: "Verifying tool scopes against autonomy level",
+        done: "Tool scopes match autonomy level" },
+      { busy: "Running guardrail safety simulations",
+        done: "Guardrails passed safety simulation" },
+      { busy: "Wiring audit trail for compliance",
+        done: "Audit trail wired · compliance ready" },
+      { busy: "Calibrating initial trust score",
+        done: "Initial trust calibrated at 88%" },
+    ],
+
+    _runEvalsThenFinalize() {
+      const evals = this._evals;
+      const intro = `<div>Running pre-flight evals before deploying <strong>${
+        String(this.slots.name).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      }</strong>.</div>`;
+      const { bubble, done } = streamJarvis(intro);
+      lastPersona = "jarvis";
+
+      done.then(async () => {
+        const target = bubble.querySelector(".bubble__text");
+        if (!target) { this._finalizeCommit(); return; }
+
+        const host = document.createElement("ul");
+        host.className = "wizard__evals";
+        host.setAttribute("aria-label", "Agent pre-flight checks");
+        target.appendChild(host);
+
+        const spinnerHTML = `
+          <span class="status-line__icon is-busy"><span class="spinner"></span></span>
+        `;
+        const tickHTML = `
+          <span class="status-line__icon is-ok">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none"
+                 stroke="currentColor" stroke-width="3"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12l5 5L20 7"/>
+            </svg>
+          </span>
+        `;
+
+        for (const step of evals) {
+          const li = document.createElement("li");
+          li.className = "wizard__eval is-busy";
+          li.innerHTML = `${spinnerHTML}<span class="wizard__eval-label">${step.busy}…</span>`;
+          host.appendChild(li);
+          scrollDown();
+
+          await sleep(820);
+
+          li.classList.remove("is-busy");
+          li.classList.add("is-ok");
+          li.innerHTML = `${tickHTML}<span class="wizard__eval-label">${step.done}</span>`;
+          scrollDown();
+
+          await sleep(220);
+        }
+
+        await sleep(380);
+        this._finalizeCommit();
+      });
+    },
+
+    _finalizeCommit() {
       const { name, level, domain, jtbd } = this.slots;
       const domainLabel = AGENT_DOMAINS.find((d) => d.id === domain)?.label || "Reliability";
-      userBubble("Create agent");
       // Tell the cockpit page to slot the agent into its grid. If
       // the cockpit isn't currently mounted, the event is a no-op
       // and the agent simply won't appear until the next mount —
@@ -1274,7 +1359,7 @@
         autoDismiss: 2800,
       });
       streamJarvis(md(
-        `Done. **${name}** is live in your cockpit. ` +
+        `All checks green. **${name}** is live in your cockpit. ` +
         "I'll keep you posted as it warms up."
       ));
       lastPersona = "jarvis";
@@ -1878,19 +1963,38 @@
   // shape the awaiting-approval rows use, but the title is now a
   // human sentence (what's wrong from the user's view) and the
   // sub line carries the technical detail (service name + metric).
+  //
+  // High-tone rows are the active "this is about to bite you"
+  // signals — the Card payments row maps to the live P1 incident,
+  // so we render it as a real button. Clicking it tears down home
+  // and opens the live incident detail page (same surface the
+  // earlier toast used to mount).
   const renderHomeTrend = (t) => {
     const esc = (v) => String(v)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const sevLabel = t.tone === "high" ? "high"
                    : t.tone === "medium" ? "medium" : "low";
+    // Every Services-to-watch row is interactive — they all route
+    // to the live incident page so a supervisor can drill in. The
+    // CTA copy adapts to severity ("Open incident" for the active
+    // P1, "Investigate" for the at-risk rows below).
+    const cta = t.tone === "high" ? "Open incident" : "Investigate";
     return `
-      <li class="home-trends__row" data-tone="${esc(t.tone)}">
+      <li class="home-trends__row home-trends__row--clickable" data-tone="${esc(t.tone)}"
+          role="button" tabindex="0" data-home-trend="incident"
+          aria-label="${esc(cta)}: ${esc(t.title)}">
         <div class="home-trends__top">
           <span class="home-trends__title">${esc(t.title)}</span>
           <span class="signoff__risk signoff__risk--${esc(sevLabel)}">${esc(sevLabel)}</span>
         </div>
         <p class="home-trends__sub">${esc(t.sub)}</p>
+        <span class="home-trends__cta" aria-hidden="true">
+          ${esc(cta)}
+          <svg viewBox="0 0 12 12" width="11" height="11" fill="currentColor">
+            <path d="M4.6 1.6 3.5 2.7 6.8 6l-3.3 3.3 1.1 1.1L9 6 4.6 1.6Z"/>
+          </svg>
+        </span>
       </li>`;
   };
 
@@ -2060,8 +2164,19 @@
     requestAnimationFrame(() => home.classList.add("home--in"));
 
     // Chiclet & footer-link delegation — every element carrying
-    // `data-chiclet` opens the corresponding right-panel page.
+    // `data-chiclet` opens the corresponding right-panel page;
+    // `data-home-trend="incident"` shortcut opens the live P1
+    // incident page directly (replaces the auto-firing toast we
+    // used to schedule in startHome).
     home.addEventListener("click", (e) => {
+      const trend = e.target.closest("[data-home-trend='incident']");
+      if (trend) {
+        e.preventDefault();
+        if (typeof window.__openIncidentFromHome === "function") {
+          window.__openIncidentFromHome();
+        }
+        return;
+      }
       const trigger = e.target.closest("[data-chiclet]");
       if (trigger) {
         e.preventDefault();
@@ -2078,6 +2193,19 @@
           autoDismiss: 2400,
         });
         approval.closest(".signoff")?.setAttribute("data-state", action);
+      }
+    });
+
+    // Keyboard parity for the role="button" trending row — space /
+    // enter should fire the same incident open as a mouse click.
+    home.addEventListener("keydown", (e) => {
+      const trend = e.target.closest("[data-home-trend='incident']");
+      if (!trend) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (typeof window.__openIncidentFromHome === "function") {
+          window.__openIncidentFromHome();
+        }
       }
     });
 
@@ -2179,10 +2307,11 @@
 
     renderHome();
 
-    // Phase 2: schedule the P1 incident toast ~8s after John lands
-    // on home. If the user manually re-triggers via window.__playIncident
-    // this will be cancelled and a fresh one will fire immediately.
-    scheduleIncident({ delay: 8000 });
+    // Phase 2 (v4 change): the P1 incident no longer pops up
+    // automatically as a toast — instead, the user opens it by
+    // clicking the "Card payments — declines climbing fast" row
+    // in the Services to watch card. Manual re-trigger is still
+    // available via window.__playIncident for testing.
   }
 
   // Re-enter Setup. Resets the story and re-runs it from the beginning.
@@ -2462,6 +2591,7 @@
     // timeline is still narrating the resolution.
     resolved: false,
     approvalCardEl: null,   // chat-thread approval bubble DOM ref (rootcause gate)
+    summaryCardEl:  null,   // chat-thread post-incident summary bubble DOM ref
   };
 
   // ---- Toast: critical incident alert -----------------------
@@ -2643,6 +2773,12 @@
           }
           updateIncidentElapsed();
           renderIncidentChiclets("resolved");
+          // The post-incident summary should land in TWO places at the
+          // same beat: the right-panel page (greens up via applySummary)
+          // AND the chat thread, so a user who's been driving from the
+          // chat panel sees the wrap-up land naturally as a Jarvis
+          // message instead of having to glance over to the side card.
+          postSummaryCard();
           pushDirectorNote({
             title: "Incident resolved",
             text: `${INCIDENT.service} · ${INCIDENT.id}`,
@@ -3143,6 +3279,18 @@
     (incState.phaseIdx >= 0 ? getIncidentSnapshot() : null);
   window.__incHandleAction = handleIncidentAction;
 
+  // Home → Incident shortcut. The "Card payments — declines climbing
+  // fast" row in the Services to watch card invokes this in place of
+  // the old auto-firing toast: it boots a clean incident state (so
+  // re-entries replay the timeline) and mounts the live page.
+  window.__openIncidentFromHome = () => {
+    if (incState.phaseIdx >= 0) {
+      resetIncidentState();
+    }
+    INCIDENT.startedAt = Date.now();
+    openIncident({});
+  };
+
   // Tear down all incident state — phase, timers, timeline, bar, page
   // sync hook. Called when the user starts a fresh chat session and
   // when __playIncident() re-fires the demo.
@@ -3161,6 +3309,7 @@
     incState.activity = null;
     incState.resolved = false;
     incState.approvalCardEl = null;
+    incState.summaryCardEl = null;
     incState.pageOpen = false;
     INCIDENT.startedAt = null;
     removeIncidentBar();

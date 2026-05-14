@@ -605,7 +605,7 @@
       const greeting = step.greeting || cfg.greeting || "Welcome,";
       const name = step.name || cfg.name || `${persona.name || "there"}!`;
       const titleLead = step.titleLead || cfg.titleLead || "Start with";
-      const titleTail = step.titleTail || cfg.titleTail || "Autonomous ITSM";
+      const titleTail = step.titleTail || cfg.titleTail || "Agentic IT Service";
       const cta = step.cta || cfg.cta || "Get Started";
       const placeholder = step.placeholder || cfg.placeholder || "Ask anything";
 

@@ -1253,7 +1253,7 @@
       greeting: "Welcome,",
       name: "Sarah!",
       titleLead: "Start with",
-      titleTail: "Autonomous ITSM",
+      titleTail: "Agentic IT Service",
       cta: "Get Started",
       placeholder: "Ask anything",
       goto: "begin"

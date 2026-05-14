@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvis · Robot Face Logo Picker</title>
+  <style>
+    :root {
+      --bg-0: #05060a;
+      --bg-1: #0a0c14;
+      --panel: rgba(16, 20, 34, 0.72);
+      --line: rgba(120, 160, 255, 0.18);
+      --ink: #e8ecf7;
+      --ink-dim: #9aa3bd;
+      --ink-mute: #6b7390;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 800px at 80% -10%, rgba(139,108,255,.18), transparent 60%),
+        radial-gradient(1000px 700px at -10% 110%, rgba(54,227,192,.12), transparent 60%),
+        linear-gradient(180deg, var(--bg-0), var(--bg-1) 40%, var(--bg-0));
+      min-height: 100vh;
+      padding: 40px 24px 80px;
+    }
+    h1 { max-width: 1100px; margin: 0 auto 6px; font-size: 28px; font-weight: 700; }
+    .lead { max-width: 1100px; margin: 0 auto 28px; color: var(--ink-dim); font-size: 14px; }
+    .lead code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #22D3FF; background: rgba(34,211,255,.08);
+      padding: 2px 6px; border-radius: 6px;
+    }
+    .grid {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+      padding: 18px 14px 14px; text-align: center;
+      transition: transform .15s ease, border-color .2s ease;
+    }
+    .card:hover { transform: translateY(-2px); border-color: rgba(140,180,255,.45); }
+    .card svg {
+      width: 96px; height: 96px;
+      filter: drop-shadow(0 0 18px rgba(162, 75, 255, .35));
+    }
+    .num {
+      display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      color: var(--ink-mute); background: rgba(120,160,255,.08);
+      padding: 3px 8px; border-radius: 999px; margin-bottom: 10px;
+    }
+    .name { font-size: 14px; font-weight: 600; margin-top: 8px; }
+    .desc { font-size: 11px; color: var(--ink-dim); margin-top: 4px; line-height: 1.4; }
+
+    body.light {
+      background: linear-gradient(180deg, #f7f8fc, #eef0f7);
+      color: #0b0e1a;
+    }
+    body.light .card { background: white; border-color: #e3e6ef; }
+    body.light .card svg { filter: drop-shadow(0 4px 16px rgba(162, 75, 255, .25)); }
+    body.light .num { color: #6b7390; background: #eef0f7; }
+    body.light .desc { color: #5a6079; }
+    .toggle {
+      position: fixed; top: 18px; right: 18px;
+      background: var(--panel); border: 1px solid var(--line);
+      color: var(--ink); padding: 6px 12px; border-radius: 999px;
+      font-family: inherit; font-size: 12px; cursor: pointer;
+    }
+    body.light .toggle { background: white; color: #0b0e1a; border-color: #e3e6ef; }
+  </style>
+</head>
+<body>
+  <button class="toggle" onclick="document.body.classList.toggle('light')">Toggle light/dark</button>
+
+  <h1>Jarvis · Robot face with headphones — pick a variant</h1>
+  <p class="lead">
+    Keeping the original DNA: a friendly little robot face wearing headphones, in the brand gradient
+    (<code>#FF3DBE → #A24BFF → #22D3FF</code>).
+    Each tile varies the head shape, the headphone band, the eyes, and the smile — but they all live
+    in the same family. Toggle light/dark to preview. Tell me <code>"apply #N"</code> when you've picked.
+  </p>
+
+  <div class="grid">
+    <!-- Shared gradient defs -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#FF3DBE"/>
+          <stop offset=".5" stop-color="#A24BFF"/>
+          <stop offset="1" stop-color="#22D3FF"/>
+        </linearGradient>
+        <linearGradient id="gradH" x1="0" y1="100" x2="200" y2="100" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#FF3DBE"/>
+          <stop offset=".5" stop-color="#A24BFF"/>
+          <stop offset="1" stop-color="#22D3FF"/>
+        </linearGradient>
+        <linearGradient id="gradV" x1="100" y1="0" x2="100" y2="200" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#FF3DBE"/>
+          <stop offset=".5" stop-color="#A24BFF"/>
+          <stop offset="1" stop-color="#22D3FF"/>
+        </linearGradient>
+      </defs>
+    </svg>
+
+    <!-- 1. Classic round head, dot eyes, gentle smile, full headphone arc -->
+    <div class="card">
+      <span class="num">01</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <!-- headphones -->
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <!-- face -->
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <circle cx="84"  cy="112" r="6" fill="white"/>
+        <circle cx="116" cy="112" r="6" fill="white"/>
+        <path d="M85 130 Q100 142 115 130" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Classic Bot</div>
+      <div class="desc">Round face, dot eyes, simple smile — friendly default.</div>
+    </div>
+
+    <!-- 2. Squircle head, square pixel eyes -->
+    <div class="card">
+      <span class="num">02</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="58" y="78" width="84" height="86" rx="22" fill="url(#grad)"/>
+        <rect x="78" y="108" width="10" height="10" fill="white"/>
+        <rect x="112" y="108" width="10" height="10" fill="white"/>
+        <path d="M85 138 Q100 150 115 138" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Pixel Bot</div>
+      <div class="desc">Squircle head + pixel-square eyes — retro 8-bit charm.</div>
+    </div>
+
+    <!-- 3. Astronaut helmet style — empty face like reference image -->
+    <div class="card">
+      <span class="num">03</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <!-- outer helmet shape with side cups -->
+        <path d="M30 110 C30 71 61 40 100 40 C139 40 170 71 170 110 V150 C170 159 163 166 154 166 H46 C37 166 30 159 30 150 Z"
+              fill="url(#grad)"/>
+        <rect x="22" y="108" width="14" height="44" rx="4" fill="url(#grad)"/>
+        <rect x="164" y="108" width="14" height="44" rx="4" fill="url(#grad)"/>
+        <!-- inner empty face / visor -->
+        <path d="M50 112 C50 84 72 62 100 62 C128 62 150 84 150 112 V146 C150 150 147 153 143 153 H57 C53 153 50 150 50 146 Z" fill="white"/>
+        <!-- gentle eyes + smile inside the visor -->
+        <circle cx="86"  cy="106" r="4" fill="#0a0c14"/>
+        <circle cx="114" cy="106" r="4" fill="#0a0c14"/>
+        <path d="M86 124 Q100 134 114 124" stroke="#0a0c14" stroke-width="4" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Helmet Visor</div>
+      <div class="desc">Astronaut-helmet outline with face inside the visor.</div>
+    </div>
+
+    <!-- 4. Antenna bot -->
+    <div class="card">
+      <span class="num">04</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <line x1="100" y1="14" x2="100" y2="30" stroke="url(#grad)" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="100" cy="12" r="6" fill="url(#grad)"/>
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="56" y="80" width="88" height="88" rx="44" fill="url(#grad)"/>
+        <circle cx="84"  cy="112" r="7" fill="white"/>
+        <circle cx="116" cy="112" r="7" fill="white"/>
+        <path d="M85 132 Q100 144 115 132" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Antenna</div>
+      <div class="desc">Friendly bot with a single signal antenna on top.</div>
+    </div>
+
+    <!-- 5. Visor band over eyes -->
+    <div class="card">
+      <span class="num">05</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="white"/>
+        <!-- visor band -->
+        <rect x="60" y="100" width="80" height="22" rx="11" fill="url(#grad)"/>
+        <circle cx="84"  cy="111" r="4" fill="white"/>
+        <circle cx="116" cy="111" r="4" fill="white"/>
+        <path d="M85 138 Q100 148 115 138" stroke="url(#grad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Visor</div>
+      <div class="desc">Cyber-visor band hides the eyes; mysterious vibe.</div>
+    </div>
+
+    <!-- 6. Wink -->
+    <div class="card">
+      <span class="num">06</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <circle cx="84" cy="112" r="6" fill="white"/>
+        <path d="M108 112 Q116 108 124 112" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M82 130 Q100 144 118 130" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Wink</div>
+      <div class="desc">Cheeky one-eye wink — playful concierge energy.</div>
+    </div>
+
+    <!-- 7. Crescent / sleepy eyes -->
+    <div class="card">
+      <span class="num">07</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <path d="M76 110 Q84 116 92 110" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M108 110 Q116 116 124 110" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M84 132 Q100 144 116 132" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Joy Eyes</div>
+      <div class="desc">Crescent "happy" eyes — warm, kawaii feel.</div>
+    </div>
+
+    <!-- 8. Star eyes -->
+    <div class="card">
+      <span class="num">08</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <g fill="white">
+          <path d="M84 102 L86 110 L94 112 L86 114 L84 122 L82 114 L74 112 L82 110 Z"/>
+          <path d="M116 102 L118 110 L126 112 L118 114 L116 122 L114 114 L106 112 L114 110 Z"/>
+        </g>
+        <path d="M84 132 Q100 144 116 132" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Stargaze</div>
+      <div class="desc">Sparkle eyes — the bot is amazed and helpful.</div>
+    </div>
+
+    <!-- 9. Heart-eyes — ultra-friendly mode -->
+    <div class="card">
+      <span class="num">09</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <path d="M84 105 Q88 99 92 105 Q96 99 100 105 Q96 113 90 119 Q84 113 80 105 Q84 99 88 105"
+              fill="white" transform="translate(-4,4)"/>
+        <path d="M116 105 Q120 99 124 105 Q128 99 132 105 Q128 113 122 119 Q116 113 112 105 Q116 99 120 105"
+              fill="white" transform="translate(-4,4)"/>
+        <path d="M84 134 Q100 144 116 134" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Heart Eyes</div>
+      <div class="desc">Maximum charm — best for consumer/Slack avatar.</div>
+    </div>
+
+    <!-- 10. Hexagon head -->
+    <div class="card">
+      <span class="num">10</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <path d="M100 70 L150 100 V140 L100 170 L50 140 V100 Z" fill="url(#grad)"/>
+        <circle cx="84"  cy="118" r="6" fill="white"/>
+        <circle cx="116" cy="118" r="6" fill="white"/>
+        <path d="M85 138 Q100 150 115 138" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Hex Bot</div>
+      <div class="desc">Hexagonal face — geeky, technical.</div>
+    </div>
+
+    <!-- 11. Smug / smirk -->
+    <div class="card">
+      <span class="num">11</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <circle cx="84"  cy="112" r="6" fill="white"/>
+        <circle cx="116" cy="112" r="6" fill="white"/>
+        <path d="M84 134 Q104 144 118 130" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Smirk</div>
+      <div class="desc">Asymmetric smile — confident, "I got this" energy.</div>
+    </div>
+
+    <!-- 12. Open mouth / chatty -->
+    <div class="card">
+      <span class="num">12</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <circle cx="84"  cy="108" r="6" fill="white"/>
+        <circle cx="116" cy="108" r="6" fill="white"/>
+        <ellipse cx="100" cy="135" rx="14" ry="9" fill="white"/>
+      </svg>
+      <div class="name">Chatty</div>
+      <div class="desc">Open little "o" mouth — actively talking.</div>
+    </div>
+
+    <!-- 13. Triangle ears (cat-bot) -->
+    <div class="card">
+      <span class="num">13</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <path d="M30 96 L42 60 L58 96 Z" fill="url(#grad)"/>
+        <path d="M170 96 L158 60 L142 96 Z" fill="url(#grad)"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="118" r="48" fill="url(#grad)"/>
+        <circle cx="84"  cy="115" r="6" fill="white"/>
+        <circle cx="116" cy="115" r="6" fill="white"/>
+        <path d="M85 134 Q100 146 115 134" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Cat-Bot</div>
+      <div class="desc">Triangle ears poke through — whimsical, mascot-y.</div>
+    </div>
+
+    <!-- 14. Helmet bolts (industrial) -->
+    <div class="card">
+      <span class="num">14</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <circle cx="84"  cy="112" r="6" fill="white"/>
+        <circle cx="116" cy="112" r="6" fill="white"/>
+        <path d="M85 132 Q100 144 115 132" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <!-- bolts -->
+        <circle cx="60" cy="80" r="4" fill="white" opacity=".9"/>
+        <circle cx="140" cy="80" r="4" fill="white" opacity=".9"/>
+        <circle cx="100" cy="68" r="4" fill="white" opacity=".9"/>
+      </svg>
+      <div class="name">Bolt Bot</div>
+      <div class="desc">Tiny helmet rivets — industrial, rugged charm.</div>
+    </div>
+
+    <!-- 15. LED-bar eyes -->
+    <div class="card">
+      <span class="num">15</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <rect x="76" y="108" width="16" height="6" rx="3" fill="white"/>
+        <rect x="108" y="108" width="16" height="6" rx="3" fill="white"/>
+        <path d="M85 134 Q100 144 115 134" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">LED Bot</div>
+      <div class="desc">Bar-LED eyes — sci-fi, fits "Control Tower" theme.</div>
+    </div>
+
+    <!-- 16. Cheek dots / blush -->
+    <div class="card">
+      <span class="num">16</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+        <circle cx="84"  cy="110" r="6" fill="white"/>
+        <circle cx="116" cy="110" r="6" fill="white"/>
+        <circle cx="74"  cy="128" r="5" fill="white" opacity=".55"/>
+        <circle cx="126" cy="128" r="5" fill="white" opacity=".55"/>
+        <path d="M85 134 Q100 144 115 134" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Blush</div>
+      <div class="desc">Soft cheek dots — warmer, more huggable.</div>
+    </div>
+
+    <!-- 17. Tilted head -->
+    <div class="card">
+      <span class="num">17</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <g transform="rotate(-10 100 110)">
+          <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+                stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+          <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+          <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+          <circle cx="100" cy="115" r="48" fill="url(#grad)"/>
+          <circle cx="84"  cy="112" r="6" fill="white"/>
+          <circle cx="116" cy="112" r="6" fill="white"/>
+          <path d="M85 132 Q100 144 115 132" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+        </g>
+      </svg>
+      <div class="name">Curious</div>
+      <div class="desc">Tilted head — listening, paying attention.</div>
+    </div>
+
+    <!-- 18. Big top headphones (DJ vibe) -->
+    <div class="card">
+      <span class="num">18</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M22 124 C22 70 60 30 100 30 C140 30 178 70 178 124"
+              stroke="url(#grad)" stroke-width="22" stroke-linecap="round" fill="none"/>
+        <rect x="14" y="116" width="32" height="56" rx="14" fill="url(#grad)"/>
+        <rect x="154" y="116" width="32" height="56" rx="14" fill="url(#grad)"/>
+        <circle cx="100" cy="128" r="40" fill="url(#grad)"/>
+        <circle cx="86"  cy="124" r="5" fill="white"/>
+        <circle cx="114" cy="124" r="5" fill="white"/>
+        <path d="M88 142 Q100 150 112 142" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">DJ Cans</div>
+      <div class="desc">Big over-ear headphones — bold, confident.</div>
+    </div>
+
+    <!-- 19. Capsule head — modern Pixar -->
+    <div class="card">
+      <span class="num">19</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="150" y="100" width="22" height="42" rx="8" fill="url(#grad)"/>
+        <rect x="58" y="78" width="84" height="92" rx="42" fill="url(#grad)"/>
+        <circle cx="84"  cy="118" r="7" fill="white"/>
+        <circle cx="116" cy="118" r="7" fill="white"/>
+        <path d="M85 138 Q100 150 115 138" stroke="white" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Capsule</div>
+      <div class="desc">Tall rounded face — modern animated character feel.</div>
+    </div>
+
+    <!-- 20. Outline-only (no fill, line-art) -->
+    <div class="card">
+      <span class="num">20</span><br/>
+      <svg viewBox="0 0 200 200" fill="none">
+        <path d="M40 110 C40 70 70 40 100 40 C130 40 160 70 160 110"
+              stroke="url(#grad)" stroke-width="10" stroke-linecap="round" fill="none"/>
+        <rect x="32" y="104" width="18" height="38" rx="6" stroke="url(#grad)" stroke-width="6" fill="none"/>
+        <rect x="150" y="104" width="18" height="38" rx="6" stroke="url(#grad)" stroke-width="6" fill="none"/>
+        <circle cx="100" cy="118" r="46" stroke="url(#grad)" stroke-width="8" fill="none"/>
+        <circle cx="86"  cy="116" r="5" fill="url(#grad)"/>
+        <circle cx="114" cy="116" r="5" fill="url(#grad)"/>
+        <path d="M86 134 Q100 146 114 134" stroke="url(#grad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="name">Line-Art</div>
+      <div class="desc">Outline-only version — works on any background.</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -601,9 +601,9 @@
       const persona = CURRENT_PERSONA || {};
       const greeting = step.greeting || cfg.greeting || "Welcome,";
       const name = step.name || cfg.name || `${persona.name || "there"}!`;
-      const titleLead = step.titleLead || cfg.titleLead || "Build by describing";
-      const titleTail = step.titleTail || cfg.titleTail || "your vision...";
-      const cta = step.cta || cfg.cta || "Install ITSM";
+      const titleLead = step.titleLead || cfg.titleLead || "Start with";
+      const titleTail = step.titleTail || cfg.titleTail || "Autonomous ITSM";
+      const cta = step.cta || cfg.cta || "Get Started";
       const placeholder = step.placeholder || cfg.placeholder || "Ask anything";
 
       // Park the workspace in welcome mode so CSS can hide the dock

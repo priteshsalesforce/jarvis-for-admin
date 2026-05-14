@@ -1252,9 +1252,9 @@
     welcome: {
       greeting: "Welcome,",
       name: "Sarah!",
-      titleLead: "Build by describing",
-      titleTail: "your vision...",
-      cta: "Install ITSM",
+      titleLead: "Start with",
+      titleTail: "Autonomous ITSM",
+      cta: "Get Started",
       placeholder: "Ask anything",
       goto: "begin"
     },

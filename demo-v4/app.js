@@ -2919,6 +2919,79 @@
     incState.approvalCardEl = bubble;
   }
 
+  // ---- Chat post-incident summary card ------------------------
+  // Mirror of the right-panel #incSummaryCard that lands in the
+  // chat thread the moment ComplianceAgent finishes its RCA. Same
+  // beat, same content, same actions — wired through the same
+  // handleIncidentAction switch so View / Download / Share-Slack
+  // behave identically whether triggered from the page or the chat.
+  // Lives as a Jarvis bubble (bubble--summary) with rich card
+  // markup, followed by a quiet handoff sentence so the chat
+  // closes the loop conversationally instead of just dropping a
+  // card and going silent.
+  function postSummaryCard() {
+    if ($workspace && $workspace.classList.contains("workspace--chat-closed")) {
+      setChatClosed(false);
+    }
+    if (incState.summaryCardEl && incState.summaryCardEl.isConnected) {
+      // Already posted (e.g. user re-triggered the demo) — don't
+      // double up the card in the same conversation.
+      return;
+    }
+    const bubble = jarvisBubble("");
+    bubble.classList.add("bubble--summary");
+    const text = bubble.querySelector(".bubble__text");
+    if (!text) return;
+    const mttr = computeMTTR();
+    text.innerHTML = `
+      <div class="summary-card" data-summary="ready">
+        <div class="summary-card__head">
+          <span class="summary-card__check" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3.5 8.4 6.6 11.5l6-6.5"/>
+            </svg>
+          </span>
+          <div class="summary-card__head-text">
+            <div class="summary-card__eyebrow">Post-incident summary · ComplianceAgent</div>
+            <div class="summary-card__title">Post-incident summary is ready</div>
+          </div>
+        </div>
+        <div class="summary-card__body">
+          <p class="summary-card__lead">
+            ComplianceAgent drafted a full RCA with timeline, root cause, and follow-up actions.
+          </p>
+          <ul class="summary-card__meta">
+            <li><span>Incident</span><strong>${INCIDENT.id} · ${INCIDENT.service}</strong></li>
+            <li><span>Severity</span><strong>${INCIDENT.sev} · Resolved</strong></li>
+            <li><span>MTTR</span><strong>${mttr}</strong></li>
+          </ul>
+        </div>
+        <div class="summary-card__actions">
+          <button type="button" class="summary-card__btn summary-card__btn--primary"
+                  data-inc-action="view-summary">
+            View summary
+          </button>
+          <button type="button" class="summary-card__btn"
+                  data-inc-action="download-summary">
+            Download (.md)
+          </button>
+          <button type="button" class="summary-card__btn"
+                  data-inc-action="share-slack">
+            Share to Slack
+          </button>
+        </div>
+      </div>
+    `;
+    bubble.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-inc-action]");
+      if (!btn) return;
+      handleIncidentAction(btn.getAttribute("data-inc-action"));
+    });
+    incState.summaryCardEl = bubble;
+  }
+
   // Disable the still-open approval card (so it stops looking like a
   // pending question) and post the conversational pair: the user's
   // choice as a user-side bubble, then Jarvis's reply on the left.

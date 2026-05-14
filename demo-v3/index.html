@@ -34,12 +34,12 @@
          SIDE NAV — Gemini-style.
          Sections, top → bottom:
            1. Hamburger (collapse / expand)
-           2. Workspace items: Cockpit, Horizon, Incidents (gated until setup
-              completes), Settings (active during setup)
-           3. Divider
-           4. New chat button
-           5. Recent chat sessions (hidden when collapsed)
-           6. Profile (pinned to the bottom)
+           2. Workspace items, gated until Setup completes:
+                Tower · Insight · Horizon (New) · Lens
+           3. Settings (active during Setup), Profile (inline below)
+           4. Spacer
+           5. Jarvis — pinned to the bottom. Click toggles the chat panel
+              (open ↔ closed). This replaces the previous floating FAB.
          ===================================================================== -->
     <aside class="sidenav" id="sidenav"
            data-collapsed="false"
@@ -51,113 +51,87 @@
         <button class="sidenav__hamburger" id="navToggle" type="button"
                 aria-label="Collapse sidebar" aria-expanded="true"
                 aria-controls="sidenav">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="4" y1="6"  x2="20" y2="6"/>
-            <line x1="4" y1="12" x2="20" y2="12"/>
-            <line x1="4" y1="18" x2="20" y2="18"/>
-          </svg>
+          <i class="icon icon--hamburger" aria-hidden="true"></i>
         </button>
       </div>
 
       <!-- Workspace items.
-           Cockpit / Horizon / Incidents start with `is-locked` which
-           hides them until the IT admin completes Setup; the JS
-           strips that class on `setup complete` and the items
-           reveal in place. Settings is the only item visible during
-           Setup, and it's marked active for the entire flow. -->
+           Tower / Insight / Horizon / Lens start with `is-locked` which
+           hides them until the IT admin completes Setup; the JS strips
+           that class on `setup complete` and the items reveal in place.
+           Settings is the only nav item visible during Setup, and it's
+           marked active for the entire flow. Profile sits inline below
+           Settings (always visible). -->
       <nav class="sidenav__group" aria-label="Workspace">
         <button class="sidenav__item is-locked"
-                type="button" id="navCockpit" data-nav="cockpit"
+                type="button" id="navTower" data-nav="tower"
                 hidden>
           <span class="sidenav__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="7" height="9" x="3" y="3"  rx="1.5"/>
-              <rect width="7" height="5" x="14" y="3"  rx="1.5"/>
-              <rect width="7" height="9" x="14" y="12" rx="1.5"/>
-              <rect width="7" height="5" x="3" y="16"  rx="1.5"/>
-            </svg>
+            <i class="icon icon--tower"></i>
           </span>
-          <span class="sidenav__label">Cockpit</span>
+          <span class="sidenav__label">Tower</span>
+        </button>
+
+        <button class="sidenav__item is-locked"
+                type="button" id="navInsight" data-nav="insight"
+                hidden>
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--insight"></i>
+          </span>
+          <span class="sidenav__label">Insight</span>
         </button>
 
         <button class="sidenav__item is-locked"
                 type="button" id="navHorizon" data-nav="horizon"
                 hidden>
           <span class="sidenav__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 14h18"/>
-              <path d="M5 14a7 7 0 0 1 14 0"/>
-              <path d="M2 18h20"/>
-            </svg>
+            <i class="icon icon--horizon"></i>
           </span>
           <span class="sidenav__label">Horizon</span>
+          <span class="sidenav__badge" aria-label="New surface">New</span>
         </button>
 
         <button class="sidenav__item is-locked"
-                type="button" id="navIncidents" data-nav="incidents"
+                type="button" id="navLens" data-nav="lens"
                 hidden>
           <span class="sidenav__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 9v4"/>
-              <path d="M12 17h.01"/>
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
-            </svg>
+            <i class="icon icon--lens"></i>
           </span>
-          <span class="sidenav__label">Incidents</span>
+          <span class="sidenav__label">Lens</span>
         </button>
 
         <button class="sidenav__item is-active"
                 type="button" id="navSettings" data-nav="settings"
                 aria-current="page">
           <span class="sidenav__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
+            <i class="icon icon--settings"></i>
           </span>
           <span class="sidenav__label">Settings</span>
         </button>
+
+        <button class="sidenav__item"
+                type="button" id="navProfile" data-nav="profile"
+                aria-label="Open your profile · Sarah Chen, IT Admin">
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--profile"></i>
+          </span>
+          <span class="sidenav__label">Profile</span>
+        </button>
       </nav>
 
-      <!-- Divider -->
-      <div class="sidenav__divider" role="separator" aria-hidden="true"></div>
+      <!-- Spacer: flex-grows to push Jarvis to the bottom of the rail -->
+      <div class="sidenav__spacer" aria-hidden="true"></div>
 
-      <!-- New chat -->
-      <button class="sidenav__newchat" id="navNewChat" type="button"
-              title="Start a new chat with Jarvis">
-        <span class="sidenav__icon sidenav__icon--newchat" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20h9"/>
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>
-          </svg>
-        </span>
-        <span class="sidenav__label">New chat</span>
-      </button>
-
-      <!-- Recent chat sessions (hidden when collapsed) -->
-      <div class="sidenav__sessions" id="navSessions" aria-label="Recent chats">
-        <div class="sidenav__sessions-title">Chats</div>
-        <ul class="sidenav__sessions-list" id="navSessionList">
-          <li class="sidenav__sessions-empty" id="navSessionsEmpty">
-            No chats yet — ask Jarvis anything to start one.
-          </li>
-        </ul>
-      </div>
-
-      <!-- Profile, pinned to bottom -->
+      <!-- Jarvis — pinned bottom. Click toggles the chat panel open/closed.
+           Replaces the previous floating FAB so the chat affordance lives
+           in the same rail as the rest of the navigation. -->
       <div class="sidenav__foot">
-        <button class="sidenav__profile" id="navProfile" type="button"
-                aria-label="Open your profile · Sarah Chen, IT Admin">
-          <span class="sidenav__avatar" aria-hidden="true">S</span>
-          <span class="sidenav__profile-meta">
-            <span class="sidenav__profile-name">Sarah Chen</span>
-            <span class="sidenav__profile-sub">IT Admin · Acme Health</span>
+        <button class="sidenav__jarvis" id="navJarvis" type="button"
+                title="Open Jarvis"
+                aria-label="Open Jarvis chat panel"
+                aria-pressed="true">
+          <span class="sidenav__jarvis-mark" aria-hidden="true">
+            <img src="assets/jarvis-mark.png" alt="" />
           </span>
         </button>
       </div>
@@ -170,7 +144,31 @@
          IT admin can interrupt to ask Jarvis a question.
          ===================================================================== -->
     <main class="workspace" id="workspace">
+      <!-- =================================================================
+           CHAT PANEL — the stage holds the Jarvis thread + whisper composer.
+           Its compact header carries a Jarvis avatar (decorative anchor)
+           and a close button. The X collapses the panel into a floating
+           Jarvis FAB so the user can keep working in the workspace pages
+           without the chat taking up screen real estate.
+           ================================================================= -->
       <section class="stage" id="stage">
+        <header class="stage__head" id="stageHead">
+          <!-- Trailing action group — history (left) + close (right).
+               History opens the chat-history drawer; close dismisses
+               the chat panel and hands the canvas to the right panel. -->
+          <div class="stage__head-actions">
+            <button class="stage__head-icon stage__head-history" id="stageHistory" type="button"
+                    title="Chat history" aria-label="Open chat history"
+                    aria-pressed="false" aria-controls="chatHistory">
+              <i class="icon icon--history" aria-hidden="true"></i>
+            </button>
+            <button class="stage__head-icon stage__head-close" id="stageClose" type="button"
+                    title="Close chat" aria-label="Close chat panel" aria-expanded="true">
+              <i class="icon icon--close" aria-hidden="true"></i>
+            </button>
+          </div>
+        </header>
+
         <div class="stage__main" id="stageMain">
           <div class="thread" id="thread"></div>
         </div>
@@ -206,47 +204,68 @@
             </div>
           </div>
         </div>
+
+        <!-- =============================================================
+             Chat-history drawer — slides over the thread + dock when
+             the user clicks the history icon in the stage header. The
+             stage header itself stays visible so the icon doubles as a
+             toggle (re-click to close). Rendered client-side from a
+             demo data array in app.js; in production this would be the
+             paginated list of past Jarvis conversations.
+             ============================================================= -->
+        <aside class="chat-history" id="chatHistory" aria-hidden="true" aria-label="Chat history">
+          <header class="chat-history__head">
+            <!-- Inline search replaces the static title — at this point in
+                 the flow the panel is unmistakably "history" (the icon's
+                 pressed-state already says so), and search is what the user
+                 actually came to do once the list grows past a screenful. -->
+            <label class="chat-history__search" for="chatHistorySearch">
+              <svg class="chat-history__search-icon" viewBox="0 0 16 16"
+                   width="14" height="14" fill="none" stroke="currentColor"
+                   stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                <circle cx="7" cy="7" r="4.5"/>
+                <path d="M10.4 10.4 13.5 13.5"/>
+              </svg>
+              <input id="chatHistorySearch" type="search" autocomplete="off"
+                     class="chat-history__search-input"
+                     placeholder="Search history"
+                     aria-label="Search chat history"/>
+            </label>
+            <div class="chat-history__head-actions">
+              <button class="chat-history__filter" type="button"
+                      aria-label="Filter chat history" title="Filter">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none"
+                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                     aria-hidden="true">
+                  <path d="M2.5 4h11M4.5 8h7M6.5 12h3"/>
+                </svg>
+                <svg viewBox="0 0 12 12" width="9" height="9" fill="currentColor"
+                     aria-hidden="true">
+                  <path d="M6 8.6 2.2 4.8 3 4l3 3 3-3 .8.8L6 8.6Z"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+          <div class="chat-history__body" id="chatHistoryBody" role="list">
+            <!-- Rendered by app.js (renderChatHistory). -->
+          </div>
+        </aside>
       </section>
 
+      <!-- =================================================================
+           RIGHT-SIDE PANEL — workspace pages mount here (Tower, Insight,
+           Horizon, Lens, plus the in-story Splunk auth / ITSM bootstrap
+           pages). Pure surface: no chrome, no title bar, no close icon.
+           When the user dismisses the chat (X in the chat header, or a
+           tap on the sidenav Jarvis tile), the chat column collapses
+           and this panel takes the entire workspace canvas.
+           ================================================================= -->
       <aside class="sidepanel" id="sidepanel" aria-hidden="true" inert>
         <div class="browser">
-          <div class="browser__chrome">
-            <div class="browser__title" id="browserTitle">
-              <span class="browser__title-icon" aria-hidden="true"></span>
-              <span class="browser__title-text" id="browserTitleText">Workspace</span>
-            </div>
-            <button class="browser__iconbtn browser__fullscreen" id="browserFullscreen"
-                    type="button" title="Expand to full screen"
-                    aria-label="Expand panel to full screen" aria-pressed="false">
-              <svg class="browser__icon browser__icon--expand"
-                   viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M3 9V3h6"/>
-                <path d="M21 9V3h-6"/>
-                <path d="M3 15v6h6"/>
-                <path d="M21 15v6h-6"/>
-              </svg>
-              <svg class="browser__icon browser__icon--collapse"
-                   viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 3v6H3"/>
-                <path d="M15 3v6h6"/>
-                <path d="M9 21v-6H3"/>
-                <path d="M15 21v-6h6"/>
-              </svg>
-            </button>
-            <button class="browser__iconbtn browser__close" id="browserClose"
-                    type="button" title="Close" aria-label="Close panel">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M18 6 6 18"/>
-                <path d="m6 6 12 12"/>
-              </svg>
-            </button>
-          </div>
           <div class="browser__viewport" id="browserViewport"></div>
         </div>
       </aside>
+
     </main>
   </div>
 

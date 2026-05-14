@@ -1260,23 +1260,534 @@
       }, 40);
     },
 
-    /* ---------- The Cockpit (placeholder) -------------------- */
-    // Intentionally blank for now — the full cockpit design will
-    // slot in here. We keep a registered factory (rather than
-    // letting the engine fall back to `<p>cockpit</p>`) so the
-    // viewport renders cleanly the moment Sarah opens it.
+    /* ---------- The Cockpit -------------------------------------
+       Sarah's day-1 control surface for an IT Manager. Reading
+       altitudes, top → bottom:
+         0. Topbar     — title + last-updated stamp + time-range pill.
+         1. Banner     — single highest-priority signal of the moment.
+         2. Sign-offs  — "Awaiting your approval" lane (THE thing that
+                         makes this page actionable, not informational).
+         3. KPI strip  — the six numbers an IT manager scans first.
+         4. AI Agents  — the digital labour on shift today, filterable
+                         by domain and sortable by trust trajectory.
+         5. The Team   — human-managed rotation of those agents.
+
+       Authored as data-then-template so each section is a small
+       array of objects and a single render fn. Mutating state (time
+       range, active domain, sort key) lives in closure variables and
+       triggers targeted re-renders rather than blowing the page away.
+       ---------------------------------------------------------- */
     "cockpit": (panel) => {
-      panel.innerHTML = `
-        <div class="cockpit-placeholder">
-          <div class="cockpit-placeholder__inner">
-            <div class="cockpit-placeholder__badge">The Cockpit</div>
-            <div class="cockpit-placeholder__hint">Design coming soon</div>
+      // Page-local HTML escape. The `md` helper used elsewhere in the
+      // app lives inside app.js's IIFE so it's not in scope here; we
+      // only need plain text escaping for the cockpit data values.
+      const esc = (s) => String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+      // ----- Iconography (inline SVGs, kept minimal) ---------------------
+      // Only icons that earn their place at this altitude. Removed:
+      // sparkline polyline (now rendered procedurally), caret affordance
+      // (cards announce "Open …" via aria-label), clock pill icon
+      // (the word "Updated" carries the meaning).
+      const ICON_AGENT = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17.5A4.5 4.5 0 0 1 4.2 9.3a5.5 5.5 0 0 1 10.7-1.5 4.2 4.2 0 0 1 4 4.2 4 4 0 0 1-4 4.5H7Z"/><path d="M12 10.5v4M10 12.5h4"/></svg>`;
+      const ICON_ARROW_DOWN = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M6 9.3 2.2 5.5 3 4.7l3 3 3-3 .8.8L6 9.3Z"/></svg>`;
+      const ICON_ARROW_UP   = `<svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M6 2.7 9.8 6.5 9 7.3l-3-3-3 3-.8-.8L6 2.7Z"/></svg>`;
+      const ICON_CHECK = `<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 5"/></svg>`;
+
+      // ----- Mutable state (closure-scoped) ------------------------------
+      let activeDomain      = "all";   // all | reliability | cost | identity | compliance
+      let showAllSignoffs   = false;   // collapsed → show top 2; "1 more" expands
+      let lastUpdated       = new Date();
+
+      // ----- ITXM domain chips ------------------------------------------
+      // Counts dropped on purpose — at a glance the user reads four words,
+      // not numbers, and clicking the chip is how they discover the count.
+      const domains = [
+        { id: "all",         label: "All" },
+        { id: "reliability", label: "Reliability" },
+        { id: "cost",        label: "Cost" },
+        { id: "identity",    label: "Identity" },
+        { id: "compliance",  label: "Compliance" }
+      ];
+
+      // ----- KPI strip ---------------------------------------------------
+      const kpis = [
+        { label: "AI Agents",            value: "34",
+          metas: [
+            { text: "+2 discovered",          tone: "ok"   },
+            { text: "2 pending registration", tone: "warn" }
+          ]
+        },
+        { label: "Incidents · 24h",      value: "47",
+          metas: [
+            { text: "1 Major",                tone: "alert" },
+            { text: "44 auto-resolved",       tone: "ok"    }
+          ]
+        },
+        { label: "Auto Resolutions",     value: "94%",
+          metas: [
+            { text: "+2pp from last week",    tone: "ok" }
+          ]
+        },
+        { label: "Cases closed · 24h",   value: "128",
+          metas: [
+            { text: "28 in customer voice",   tone: "mute" }
+          ]
+        },
+        { label: "CMDB · CIS Tracked",   value: "3,847",
+          sub: "Coverage 97.4%",
+          metas: [
+            { text: "+12 new (auto-discovered)", tone: "ok" }
+          ]
+        },
+        { label: "KYC processing · 15D", value: "94%",
+          sub: "Success rate",
+          metas: [
+            { text: "+2pp from last week",    tone: "ok" }
+          ]
+        }
+      ];
+
+      // ----- Sign-offs — collapsed to a one-line headline per card -------
+      // The detail view (which we don't build here) is where the manager
+      // sees the full reason / impact / audit trail. The cockpit's job is
+      // to surface the *decision*, not the brief.
+      let signoffs = [
+        { id: "remed-payments", agent: "RemediationAgent",
+          action: "Roll back checkout-api → v2.4.1",
+          risk: "high",   deadline: "in 12 min" },
+        { id: "change-launch",  agent: "ChangeAgent",
+          action: "Hold Saturday onboarding launch",
+          risk: "medium", deadline: "by 18:00" },
+        { id: "lic-figma",      agent: "LicenseAgent",
+          action: "Reclaim 47 idle Figma seats",
+          risk: "low",    deadline: "by Fri" }
+      ];
+
+      // ----- Agents ------------------------------------------------------
+      // `barRisk` >= SLA_THRESHOLD shows the card as "At risk". All other
+      // status badges are silenced — the bar + colour is enough.
+      const agents = [
+        { name: "RemediationAgent", level: "L3", instances: 3, domain: "reliability",
+          body: "Watching checkout-api; deferred 1 rollback to a human.",
+          trust: 90, trend: "down", load: 0.46, barRisk: 22, tone: "cool", status: "new" },
+        { name: "FinOpsAgent",      level: "L3", instances: 1, domain: "cost",
+          body: "AWS spend trending +14% MoM on data-warehouse · 3 right-size proposals queued.",
+          trust: 91, trend: "down", load: 0.46, barRisk: 24, tone: "cool" },
+        { name: "SLAAgent",         level: "L4", instances: 1, domain: "reliability",
+          body: "Two enterprise SLAs at 80% breach risk on payments-gateway.",
+          trust: 98, trend: "up",   load: 0.58, barRisk: 82, tone: "hot" },
+        { name: "RiskAgent",        level: "L4", instances: 1, domain: "compliance",
+          body: "Watching checkout-api; deferred 1 rollback to a human.",
+          trust: 90, trend: "down", load: 0.51, barRisk: 38, tone: "warm" },
+        { name: "LicenseAgent",     level: "L4", instances: 1, domain: "cost",
+          body: "Reclaimed 47 idle Figma seats; flagged Adobe CC over-allocation by 12%.",
+          trust: 93, trend: "down", load: 0.32, barRisk: 24, tone: "cool" },
+        { name: "ChangeAgent",      level: "L4", instances: 1, domain: "reliability",
+          body: "Holding 2 changes against Saturday's onboarding launch freeze.",
+          trust: 91, trend: "down", load: 0.41, barRisk: 24, tone: "cool" },
+        { name: "IdentityAgent",    level: "L3", instances: 1, domain: "identity",
+          body: "12 stale service principals; auto-rotation queued for Friday window.",
+          trust: 95, trend: "up",   load: 0.28, barRisk: 18, tone: "cool" },
+        { name: "ComplianceAgent",  level: "L4", instances: 1, domain: "compliance",
+          body: "SOX evidence pack 87% complete · 4 controls waiting on attestation.",
+          trust: 92, trend: "flat", load: 0.37, barRisk: 30, tone: "warm" }
+      ];
+
+      // ----- The Team ----------------------------------------------------
+      const team = [
+        { name: "RemediationAgent", level: "L3", instances: 1, domain: "reliability",
+          body: "Watching checkout-api; deferred 1 rollback to a human.",
+          trust: 90, trend: "down", load: 0.46, barRisk: 22, tone: "cool" },
+        { name: "FinOpsAgent",      level: "L3", instances: 1, domain: "cost",
+          body: "AWS spend trending +14% MoM on data-warehouse · 3 right-size proposals queued.",
+          trust: 91, trend: "down", load: 0.46, barRisk: 24, tone: "cool" },
+        { name: "SLAAgent",         level: "L4", instances: 1, domain: "reliability",
+          body: "Two enterprise SLAs at 80% breach risk on payments-gateway.",
+          trust: 98, trend: "down", load: 0.58, barRisk: 82, tone: "hot" },
+        { name: "RiskAgent",        level: "L4", instances: 1, domain: "compliance",
+          body: "Watching checkout-api; deferred 1 rollback to a human.",
+          trust: 90, trend: "down", load: 0.51, barRisk: 38, tone: "warm" }
+      ];
+
+      // ----- Risk thresholds ---------------------------------------------
+      const SLA_THRESHOLD = 70;
+      const TRUST_FLOOR   = 92;
+
+      // ----- Helpers -----------------------------------------------------
+      const trendLabel = (trend) =>
+        trend === "up" ? "improving" : trend === "down" ? "declining" : "stable";
+
+      const relTime = (date) => {
+        const s = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+        if (s < 60)  return `${s}s ago`;
+        const m = Math.round(s / 60);
+        if (m < 60)  return `${m}m ago`;
+        const h = Math.round(m / 60);
+        return `${h}h ago`;
+      };
+
+      // ----- Render: status badge (alerting only) ------------------------
+      // Routine "watch" / "stable" states render nothing. The card is calm
+      // unless it actually wants attention.
+      const renderStatus = (a) => {
+        if (a.status === "new") {
+          return `<span class="agent__badge agent__badge--new" title="Added in the last 24h">New</span>`;
+        }
+        if (a.trust < TRUST_FLOOR) {
+          return `<span class="agent__badge agent__badge--alert" title="Trust below ${TRUST_FLOOR}% SLA floor">Below SLA</span>`;
+        }
+        if (a.barRisk >= SLA_THRESHOLD) {
+          return `<span class="agent__badge agent__badge--warn" title="Above ${SLA_THRESHOLD}% breach-risk threshold">At risk</span>`;
+        }
+        return "";
+      };
+
+      // ----- Render: sign-off card (one-line headline) -------------------
+      // No avatar, no reason, no impact. The risk colour-band + risk pill
+      // + deadline + action + two buttons is everything a manager needs
+      // to decide. Full context lives behind "View details" on hover.
+      const renderSignoff = (s) => `
+        <article class="signoff" data-risk="${s.risk}" data-signoff-id="${esc(s.id)}">
+          <div class="signoff__row">
+            <span class="signoff__risk signoff__risk--${s.risk}">${esc(s.risk)}</span>
+            <span class="signoff__agent">${esc(s.agent)}</span>
+            <span class="signoff__deadline">${esc(s.deadline)}</span>
+          </div>
+          <p class="signoff__action">${esc(s.action)}</p>
+          <div class="signoff__actions">
+            <button class="signoff__btn signoff__btn--approve" type="button"
+                    data-signoff-action="approve" data-signoff-id="${esc(s.id)}">
+              <span aria-hidden="true">${ICON_CHECK}</span> Approve
+            </button>
+            <button class="signoff__btn signoff__btn--defer" type="button"
+                    data-signoff-action="defer" data-signoff-id="${esc(s.id)}">Defer</button>
+          </div>
+        </article>
+      `;
+
+      // ----- Render: KPI card --------------------------------------------
+      const renderKpi = (k) => `
+        <article class="kpi">
+          <div class="kpi__label">${esc(k.label)}</div>
+          <div class="kpi__value">${esc(k.value)}</div>
+          ${k.sub ? `<div class="kpi__sub">${esc(k.sub)}</div>` : ""}
+          <div class="kpi__metas">
+            ${k.metas.map(m => `<span class="kpi__meta kpi__meta--${m.tone}">${esc(m.text)}</span>`).join("")}
+          </div>
+        </article>
+      `;
+
+      // ----- Render: domain chip (no count) ------------------------------
+      const renderDomainChip = (d) => `
+        <button class="cockpit__chip ${d.id === activeDomain ? "is-active" : ""}"
+                type="button" role="tab"
+                aria-selected="${d.id === activeDomain ? "true" : "false"}"
+                data-cockpit-domain="${d.id}">${esc(d.label)}</button>
+      `;
+
+      // ----- Render: agent card (Lite) -----------------------------------
+      // Strips down to the four things that matter on a glance:
+      //   1. Who (icon + name + level + optional ×N instances)
+      //   2. What it's doing right now (2-line body)
+      //   3. Trust % + arrow direction (one symbol, one number)
+      //   4. Load value (one number)
+      //   5. A coloured pressure bar with an SLA threshold marker.
+      // Dropped: sparkline, median baseline tick, "ABOVE SLA THRESHOLD"
+      // text, hover caret, status dot. Single status badge appears only
+      // when the card is actually alerting.
+      const renderAgent = (a) => {
+        const arrow    = a.trend === "up" ? ICON_ARROW_UP : a.trend === "down" ? ICON_ARROW_DOWN : "";
+        const trendCls = a.trend === "up" ? "agent__arrow--up" : a.trend === "down" ? "agent__arrow--down" : "agent__arrow--flat";
+        const trustAria = `Trust ${a.trust} percent, ${trendLabel(a.trend)}`;
+        const isBreach = a.barRisk >= SLA_THRESHOLD;
+        return `
+          <article class="agent" data-tone="${a.tone}" data-domain="${a.domain}"
+                   ${isBreach ? 'data-breach="1"' : ""}>
+            <header class="agent__head">
+              <div class="agent__icon" aria-hidden="true">${ICON_AGENT}</div>
+              <div class="agent__title">
+                <span class="agent__name">${esc(a.name)}</span>
+                <span class="agent__level">${esc(a.level)}</span>
+                ${a.instances > 1 ? `<span class="agent__instances" title="${a.instances} instances managed as one">×${a.instances}</span>` : ""}
+              </div>
+              <div class="agent__status">${renderStatus(a)}</div>
+            </header>
+            <p class="agent__body">${esc(a.body)}</p>
+            <footer class="agent__foot">
+              <span class="agent__metric" aria-label="${esc(trustAria)}">
+                Trust <strong>${a.trust}%</strong>
+                ${arrow ? `<span class="agent__arrow ${trendCls}">${arrow}</span>` : ""}
+              </span>
+              <span class="agent__metric agent__metric--load">
+                Load <strong>${a.load.toFixed(2)}</strong>
+              </span>
+            </footer>
+            <div class="agent__bar" role="presentation" style="--threshold:${SLA_THRESHOLD}%">
+              <span style="width:${a.barRisk}%"></span>
+            </div>
+          </article>
+        `;
+      };
+
+      // ----- Filtering ---------------------------------------------------
+      const filtered = (list) =>
+        activeDomain === "all" ? list : list.filter(a => a.domain === activeDomain);
+
+      // ----- Sign-off list (collapsed = top 2 by risk) -------------------
+      // Risk rank surfaces the most urgent two first regardless of their
+      // order in the array.
+      const riskRank = (r) => r === "high" ? 0 : r === "medium" ? 1 : 2;
+      const visibleSignoffs = () => {
+        const sorted = [...signoffs].sort((a, b) => riskRank(a.risk) - riskRank(b.risk));
+        return showAllSignoffs ? sorted : sorted.slice(0, 2);
+      };
+
+      // ----- Top-level HTML ----------------------------------------------
+      const renderShell = () => {
+        const all = signoffs.length;
+        const visible = visibleSignoffs();
+        const hidden = all - visible.length;
+        return `
+        <div class="cockpit" role="region" aria-label="Cockpit · your control surface">
+          <div class="cockpit__shell">
+
+            <header class="cockpit__topbar">
+              <h1 class="cockpit__title">Cockpit</h1>
+              <span class="cockpit__updated" aria-live="polite">
+                Live · Updated <span data-cockpit-updated-rel>${esc(relTime(lastUpdated))}</span>
+              </span>
+            </header>
+
+            <section class="cockpit__signoffs" aria-label="Awaiting your approval">
+              <header class="cockpit__signoffs-head">
+                <h2 class="cockpit__section-title">Awaiting your approval</h2>
+                <span class="cockpit__section-stat" data-cockpit-signoff-count>${all} queued</span>
+              </header>
+              <div class="cockpit__signoffs-grid" data-cockpit-signoffs>
+                ${visible.map(renderSignoff).join("")}
+              </div>
+              ${all === 0
+                ? `<div class="cockpit__signoffs-empty"><span aria-hidden="true">${ICON_CHECK}</span> You're caught up.</div>`
+                : hidden > 0
+                  ? `<button class="cockpit__more" type="button" data-cockpit-action="show-all-signoffs">See queue (${hidden} more)</button>`
+                  : showAllSignoffs && all > 2
+                    ? `<button class="cockpit__more" type="button" data-cockpit-action="collapse-signoffs">Collapse</button>`
+                    : ""
+              }
+            </section>
+
+            <section class="cockpit__kpis" aria-label="Key indicators">
+              ${kpis.map(renderKpi).join("")}
+            </section>
+
+            <section class="cockpit__section" aria-label="AI Agents">
+              <header class="cockpit__section-head">
+                <div class="cockpit__section-titlegroup">
+                  <h2 class="cockpit__section-title">AI Agents</h2>
+                  <span class="cockpit__section-stat">25 agents · 23 active · 1 outlier</span>
+                </div>
+                <button class="cockpit__see" type="button"
+                        data-cockpit-action="see-all-agents">See all</button>
+              </header>
+              <div class="cockpit__chips" role="tablist" aria-label="Filter by domain">
+                ${domains.map(renderDomainChip).join("")}
+              </div>
+              <div class="cockpit__grid" data-cockpit-grid="agents">
+                ${filtered(agents).map(renderAgent).join("")}
+              </div>
+            </section>
+
+            <section class="cockpit__section" aria-label="The Team">
+              <header class="cockpit__section-head">
+                <div class="cockpit__section-titlegroup">
+                  <h2 class="cockpit__section-title">The Team</h2>
+                  <span class="cockpit__section-sub">managing your digital labour</span>
+                </div>
+                <button class="cockpit__see" type="button"
+                        data-cockpit-action="see-all-team">See all</button>
+              </header>
+              <div class="cockpit__grid" data-cockpit-grid="team">
+                ${team.map(renderAgent).join("")}
+              </div>
+            </section>
+
           </div>
         </div>
       `;
+      };
+
+      // Mount the page.
+      panel.innerHTML = renderShell();
+
+      // ----- Targeted re-renderers ---------------------------------------
+      const $ = (sel, root = panel) => root.querySelector(sel);
+
+      const rerenderAgents = () => {
+        const grid = $('[data-cockpit-grid="agents"]');
+        if (grid) grid.innerHTML = filtered(agents).map(renderAgent).join("");
+        wireAgentCards();
+      };
+
+      const rerenderChips = () => {
+        panel.querySelectorAll("[data-cockpit-domain]").forEach((b) => {
+          const active = b.getAttribute("data-cockpit-domain") === activeDomain;
+          b.classList.toggle("is-active", active);
+          b.setAttribute("aria-selected", active ? "true" : "false");
+        });
+      };
+
+      // Re-render the entire sign-off section (grid + count + more link),
+      // because the visible set / "n more" affordance depends on multiple
+      // pieces of state at once.
+      const rerenderSignoffs = () => {
+        const section = panel.querySelector(".cockpit__signoffs");
+        if (!section) return;
+        const all = signoffs.length;
+        const visible = visibleSignoffs();
+        const hidden = all - visible.length;
+        const grid = section.querySelector("[data-cockpit-signoffs]");
+        if (grid) {
+          grid.innerHTML = all === 0
+            ? ""
+            : visible.map(renderSignoff).join("");
+        }
+        const count = section.querySelector("[data-cockpit-signoff-count]");
+        if (count) count.textContent = `${all} queued`;
+        // Replace whatever "more / collapse / empty" affordance was there.
+        section.querySelectorAll(".cockpit__more, .cockpit__signoffs-empty").forEach(n => n.remove());
+        if (all === 0) {
+          const empty = document.createElement("div");
+          empty.className = "cockpit__signoffs-empty";
+          empty.innerHTML = `<span aria-hidden="true">${ICON_CHECK}</span> You're caught up.`;
+          section.appendChild(empty);
+        } else if (hidden > 0) {
+          const more = document.createElement("button");
+          more.className = "cockpit__more";
+          more.type = "button";
+          more.setAttribute("data-cockpit-action", "show-all-signoffs");
+          more.textContent = `See queue (${hidden} more)`;
+          section.appendChild(more);
+        } else if (showAllSignoffs && all > 2) {
+          const collapse = document.createElement("button");
+          collapse.className = "cockpit__more";
+          collapse.type = "button";
+          collapse.setAttribute("data-cockpit-action", "collapse-signoffs");
+          collapse.textContent = "Collapse";
+          section.appendChild(collapse);
+        }
+        wireSignoffActions();
+        wireMoreActions();
+      };
+
+      // ----- Wiring -------------------------------------------------------
+      const note = (msg) => {
+        if (typeof window.directorNote === "function") window.directorNote(msg);
+      };
+
+      // Domain chips
+      panel.querySelectorAll("[data-cockpit-domain]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeDomain = btn.getAttribute("data-cockpit-domain");
+          rerenderChips();
+          rerenderAgents();
+        });
+      });
+
+      // Sign-off Approve / Defer
+      function wireSignoffActions() {
+        panel.querySelectorAll("[data-signoff-action]").forEach((btn) => {
+          if (btn.dataset.wired === "1") return;
+          btn.dataset.wired = "1";
+          btn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            const action = btn.getAttribute("data-signoff-action");
+            const id     = btn.getAttribute("data-signoff-id");
+            const item   = signoffs.find(s => s.id === id);
+            if (!item) return;
+            signoffs = signoffs.filter(s => s.id !== id);
+            rerenderSignoffs();
+            const verb = action === "approve" ? "Approved" : "Deferred";
+            note(`${verb}: ${item.action}.`);
+          });
+        });
+      }
+      wireSignoffActions();
+
+      // "See queue (N more)" / "Collapse"
+      function wireMoreActions() {
+        panel.querySelectorAll(".cockpit__more").forEach((btn) => {
+          if (btn.dataset.wired === "1") return;
+          btn.dataset.wired = "1";
+          btn.addEventListener("click", () => {
+            const action = btn.getAttribute("data-cockpit-action");
+            if (action === "show-all-signoffs") showAllSignoffs = true;
+            else if (action === "collapse-signoffs") showAllSignoffs = false;
+            rerenderSignoffs();
+          });
+        });
+      }
+      wireMoreActions();
+
+      // Section "See all" links
+      panel.querySelectorAll("[data-cockpit-action]").forEach((el) => {
+        // Skip ones already wired (signoff actions, more buttons)
+        if (el.dataset.wired === "1") return;
+        const action = el.getAttribute("data-cockpit-action");
+        if (!["see-all-agents", "see-all-team"].includes(action)) return;
+        el.dataset.wired = "1";
+        el.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          const msg = {
+            "see-all-agents":   "Showing all 25 agents across the 4 ITXM domains.",
+            "see-all-team":     "Opening the full rotation — 4 on shift, 3 active."
+          }[action];
+          if (msg) note(msg);
+        });
+      });
+
+      // Agent card click + keyboard
+      function wireAgentCards() {
+        panel.querySelectorAll(".agent").forEach((card) => {
+          if (card.dataset.wired === "1") return;
+          card.dataset.wired = "1";
+          card.setAttribute("tabindex", "0");
+          card.setAttribute("role", "button");
+          const name = card.querySelector(".agent__name")?.textContent || "Agent";
+          card.setAttribute("aria-label", `Open ${name} detail`);
+          const open = () => note(`Opening ${name} — detail view coming online.`);
+          card.addEventListener("click", open);
+          card.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); }
+          });
+        });
+      }
+      wireAgentCards();
+
+      // "Updated X ago" auto-tick. Self-cleans when the panel is unmounted.
+      const tickUpdated = () => {
+        const rel = panel.querySelector("[data-cockpit-updated-rel]");
+        if (rel) rel.textContent = relTime(lastUpdated);
+      };
+      const updatedTimer = setInterval(() => {
+        if (!panel.querySelector("[data-cockpit-updated-rel]")) {
+          clearInterval(updatedTimer);
+          return;
+        }
+        tickUpdated();
+      }, 15000);
     }
   };
   Object.assign(window.PAGES = window.PAGES || {}, pages);
+  // Tower is the active nav item that opens the Cockpit. Aliasing it
+  // here means the workspace placeholder in app.js stays untouched
+  // while Sarah lands on her control surface the moment she taps
+  // Tower in the sidenav.
+  window.PAGES.tower = window.PAGES.cockpit;
 
   // ----- Chapter registration -----------------------------------
   const chapter = {
@@ -1339,9 +1850,9 @@
     welcome: {
       greeting: "Welcome,",
       name: "Sarah!",
-      titleLead: "Build by describing",
-      titleTail: "your vision...",
-      cta: "Install ITSM",
+      titleLead: "Start with",
+      titleTail: "Autonomous ITSM",
+      cta: "Get Started",
       placeholder: "Ask anything",
       goto: "begin"
     },

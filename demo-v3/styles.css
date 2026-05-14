@@ -129,6 +129,41 @@ body {
   transition: color .3s ease;
 }
 
+/* ----------------------------------------------------------------
+   Iconography — single-color SVG glyphs painted in `currentColor`
+   via CSS mask. The supplied source SVGs use a hard-coded fill, so a
+   plain `<img src>` would lock the icon to that color and break the
+   hover / active / dark-mode states the rest of the UI relies on.
+   The mask approach renders the shape from the SVG file but paints
+   it with the element's `color`, so all existing color rules
+   (.sidenav__item.is-active, [data-theme="dark"], hover, etc.)
+   continue to "just work" with no per-icon overrides.
+   ---------------------------------------------------------------- */
+.icon {
+  display: inline-block;
+  width: 18px; height: 18px;
+  flex-shrink: 0;
+  color: var(--ink-dim);
+  background-color: currentColor;
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-size: contain;    mask-size: contain;
+}
+.icon--hamburger { -webkit-mask-image: url("assets/icons/Hamburger.svg"); mask-image: url("assets/icons/Hamburger.svg"); }
+.icon--tower     { -webkit-mask-image: url("assets/icons/Tower.svg");     mask-image: url("assets/icons/Tower.svg"); }
+.icon--insight   { -webkit-mask-image: url("assets/icons/Insight.svg");   mask-image: url("assets/icons/Insight.svg"); }
+.icon--horizon   { -webkit-mask-image: url("assets/icons/Horizon.svg");   mask-image: url("assets/icons/Horizon.svg"); }
+.icon--lens      { -webkit-mask-image: url("assets/icons/Lens.svg");      mask-image: url("assets/icons/Lens.svg"); }
+.icon--settings  { -webkit-mask-image: url("assets/icons/settings.svg");  mask-image: url("assets/icons/settings.svg"); }
+.icon--profile   { -webkit-mask-image: url("assets/icons/profile.svg");   mask-image: url("assets/icons/profile.svg"); }
+.icon--close     { -webkit-mask-image: url("assets/icons/Close.svg");     mask-image: url("assets/icons/Close.svg"); }
+.icon--history   { -webkit-mask-image: url("assets/icons/History.svg");   mask-image: url("assets/icons/History.svg"); }
+
+/* Context sizing — the chat-header buttons and the hamburger render
+   slightly larger / smaller than the default sidenav nav glyph. */
+.sidenav__hamburger .icon  { width: 20px; height: 20px; }
+.stage__head-icon .icon    { width: 16px; height: 16px; }
+
 /* ---------- Ambient background (pastel orb blobs only) ---------- */
 .bg-orb {
   position: fixed; border-radius: 50%; filter: blur(80px);
@@ -280,10 +315,12 @@ body {
    length. Line-height is set to 1.4 (not 1) so descenders like
    the "g" in "Settings" or "p" in "Cockpit" aren't clipped by
    the label's `overflow: hidden`. */
-.sidenav__item,
-.sidenav__newchat {
+.sidenav__item {
   display: grid;
-  grid-template-columns: 28px 1fr;
+  /* Three tracks: icon (28px) · label (1fr) · optional trailing slot
+     (auto). The auto track collapses to 0 when the item has no
+     trailing badge, so non-badged items keep their original shape. */
+  grid-template-columns: 28px 1fr auto;
   align-items: center;
   gap: 12px;
   width: 100%;
@@ -427,10 +464,9 @@ body {
 .sidenav__icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: 28px;
-  color: currentColor;
+  color: var(--ink-dim);
   flex-shrink: 0;
 }
-.sidenav__icon svg { display: block; }
 
 .sidenav__label {
   min-width: 0;
@@ -450,141 +486,160 @@ body {
   flex-shrink: 0;
 }
 
-/* Divider sits flush against the rail and shrinks with collapse */
-.sidenav__divider {
-  height: 1px;
-  background: var(--line);
-  margin: 8px 8px;
-}
-
-/* New chat — same shape as nav items, but the icon is accented
-   so it reads as the primary action in this region. */
-.sidenav__newchat {
-  margin-bottom: 8px;
+/* "New" pill — small lozenge stamped on a sidenav item to mark a
+   recently-launched surface (e.g. Horizon). The lavender tint comes
+   from the brand gradient family so it reads as part of the Jarvis
+   visual system rather than an alert. */
+.sidenav__badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  margin-left: 4px;
+  border-radius: 999px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--ink);
-}
-
-/* Sessions list — only meaningful when expanded.
-   In collapsed state, the entire region is hidden so the rail
-   stays clean. The list grows to fill remaining space and
-   scrolls internally so the profile footer stays pinned. */
-.sidenav__sessions {
-  display: flex; flex-direction: column;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-}
-.sidenav__sessions-title {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-  padding: 6px 12px 8px;
-}
-.sidenav__sessions-list {
-  list-style: none;
-  margin: 0; padding: 0 4px 8px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar) transparent;
-}
-.sidenav__sessions-list::-webkit-scrollbar { width: 6px; }
-.sidenav__sessions-list::-webkit-scrollbar-thumb {
-  background: var(--scrollbar); border-radius: 6px;
-}
-
-.sidenav__session {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 0; background: transparent;
-  color: var(--ink-dim);
-  font: 400 13px/1.35 var(--font-ui);
-  text-align: left;
-  cursor: pointer;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--grad-jarvis);
+  background-size: 200% 100%;
+  box-shadow: 0 1px 2px rgba(106, 77, 255, .25);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background .15s ease, color .15s ease;
-}
-/* Hover, active, and focus states are unified with the rest of
-   the rail in the shared rule near the top of the sidenav block;
-   we only need to express the "currently selected session"
-   visual here. */
-.sidenav__session.is-active {
-  background: var(--sidenav-hover);
-  color: var(--ink);
-  font-weight: 600;
+  transition: opacity .2s ease;
 }
 
-.sidenav__sessions-empty {
-  list-style: none;
-  padding: 8px 12px;
-  color: var(--ink-mute);
-  font-size: 12px;
-  line-height: 1.45;
+/* Spacer — flex-grows to push the Jarvis footer to the bottom of
+   the rail regardless of how many nav items are visible. Sits
+   between the nav group and the foot. */
+.sidenav__spacer {
+  flex: 1 1 auto;
+  min-height: 8px;
 }
 
-/* Profile — pinned at the bottom of the rail. We use margin-top:auto
-   to push it down regardless of how few sessions there are. */
+/* Foot — pinned to the bottom, holds the Jarvis chat-toggle button.
+   The Jarvis tile is the only thing in the foot in this layout
+   (Profile moved up into the main nav group). */
 .sidenav__foot {
-  margin-top: auto;
-  padding-top: 8px;
+  padding-top: 10px;
+  margin-top: 6px;
   border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
-.sidenav__profile {
-  display: grid;
-  grid-template-columns: 32px 1fr;
+/* Jarvis tile — the chat affordance. Same outer shape as the rest
+   of the sidenav items so the rail stays visually consistent, but
+   the icon disc is gradient-haloed and breathes softly to communicate
+   "this is the AI you can talk to". Pressed state (aria-pressed=true)
+   means the chat panel is currently OPEN. */
+.sidenav__jarvis {
+  display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 8px 8px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
   border-radius: 12px;
-  border: 0; background: transparent;
   color: var(--ink);
+  font: 600 13px/1.2 var(--font-ui);
   text-align: left;
   cursor: pointer;
-  transition: background .15s ease;
+  transition: background .18s ease, transform .18s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-/* Hover/focus states inherited from the shared sidenav rule. */
-.sidenav__avatar {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: var(--grad-jarvis);
-  color: #fff;
-  font-weight: 700; font-size: 13px;
+.sidenav__jarvis:hover {
+  background: var(--sidenav-hover);
+}
+.sidenav__jarvis:active {
+  background: var(--sidenav-hover-strong);
+  transform: scale(.98);
+}
+.sidenav__jarvis:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
+  outline-offset: 2px;
+  background: var(--sidenav-hover);
+}
+
+/* The Jarvis mark sits in a 36px disc with a soft gradient halo.
+   When chat is OPEN (aria-pressed=true) we add a brighter ring;
+   when chat is CLOSED we drop the ring so the tile reads as a
+   call-to-action. */
+.sidenav__jarvis-mark {
   flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, rgba(106, 77, 255, .18), transparent 70%),
+    var(--bg-1);
+  border: 1px solid var(--line);
+  box-shadow:
+    0 4px 14px rgba(106, 77, 255, .14),
+    0 0 0 4px rgba(106, 77, 255, .04);
+  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+  animation: sidenav-jarvis-breathe 5.4s ease-in-out infinite;
 }
-.sidenav__profile-meta {
-  display: flex; flex-direction: column;
+.sidenav__jarvis-mark img {
+  width: 26px; height: 26px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(106, 77, 255, .35))
+          drop-shadow(0 0 10px rgba(247, 147, 207, .25));
+  animation: sidenav-jarvis-float 5.2s ease-in-out infinite;
+}
+.sidenav__jarvis[aria-pressed="true"] .sidenav__jarvis-mark {
+  border-color: color-mix(in srgb, var(--accent-2) 40%, var(--line));
+  box-shadow:
+    0 6px 18px rgba(106, 77, 255, .22),
+    0 0 0 5px rgba(106, 77, 255, .10);
+}
+.sidenav__jarvis:hover .sidenav__jarvis-mark {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 20px rgba(106, 77, 255, .28),
+    0 0 0 6px rgba(106, 77, 255, .12);
+}
+.sidenav__jarvis-label {
+  flex: 1 1 auto;
   min-width: 0;
-  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.sidenav__profile-name {
-  font-size: 13px; font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+@keyframes sidenav-jarvis-breathe {
+  0%, 100% {
+    box-shadow:
+      0 4px 14px rgba(106, 77, 255, .14),
+      0 0 0 4px rgba(106, 77, 255, .04);
+  }
+  50% {
+    box-shadow:
+      0 6px 18px rgba(106, 77, 255, .20),
+      0 0 0 6px rgba(106, 77, 255, .08);
+  }
 }
-.sidenav__profile-sub {
-  font-size: 11px;
-  color: var(--ink-mute);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+@keyframes sidenav-jarvis-float {
+  0%, 100% { transform: translateY(0)    rotate(-2deg); }
+  50%      { transform: translateY(-1px) rotate( 2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidenav__jarvis-mark,
+  .sidenav__jarvis-mark img {
+    animation: none;
+  }
 }
 
 /* ===== Collapsed state ====================================
-   The rail shrinks to icon-only. Labels, sessions, and profile
-   metadata are hidden; native `title=""` tooltips become the
-   source of truth for what each icon means.
+   The rail shrinks to icon-only. Labels and the "New" badge are
+   hidden; native `title=""` tooltips become the source of truth
+   for what each icon means.
 
-   We swap nav items + the New-chat button from `display: grid`
-   to `display: flex` so the icon is reliably centered inside
-   the 44px tile (grid + a fixed-track + an item with explicit
-   width was leaving the icon flush-left).
+   Nav items + the Jarvis tile swap from `display: grid` to
+   `display: flex` so the icon is reliably centered inside the
+   44px tile (grid + a fixed-track + an item with explicit width
+   was leaving the icon flush-left).
    ========================================================== */
 .sidenav[data-collapsed="true"] {
   padding: 12px 8px;
@@ -598,8 +653,7 @@ body {
   width: 100%;
   align-items: center;
 }
-.sidenav[data-collapsed="true"] .sidenav__item,
-.sidenav[data-collapsed="true"] .sidenav__newchat {
+.sidenav[data-collapsed="true"] .sidenav__item {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -608,25 +662,22 @@ body {
   gap: 0;
 }
 .sidenav[data-collapsed="true"] .sidenav__label,
-.sidenav[data-collapsed="true"] .sidenav__sessions,
-.sidenav[data-collapsed="true"] .sidenav__profile-meta {
+.sidenav[data-collapsed="true"] .sidenav__badge {
   display: none;
-}
-.sidenav[data-collapsed="true"] .sidenav__divider {
-  width: 32px;
-  margin: 8px auto;
 }
 .sidenav[data-collapsed="true"] .sidenav__foot {
   width: 100%;
   display: flex; justify-content: center;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
-.sidenav[data-collapsed="true"] .sidenav__profile {
+.sidenav[data-collapsed="true"] .sidenav__jarvis {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
-  padding: 8px 6px;
+  padding: 4px;
+  gap: 0;
 }
 
 /* ---------- Workspace layout ----------
@@ -652,20 +703,53 @@ body {
    second track preserves the smooth `0px → 60%` interpolation when
    the panel slides in/out. */
 .workspace.workspace--split { grid-template-columns: 1fr 60%; }
-/* Fullscreen mode: the side panel takes over the whole workspace.
-   The chat column shrinks to 0 — overflow:hidden on .stage keeps it tidy
-   while it gets out of the way. Always paired with .workspace--split. */
-.workspace.workspace--split.workspace--panel-fullscreen {
+
+/* =====================================================================
+   CHAT-CLOSED state — the X on the chat header (or a tap on the
+   sidenav Jarvis tile) collapses the .stage column to zero width and
+   hands the workspace over to the right-side panel. Since the panel
+   no longer has its own chrome bar, this is the only "go full-screen"
+   path; the Jarvis tile in the sidenav is the one-tap way back.
+
+   The grid columns swap to `0px 1fr` regardless of whether the
+   sidepanel is currently mounted — when no panel is open, the right
+   column simply renders an empty surface and the Jarvis tile is the
+   only active control, which is the intentional "page-first" reading
+   for post-setup workspace pages.
+   ===================================================================== */
+.workspace.workspace--chat-closed,
+.workspace.workspace--chat-closed.workspace--split {
   grid-template-columns: 0px 1fr;
 }
-.workspace--panel-fullscreen .stage { pointer-events: none; }
+.workspace--chat-closed .stage {
+  pointer-events: none;
+  /* Slide the chat off to the left as it collapses so it reads as
+     "tucked into the sidebar rail" rather than just disappearing. */
+  transform: translateX(-12px);
+  opacity: 0;
+}
+
+/* During welcome the hero lives inside `.stage`, so a chat-closed
+   toggle would otherwise hide the entire welcome screen and leave
+   a blank canvas. Override the grid + transforms so welcome stays
+   in view regardless of the chat-closed state. The Jarvis tile's
+   aria-pressed value still flips, so the visual cue of "I just
+   asked Jarvis to step aside" is still legible. */
+.workspace--welcome.workspace--chat-closed {
+  grid-template-columns: 1fr 0px;
+}
+.workspace--welcome.workspace--chat-closed .stage {
+  pointer-events: auto;
+  transform: none;
+  opacity: 1;
+}
 
 /* When the side panel is NOT open, let the chat use the full canvas.
    Content max-widths grow and side padding shrinks so the hero, thread,
    whisper, and dock breathe across the screen instead of sitting in a
    narrow centered column with big empty margins on either side. */
-.workspace:not(.workspace--split) .stage__main { padding: 36px 5% 24px; }
-.workspace:not(.workspace--split) .dock        { padding: 0 5% 22px; }
+.workspace:not(.workspace--split) .stage__main { padding: 36px 16px 24px; }
+.workspace:not(.workspace--split) .dock        { padding: 0 16px 22px; }
 .workspace:not(.workspace--split) .hero        { max-width: 1100px; }
 .workspace:not(.workspace--split) .thread      { max-width: 800px; }
 .workspace:not(.workspace--split) .dock .whisper { max-width: 800px; }
@@ -679,11 +763,102 @@ body {
   display: flex; flex-direction: column;
   height: 100%;
   overflow: hidden;
+  /* Slide + fade out as a single unit when the chat is dismissed.
+     The transform is paired with the workspace grid transition so the
+     panel feels like it physically slides into the left rail. */
+  transition:
+    transform .42s cubic-bezier(.2, .85, .25, 1),
+    opacity   .32s ease;
 }
+
+/* =====================================================================
+   STAGE HEADER — thin top bar holding the chat-panel's trailing
+   action group (history + close). Both icons sit on the right; the
+   left side intentionally stays empty so the chat thread underneath
+   has the full horizontal canvas. The X collapses the chat into the
+   sidebar Jarvis tile, handing the workspace over to the right panel.
+   ===================================================================== */
+.stage__head {
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 32px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  z-index: 2;
+  /* Hairline that only shows once the chat has content scrolled
+     beneath it — keeps the welcome state perfectly clean. */
+  border-bottom: 1px solid transparent;
+  transition: border-color .24s ease;
+}
+
+.stage__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Shared icon-button shape for the history + close affordances —
+   matches the sidenav hover vocabulary so the chat header reads as
+   part of the same UI family. Sized at 36×36 (vs. the sidenav's
+   28×28 icon column) and the glyph itself is bumped to 22×22 so the
+   stage header reads at the same visual weight as the sidenav rail
+   it's anchored against — at 30×30 / 18px the icons felt undersized
+   compared to the rest of the chrome. */
+.stage__head-icon {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-dim);
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background .18s ease,
+    color      .18s ease,
+    transform  .18s ease;
+}
+/* Per-context glyph override — the global `.icon` rule sets 18×18
+   (correct for the sidenav and inline list contexts); the stage
+   header wants a beefier glyph that matches the larger button. */
+.stage__head-icon .icon { width: 22px; height: 22px; }
+.stage__head-icon:hover {
+  background: var(--sidenav-hover);
+  color: var(--ink);
+}
+.stage__head-icon:active {
+  background: var(--sidenav-hover-strong);
+  transform: scale(.94);
+}
+.stage__head-icon:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
+  outline-offset: 2px;
+}
+
+/* The hero takes over the entire stage in welcome mode — keep the
+   header out of the way so it doesn't compete with the centered
+   "Welcome, Sarah!" composition. */
+.workspace--welcome .stage__head { display: none; }
+
+/* When the chat panel is the full workspace canvas (no right-side
+   page mounted), the X close has nothing to "close to" — clicking
+   it would just empty the canvas. Hide it; only the history icon
+   stays. Once a workspace page opens (`.workspace--split`), the X
+   reappears as the path back to a page-only / chat-dismissed view. */
+.workspace:not(.workspace--split) .stage__head-close {
+  display: none;
+}
+
 .stage__main {
   flex: 1 1 auto;
+  width: 100%;
   overflow-y: auto;
-  padding: 36px 8% 24px;
+  padding: 36px 16px 24px;
   scroll-behavior: smooth;
   overflow-anchor: auto;
   display: flex; flex-direction: column;
@@ -707,7 +882,7 @@ body {
 
 .dock {
   flex: 0 0 auto;
-  padding: 0 8% 22px;
+  padding: 0 16px 22px;
   position: relative;
 }
 
@@ -910,7 +1085,7 @@ body {
   display: flex; flex-direction: column; gap: 14px;
 }
 .bubble {
-  display: flex; gap: 12px; align-items: flex-start;
+  display: flex; align-items: flex-start;
   animation: rise-up .42s cubic-bezier(.2,.7,.2,1) both;
 }
 @keyframes rise-up {
@@ -918,27 +1093,11 @@ body {
   to   { opacity: 1; transform: none }
 }
 
-.bubble__avatar {
-  width: 26px; height: 26px; flex: 0 0 26px;
-  /* Nudge the small mark down so its visual center sits on the first
-     text line of `.bubble__body` (which has 4px top padding + 14px
-     font * 1.55 line-height — optical center is ~15px from bubble
-     top). 2px gives a clean middle alignment with "Starting setup…". */
-  margin-top: 2px;
-  position: relative;
-  background-image: url("assets/jarvis-mark.png");
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  filter: drop-shadow(0 2px 6px rgba(162, 75, 255, .22));
-}
-
 /* Jarvis (default) bubbles render ChatGPT/Gemini-style: just text on
-   the page background, no card, no border, no shadow. The avatar (logo)
-   stays as the persona indicator. The "JARVIS" name label is hidden
-   everywhere — the entire conversation is with Jarvis, so the label is
-   redundant. The Admin (user) bubble is the only one that keeps the
-   classic card look so it's easy to scan whose message is whose. */
+   the page background, no card, no border, no shadow, no avatar.
+   The entire conversation is with Jarvis, so the persona doesn't need
+   to be repeated on every reply — only the user's card-shaped bubble
+   needs a visual indicator to disambiguate authorship. */
 .bubble__body {
   background: transparent;
   border: 0;
@@ -950,12 +1109,10 @@ body {
   color: var(--ink);
   transition: background .25s ease, border-color .25s ease;
 }
-.bubble__name { display: none; }
 .bubble__text { line-height: 1.55; font-size: 14px; color: var(--ink); }
 
 /* Admin bubbles keep the card treatment */
 .bubble--user { flex-direction: row-reverse; }
-.bubble--user .bubble__avatar { display: none; }
 .bubble--user .bubble__body {
   background: #ffffff;
   border: 1px solid rgba(47, 92, 255, .22);
@@ -968,11 +1125,10 @@ body {
   border-color: rgba(107, 138, 255, .35);
 }
 
-/* Consecutive same-persona bubbles
-   - Hide the avatar on the continuation so the column reads as one group.
-   - Tighten the gap. For Jarvis (no card), keep a light rhythm; for the
-     Admin card, pull harder so the cards visually fuse. */
-.bubble--continued .bubble__avatar { visibility: hidden; }
+/* Consecutive same-persona bubbles tighten the gap so adjacent
+   messages from the same author read as one group. For the Admin
+   card we pull harder so the cards visually fuse; for Jarvis (no
+   card) we keep a lighter rhythm. */
 .thread .bubble--user.bubble--continued { margin-top: -10px; }
 .thread .bubble:not(.bubble--user).bubble--continued { margin-top: -2px; }
 .bubble--user.bubble--continued .bubble__body {
@@ -1179,58 +1335,11 @@ body {
   will-change: transform;
 }
 .workspace--split .browser { transform: translateX(0); }
-/* In fullscreen, drop the rounded panel chrome a notch so it reads as a
-   full app surface rather than a card. */
-.workspace--panel-fullscreen .browser {
-  border-radius: 10px;
-}
 
-/* ----- Title bar (replaces the old URL chrome) ----- */
-.browser__chrome {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px 10px 14px;
-  background: var(--bg-chrome);
-  border-bottom: 1px solid var(--line);
-  min-height: 44px;
-}
-.browser__title {
-  flex: 1;
-  display: flex; align-items: center; gap: 10px;
-  min-width: 0;          /* let the text ellipsis */
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-}
-.browser__title-icon {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent-ok);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-ok) 60%, transparent);
-  flex-shrink: 0;
-}
-.browser__title-text {
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.browser__iconbtn {
-  background: transparent; border: 0; cursor: pointer;
-  color: var(--ink-mute);
-  width: 28px; height: 28px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 7px;
-  transition: background .15s ease, color .15s ease;
-  flex-shrink: 0;
-}
-.browser__iconbtn:hover { color: var(--ink); background: var(--bg-soft); }
-.browser__iconbtn:active { transform: scale(0.96); }
-.browser__iconbtn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
-  outline-offset: 1px;
-}
-/* Toggle which icon shows based on the fullscreen state on the workspace. */
-.browser__icon--collapse { display: none; }
-.workspace--panel-fullscreen .browser__icon--expand   { display: none; }
-.workspace--panel-fullscreen .browser__icon--collapse { display: block; }
-
+/* The right panel is pure surface — no title bar, no chrome buttons.
+   When chat is dismissed (workspace--chat-closed) the grid hands the
+   entire canvas to this panel; the X in the chat header is the only
+   "go full-screen" control. */
 .browser__viewport {
   flex: 1; overflow: auto; background: var(--bg-1); position: relative;
 }
@@ -1304,31 +1413,493 @@ body {
 }
 .auth-footer { font-size: 11px; color: var(--ink-mute); margin-top: 10px; }
 
-/* ----- The Cockpit (placeholder) -----
-   Intentionally minimal. The real cockpit design will replace
-   this block; the placeholder keeps the panel feeling
-   intentional (not broken/empty) until that ships. */
-.cockpit-placeholder {
+/* ================================================================
+   THE COCKPIT (Lite)
+   ----------------------------------------------------------------
+   Sarah's day-1 control surface. Designed as a *dashboard*, not a
+   workspace: the eye should land, comprehend, and act in under five
+   seconds. Top → bottom:
+     0. Topbar     — one strong word (Cockpit) + a muted "Live ·
+                     Updated X ago" line. No pills, no segmented
+                     controls, no banner.
+     1. Sign-offs  — "Awaiting your approval" lane. Two compact
+                     decision rows visible; a quiet "See queue (N
+                     more)" link expands the rest.
+     2. KPI strip  — the six numbers a manager scans first.
+     3. AI Agents  — domain-filter chips, then a calm card grid.
+     4. The Team   — same card grid for the rotation.
+
+   The page mounts inside the right-side panel (`.browser__viewport`)
+   and reflows via container queries so it reads well in both
+   60%-split view and full canvas. All layout breaks live inside
+   this block — no media queries leak out.
+   ================================================================ */
+.cockpit {
+  container-type: inline-size;
+  container-name: cockpit;
+
   min-height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  padding: 32px;
+  padding: 24px 28px 56px;
   background:
-    radial-gradient(circle at 30% 20%, rgba(106, 77, 255, .08), transparent 60%),
-    radial-gradient(circle at 70% 80%, rgba(47, 92, 255, .06), transparent 55%),
+    radial-gradient(900px 520px at 90% 0%, color-mix(in srgb, var(--accent-3) 6%, transparent), transparent 70%),
+    radial-gradient(900px 520px at 0% 100%, color-mix(in srgb, var(--accent-1) 6%, transparent), transparent 70%),
     var(--bg-1);
+  color: var(--ink);
+  overflow-y: auto;
 }
-.cockpit-placeholder__inner {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 8px; text-align: center;
+
+/* Flush-left panel — when the Cockpit is mounted, the floating-card
+   left gutter (`.browser { left: 14px }`) is removed so the page reads
+   as one continuous surface flowing out of the left rail. Top / right
+   / bottom keep their 14px float so the panel still feels card-like
+   on three edges. The rounded corners on the left are kept so the
+   panel still has the soft "card" shape on all four corners — the
+   page background gradient shows through the small scallops where
+   the panel meets the sidenav. Scoped to `.browser:has(.cockpit)` so
+   other workspace pages (Splunk auth, ITSM bootstrap, etc.) keep the
+   original floating-card look. */
+.browser:has(.cockpit) {
+  left: 0;
 }
-.cockpit-placeholder__badge {
-  font-size: 13px; font-weight: 600; letter-spacing: .6px;
+.cockpit__shell {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ---- Topbar (calm: just the title + a single muted meta line) -- */
+.cockpit__topbar {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  padding: 4px 0 0;
+}
+.cockpit__title {
+  margin: 0;
+  font-size: 26px; line-height: 1.2;
+  font-weight: 700; letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.cockpit__updated {
+  font-size: 11.5px; font-weight: 500;
+  color: var(--ink-mute);
+}
+
+/* ---- "Awaiting your approval" lane ----------------------------- */
+.cockpit__signoffs {
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.cockpit__signoffs-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px;
+}
+.cockpit__signoffs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.cockpit__signoffs-empty {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-ok) 8%, var(--bg-1));
+  border: 1px solid color-mix(in srgb, var(--accent-ok) 22%, transparent);
+  color: color-mix(in srgb, var(--accent-ok) 70%, var(--ink));
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Compact sign-off row — one card, one line, one decision.
+   Layout: risk pill · agent name · deadline (right-aligned)
+           headline action (single line)
+           [ Approve ] [ Defer ]                       */
+.signoff {
+  position: relative;
+  padding: 10px 12px 10px 16px;
+  border-radius: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+/* Left risk band — purely decorative; the .signoff__risk pill carries
+   the semantic meaning for screen readers. */
+.signoff::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent-1);
+}
+.signoff[data-risk="high"]::before   { background: #e6453d; }
+.signoff[data-risk="medium"]::before { background: var(--accent-warn); }
+.signoff[data-risk="low"]::before    { background: var(--accent-ok); }
+
+.signoff__row {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.signoff__risk {
+  display: inline-flex; align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+.signoff__risk--high   { background: color-mix(in srgb, #e6453d 18%, transparent); color: #c92e26; }
+.signoff__risk--medium { background: color-mix(in srgb, var(--accent-warn) 22%, transparent); color: color-mix(in srgb, var(--accent-warn) 75%, #000); }
+.signoff__risk--low    { background: color-mix(in srgb, var(--accent-ok) 22%, transparent); color: color-mix(in srgb, var(--accent-ok) 70%, #000); }
+.signoff__agent {
+  font-size: 12px; font-weight: 600;
   color: var(--ink-dim);
-  padding: 6px 12px; border-radius: 999px;
-  background: var(--bg-2); border: 1px dashed var(--line-strong);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0;
 }
-.cockpit-placeholder__hint {
-  font-size: 12px; color: var(--ink-mute);
+.signoff__deadline {
+  margin-left: auto;
+  font-size: 11.5px; color: var(--ink-mute); font-weight: 500;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.signoff__action {
+  margin: 0;
+  font-size: 13.5px; font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.signoff__actions {
+  display: flex; gap: 6px;
+  margin-top: 2px;
+}
+.signoff__btn {
+  appearance: none; border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px; font-weight: 600;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.signoff__btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.signoff__btn--approve {
+  background: var(--accent-ok);
+  color: #ffffff;
+}
+.signoff__btn--approve:hover { background: color-mix(in srgb, var(--accent-ok) 90%, #000); }
+.signoff__btn--defer {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid var(--line-strong);
+}
+.signoff__btn--defer:hover {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--accent-warn) 45%, var(--line-strong));
+}
+
+/* Quiet expand link ("See queue (1 more)") + the same shape for the
+   section's "See all" link. Text-only, no pill, no border. */
+.cockpit__more,
+.cockpit__see {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--accent-1);
+  align-self: flex-start;
+  transition: color .15s ease;
+}
+.cockpit__more:hover,
+.cockpit__see:hover { color: color-mix(in srgb, var(--accent-1) 80%, #000); text-decoration: underline; }
+.cockpit__more:focus-visible,
+.cockpit__see:focus-visible {
+  outline: none; text-decoration: underline;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-radius: 4px;
+}
+
+/* ---- KPI strip ------------------------------------------------- */
+.cockpit__kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+.kpi {
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.kpi:hover {
+  border-color: color-mix(in srgb, var(--accent-1) 35%, var(--line));
+  box-shadow: 0 6px 18px rgba(54, 67, 142, 0.06);
+}
+.kpi__label {
+  font-size: 12px; font-weight: 500;
+  color: var(--ink-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi__value {
+  /* Fluid clamp keeps "3,847" legible in narrow 2-col layouts. */
+  font-size: clamp(20px, 2.4cqw + 12px, 28px);
+  line-height: 1.1;
+  font-weight: 700; letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.kpi__sub  { font-size: 12px; color: var(--ink-mute); margin-top: 2px; }
+.kpi__metas { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.kpi__meta { font-size: 12px; line-height: 1.35; font-weight: 500; display: inline-flex; align-items: center; }
+.kpi__meta--ok    { color: var(--accent-ok); }
+.kpi__meta--warn  { color: var(--accent-warn); }
+.kpi__meta--alert { color: #e6453d; }
+.kpi__meta--mute  { color: var(--ink-mute); }
+
+/* ---- Section header (AI Agents / The Team) -------------------- */
+.cockpit__section {
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+.cockpit__section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.cockpit__section-titlegroup {
+  display: inline-flex; align-items: baseline; gap: 10px;
+  min-width: 0; flex-wrap: wrap;
+}
+.cockpit__section-title {
+  margin: 0;
+  font-size: 18px; line-height: 1.2; font-weight: 700;
+  color: var(--ink); letter-spacing: -0.01em;
+}
+.cockpit__section-sub {
+  font-size: 13px; color: var(--ink-dim); font-weight: 500;
+}
+.cockpit__section-stat {
+  /* --ink-dim for WCAG AA on the 11px uppercase eyebrow text. */
+  font-size: 11px; letter-spacing: .06em;
+  color: var(--ink-dim); font-weight: 500;
+}
+
+/* Domain filter chips (no counts — words read faster) ----------- */
+.cockpit__chips {
+  display: flex; flex-wrap: wrap;
+  gap: 6px;
+}
+.cockpit__chip {
+  appearance: none; border: 0; cursor: pointer;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: inherit;
+  font-size: 12px; font-weight: 600;
+  transition: background .18s ease, color .18s ease;
+}
+.cockpit__chip:hover { color: var(--ink); background: color-mix(in srgb, var(--accent-1) 6%, transparent); }
+.cockpit__chip.is-active {
+  background: color-mix(in srgb, var(--accent-1) 14%, transparent);
+  color: var(--accent-1);
+}
+.cockpit__chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ---- Agent grid ----------------------------------------------- */
+.cockpit__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* ---- Agent card (Lite) ---------------------------------------- */
+.agent {
+  position: relative;
+  padding: 14px 14px 16px;
+  border-radius: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+  transition: border-color .18s ease, box-shadow .18s ease;
+  outline: none;
+}
+.agent:hover {
+  border-color: color-mix(in srgb, var(--accent-1) 30%, var(--line));
+  box-shadow: 0 6px 18px rgba(54, 67, 142, 0.06);
+}
+.agent:focus-visible {
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+/* Breach state — bar crossed SLA threshold. Subtle red tint only;
+   the bar colour + status badge already carry the signal. */
+.agent[data-breach="1"] {
+  border-color: color-mix(in srgb, #e6453d 30%, var(--line));
+}
+
+.agent__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.agent__icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--linkcard-grad);
+  color: var(--accent-2);
+  border: 1px solid color-mix(in srgb, var(--accent-2) 18%, transparent);
+  flex-shrink: 0;
+}
+.agent__title {
+  min-width: 0;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  flex-wrap: wrap;
+}
+.agent__name {
+  font-size: 14px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.agent__level {
+  font-size: 11px; font-weight: 600;
+  color: var(--ink-mute);
+  letter-spacing: .04em;
+}
+.agent__instances {
+  display: inline-flex; align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-1) 14%, transparent);
+  color: var(--accent-1);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .02em;
+}
+.agent__status {
+  display: inline-flex; align-items: center;
+  flex: 0 0 auto;
+}
+
+.agent__badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .04em;
+  line-height: 1.4;
+}
+.agent__badge--new   { background: color-mix(in srgb, var(--accent-3) 18%, transparent); color: var(--accent-3); }
+.agent__badge--alert { background: color-mix(in srgb, #e6453d 18%, transparent);          color: #c92e26;       }
+.agent__badge--warn  { background: color-mix(in srgb, var(--accent-warn) 22%, transparent); color: color-mix(in srgb, var(--accent-warn) 75%, #000); }
+
+.agent__body {
+  margin: 0;
+  font-size: 12.5px; line-height: 1.45;
+  color: var(--ink-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.45em * 2);
+}
+
+/* Footer — Trust on the left, Load on the right. Two numbers,
+   one arrow. No sparkline, no median tick, no metric-label words. */
+.agent__foot {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 2px;
+}
+.agent__metric {
+  display: inline-flex; align-items: center;
+  gap: 4px;
+}
+.agent__metric strong {
+  font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.agent__metric--load { color: var(--ink-mute); }
+.agent__metric--load strong { color: var(--ink-dim); }
+.agent__arrow {
+  display: inline-flex; align-items: center;
+  margin-left: 1px;
+}
+.agent__arrow--down { color: #e6453d; }
+.agent__arrow--up   { color: var(--accent-ok); }
+.agent__arrow--flat { color: var(--ink-mute); }
+
+/* Trust pressure bar — colour from data-tone, width set inline. The
+   `--threshold` custom property paints a faint SLA marker line. */
+.agent__bar {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--progress-track);
+  overflow: hidden;
+}
+.agent__bar::after {
+  content: "";
+  position: absolute;
+  top: -2px; bottom: -2px;
+  left: var(--threshold, 70%);
+  width: 1px;
+  background: color-mix(in srgb, var(--ink-dim) 55%, transparent);
+  opacity: .5;
+}
+.agent__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--grad-jarvis);
+  transition: width .6s cubic-bezier(.2,.7,.2,1);
+}
+.agent[data-tone="cool"] .agent__bar > span { background: linear-gradient(90deg, #6b8aff 0%, #a25cff 100%); }
+.agent[data-tone="warm"] .agent__bar > span { background: linear-gradient(90deg, #ff7e9a 0%, #ff9a3d 100%); }
+.agent[data-tone="hot"]  .agent__bar > span { background: linear-gradient(90deg, #e6453d 0%, #ff9a3d 60%, #ffd166 100%); }
+
+/* Dark theme tuning -------------------------------------------- */
+[data-theme="dark"] .agent__icon {
+  border-color: color-mix(in srgb, var(--accent-2) 28%, transparent);
+}
+[data-theme="dark"] .kpi__meta--alert,
+[data-theme="dark"] .signoff__risk--high {
+  color: #ff7a72;
+}
+[data-theme="dark"] .agent[data-breach="1"] {
+  border-color: color-mix(in srgb, #e6453d 40%, var(--line));
+}
+
+/* Reflow — container queries on .cockpit make the page respond to
+   its own width, so the layout adapts whether the chat panel is
+   open (60% canvas) or closed (full canvas). */
+@container cockpit (max-width: 1100px) {
+  .cockpit__signoffs-grid { grid-template-columns: 1fr; }
+  .cockpit__kpis          { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cockpit__grid          { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@container cockpit (max-width: 820px) {
+  .cockpit__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container cockpit (max-width: 560px) {
+  .cockpit__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cockpit__grid { grid-template-columns: 1fr; }
+  .cockpit__title { font-size: 22px; }
 }
 
 /* ----- Workspace placeholder (Cockpit / Horizon / Incidents) -----
@@ -1338,8 +1909,7 @@ body {
    stage instead of the side-panel viewport. */
 .workspace-placeholder {
   width: 100%;
-  margin: auto;
-  max-width: 720px;
+  min-height: 100%;
   display: flex; align-items: center; justify-content: center;
   padding: 56px 24px;
 }
@@ -1472,8 +2042,10 @@ body {
   }
   .workspace            { grid-template-rows: 1fr 0px; }
   .workspace--split     { grid-template-rows: 1fr 50vh; }
-  /* Fullscreen on mobile = panel takes the whole workspace height. */
-  .workspace--split.workspace--panel-fullscreen { grid-template-rows: 0px 1fr; }
+  /* Chat-closed on mobile = right panel takes the whole height
+     (the X in the chat header drives this, since the panel has no
+     chrome of its own anymore). */
+  .workspace--split.workspace--chat-closed { grid-template-rows: 0px 1fr; }
   .sidepanel { border-left: 0; border-top: 1px solid var(--line); }
   .browser {
     top: auto; left: 14px; right: 14px; bottom: 14px;
@@ -1812,13 +2384,11 @@ body {
   white-space: nowrap;
 }
 
-/* User bubbles render as a single right-aligned card — no avatar,
-   no name label. The active persona is already established by the
-   topbar pill + chapter avatar for the entire chapter run, so any
-   per-bubble identity chrome would just be redundant noise. The
-   legacy `.bubble__name { display: none }` rule from earlier in
-   the file still hides any stray name nodes, so this is mostly a
-   sanity comment for future readers. */
+/* Every bubble — both Jarvis and user — renders without an avatar
+   or name label. Jarvis bubbles are bare text on the page surface;
+   user bubbles are right-aligned cards. The conversation is always
+   between the IT admin and Jarvis, so per-message identity chrome
+   would be redundant noise. */
 
 /* =============================================================
    Inline metric-board step type
@@ -3084,7 +3654,7 @@ section.lobby[hidden]  { display: none; }
   background:
     radial-gradient(900px 480px at 50% -10%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 60%),
     radial-gradient(700px 480px at 100% 100%, color-mix(in srgb, var(--accent-1) 10%, transparent), transparent 60%),
-    var(--bg-base);
+    var(--bg-1);
   min-height: 100%;
 }
 
@@ -3758,13 +4328,15 @@ section.lobby[hidden]  { display: none; }
 .bs-legend__dot--inf { background: #28c876; }
 .bs-legend__dot--ai  { background: #a25cff; }
 
-/* When the panel is split (not fullscreen), tighten the bootstrap
-   layout so the agent grid + cmdb tiles still read at 540px wide. */
-.workspace--split:not(.workspace--panel-fullscreen) .bootstrap {
+/* When the panel is split alongside the chat (chat still open),
+   tighten the bootstrap layout so the agent grid + cmdb tiles still
+   read at 540px wide. Once the chat is dismissed (workspace--chat-closed)
+   the panel has the full canvas, so we drop these compaction rules. */
+.workspace--split:not(.workspace--chat-closed) .bootstrap {
   padding: 14px 14px 22px;
 }
-.workspace--split:not(.workspace--panel-fullscreen) .bs-graph         { height: 200px; }
-.workspace--split:not(.workspace--panel-fullscreen) .bs-reveal__graph { height: 250px; }
+.workspace--split:not(.workspace--chat-closed) .bs-graph         { height: 200px; }
+.workspace--split:not(.workspace--chat-closed) .bs-reveal__graph { height: 250px; }
 
 /* =============================================================
    ITSM Bootstrap — interactivity layer
@@ -4161,4 +4733,235 @@ section.lobby[hidden]  { display: none; }
     transition: none;
   }
   .bs-inspector__dialog { transform: none; }
+}
+
+/* =========================================================
+   JARVIS FAB
+   ---------------------------------------------------------
+   Floating action button that re-opens the chat panel after
+   the user has closed it. Positioned in the bottom-left of
+   the workspace so it visually anchors where the chat slides
+   back in from. The Jarvis mark sits inside a soft gradient
+   aura that breathes gently to read as "alive" without
+   pulling focus away from whichever page is on screen.
+   ========================================================= */
+/* The floating Jarvis FAB was retired when the Jarvis tile moved
+   into the sidenav (see `.sidenav__jarvis`). The stage still gets
+   a reduced-motion override so the slide-in / slide-out transitions
+   honor user preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* =====================================================================
+   CHAT-HISTORY DRAWER — overlays the chat thread + composer when the
+   user taps the history icon in the stage header. The header itself
+   stays visible so the icon doubles as a toggle (pressed state =
+   drawer open). Layout: a regular flex child of `.stage` that's
+   hidden by default and only revealed when `stage[data-history="1"]`.
+   This keeps the existing flex math intact and avoids absolute /
+   z-index gymnastics.
+   ===================================================================== */
+.chat-history {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+.stage[data-history="1"] .stage__main,
+.stage[data-history="1"] .dock      { display: none; }
+.stage[data-history="1"] .chat-history { display: flex; }
+.stage[data-history="1"] .stage__head { border-bottom-color: var(--panel-hairline); }
+
+/* History icon pressed-state — mirrors the sidenav active token so the
+   "this is open" cue feels like the rest of the chrome. */
+.stage__head-icon[aria-pressed="true"] {
+  background: var(--sidenav-hover-strong);
+  color: var(--ink);
+}
+
+.chat-history__head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 2px 14px 14px;
+  gap: 8px;
+}
+
+/* Inline search field — replaces the old "History" title. The label
+   wraps the icon + input so clicks anywhere in the pill focus the
+   input, and the field grows to fill all available header width. */
+.chat-history__search {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  border-radius: 10px;
+  color: var(--ink-mute);
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+  min-width: 0;
+}
+.chat-history__search:hover { border-color: var(--line-strong); }
+.chat-history__search:focus-within {
+  background: var(--bg-1);
+  border-color: color-mix(in srgb, var(--accent-1) 50%, var(--line));
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.chat-history__search-icon { flex-shrink: 0; color: currentColor; }
+.chat-history__search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+  padding: 0;
+}
+.chat-history__search-input::placeholder { color: var(--ink-mute); }
+/* Hide WebKit's built-in clear glyph — the live filter already shows
+   an Empty state when there are no matches, and the duplicate × in
+   the pill makes the field look noisy. */
+.chat-history__search-input::-webkit-search-cancel-button,
+.chat-history__search-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+
+.chat-history__head-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chat-history__filter {
+  appearance: none;
+  background: var(--bg-1);
+  color: var(--ink-dim);
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.chat-history__filter:hover {
+  background: var(--sidenav-hover);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.chat-history__filter:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.chat-history__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0 14px 22px;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+.chat-history__body::-webkit-scrollbar { width: 10px; }
+.chat-history__body::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 8px; }
+
+/* Date-grouped sections — the date label sits as a quiet eyebrow above
+   each rounded list card. */
+.chat-history__group + .chat-history__group { margin-top: 18px; }
+.chat-history__date {
+  margin: 0 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  letter-spacing: 0.01em;
+}
+
+.chat-history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chat-history__item {
+  display: block;
+  padding: 12px 14px;
+  cursor: pointer;
+  background: transparent;
+  transition: background .15s ease;
+}
+.chat-history__item + .chat-history__item {
+  border-top: 1px solid var(--line);
+}
+.chat-history__item:hover { background: var(--bg-2); }
+.chat-history__item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
+  outline-offset: -2px;
+  background: var(--bg-2);
+}
+.chat-history__entry-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 2px;
+  min-width: 0;
+}
+.chat-history__entry-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.chat-history__entry-title svg { flex-shrink: 0; color: var(--ink-mute); }
+.chat-history__entry-sub {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+/* "No matches" state for the inline search. Kept inside the body so
+   it scrolls with the list and respects the same horizontal padding. */
+.chat-history__empty {
+  padding: 28px 14px;
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.chat-history__empty strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* Final safety net if the data array is ever cleared mid-demo. */
+.chat-history__body:empty::before {
+  content: "No conversations yet.";
+  display: block;
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: 13px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-history__item { transition: none; }
 }

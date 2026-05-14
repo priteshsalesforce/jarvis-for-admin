@@ -6,13 +6,13 @@
    retired — the app boots straight into the Setup flow.
 
    This file owns:
-     · the persistent left sidenav (collapse, gating, sessions, profile)
+     · the persistent left sidenav (collapse, gating, Jarvis toggle)
      · auto-launch of the Setup chapter on first paint
      · the story engine that plays the chapter beat-by-beat
      · the persistent Q&A router (whisper bar) so the IT admin can
        interrupt to ask Jarvis a question
-     · session capture — every "New chat" → first question pair
-       creates a session entry in the sidebar
+     · workspace-page mounts (Tower / Insight / Horizon / Lens),
+       which render into the right-side panel via window.PAGES
      · the side-panel "browser" mount + dispatch surface
 
    The Setup chapter file under `stories/02-admin-sarah.js`
@@ -28,44 +28,42 @@
 
   // Workspace
   const $workspace        = $("#workspace");
+  const $stage            = $("#stage");
   const $stageMain        = $("#stageMain");
   const $thread           = $("#thread");
   const $whisperInput     = $("#whisperInput");
   const $whisperSend      = $("#whisperSend");
   const $dock             = $("#dock");
+  const $stageClose       = $("#stageClose");
+  const $stageHistory     = $("#stageHistory");
+  const $chatHistory      = $("#chatHistory");
+  const $chatHistoryBody  = $("#chatHistoryBody");
 
-  // Side panel
+  // Side panel — pure surface, no chrome. Workspace pages mount
+  // into $browserView. The panel goes full-canvas when the user
+  // dismisses the chat (X in the chat header or the Jarvis tile).
   const $sidepanel         = $("#sidepanel");
   const $browserView       = $("#browserViewport");
-  const $browserTitleText  = $("#browserTitleText");
-  const $browserClose      = $("#browserClose");
-  const $browserFullscreen = $("#browserFullscreen");
 
-  // Sidenav
+  // Sidenav — Tower / Insight / Horizon / Lens are the post-setup
+  // workspace surfaces (gated until Setup completes). Settings is
+  // active during Setup; Profile sits inline below Settings; the
+  // Jarvis tile is pinned to the bottom of the rail and toggles
+  // the chat panel.
   const $sidenav         = $("#sidenav");
   const $navToggle       = $("#navToggle");
-  const $navCockpit      = $("#navCockpit");
+  const $navTower        = $("#navTower");
+  const $navInsight      = $("#navInsight");
   const $navHorizon      = $("#navHorizon");
-  const $navIncidents    = $("#navIncidents");
+  const $navLens         = $("#navLens");
   const $navSettings     = $("#navSettings");
-  const $navNewChat      = $("#navNewChat");
-  const $navSessionList  = $("#navSessionList");
-  const $navSessionsEmpty = $("#navSessionsEmpty");
   const $navProfile      = $("#navProfile");
+  const $navJarvis       = $("#navJarvis");
 
   // Director's-notes stack (bottom-right toasts — used for "Setup
   // complete · Cockpit unlocked" and similar quiet system updates).
   const $directorStack = $("#directorStack");
 
-  // Default title for each registered page. The browser step in a story
-  // can override these by passing `title: "..."` explicitly.
-  const PAGE_TITLES = {
-    "splunk-auth":    "Splunk · Single Sign-On",
-    "itsm-dashboard": "CMDB · Discovery dashboard",
-    "cockpit":        "The Cockpit",
-    "horizon":        "Horizon",
-    "incidents":      "Incidents",
-  };
 
   // -------------------------------------------------------------
   // State
@@ -95,25 +93,22 @@
   // Sidebar collapse — also persisted so it survives a refresh.
   const SIDENAV_KEY = "jarvis-sidenav-collapsed";
 
-  // Chat session model. Each session is created the moment the user
-  // sends their first question after clicking "New chat".
-  //   { id, title, messages: [{ kind: "user"|"jarvis", html, sys }],
-  //     createdAt }
-  // We persist sessions to localStorage so they survive refresh and
-  // give the sidebar real continuity.
-  const SESSIONS_KEY = "jarvis-sessions";
-  let sessions = (() => {
-    try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) || "[]"); }
-    catch (_) { return []; }
-  })();
-  let activeSessionId   = null;        // id of the session being displayed
-  let pendingNewSession = false;       // true after "New chat" → before first user msg
+  // Chat-panel collapse (the X on the chat header — or a click on the
+  // pinned Jarvis tile in the sidenav — dismisses the panel; clicking
+  // the Jarvis tile again restores it). This is a demo, so we always
+  // boot with the chat panel open — every reload should land on the
+  // welcome stage with Jarvis fully present, regardless of where the
+  // user left it last time.
+  const CHAT_CLOSED_KEY = "jarvis-chat-closed";
+  try { localStorage.removeItem(CHAT_CLOSED_KEY); } catch (_) {}
 
-  function persistSessions() {
-    try { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions)); }
-    catch (_) { /* storage full / disabled — fine, fall back to memory */ }
-  }
-  function findSession(id) { return sessions.find((s) => s.id === id); }
+  // The legacy session-history sidebar (New chat + Recent chats list)
+  // was retired in the v3 sidebar redesign. The chat thread is now
+  // purely ephemeral — whatever's on screen IS the conversation, and
+  // closing the chat panel doesn't snapshot it. We clear the old
+  // localStorage entry on bootstrap so it doesn't accumulate stale
+  // data after the redesign ships.
+  try { localStorage.removeItem("jarvis-sessions"); } catch (_) {}
 
   // -------------------------------------------------------------
   // Utilities
@@ -145,28 +140,29 @@
   // -------------------------------------------------------------
   // Bubble factories — persona-aware
   // -------------------------------------------------------------
-  function jarvisBubble(innerHTML, { sys = false, captureToSession = true } = {}) {
+  function jarvisBubble(innerHTML, { sys = false } = {}) {
     const wrap = document.createElement("div");
     const isContinued = lastPersona === "jarvis";
     wrap.className =
       "bubble" +
       (sys ? " bubble--sys" : "") +
       (isContinued ? " bubble--continued" : "");
+    // The entire conversation is with Jarvis, so we don't repeat the
+    // avatar mark or the "Jarvis" name on every reply — the body is
+    // enough to read the message as Jarvis-authored. The user bubble
+    // is the only one that needs a visual indicator (its card shape).
     wrap.innerHTML = `
-      <div class="bubble__avatar bubble__avatar--jarvis"></div>
       <div class="bubble__body">
-        <div class="bubble__name">Jarvis</div>
         <div class="bubble__text">${innerHTML}</div>
       </div>
     `;
     $thread.appendChild(wrap);
     lastPersona = "jarvis";
     scrollDown();
-    if (captureToSession) recordMessage({ kind: "jarvis", html: innerHTML, sys });
     return wrap;
   }
 
-  function userBubble(text, { captureToSession = true } = {}) {
+  function userBubble(text) {
     const wrap = document.createElement("div");
     const isContinued = lastPersona === "user";
     wrap.className = "bubble bubble--user" + (isContinued ? " bubble--continued" : "");
@@ -178,15 +174,12 @@
     $thread.appendChild(wrap);
     lastPersona = "user";
     scrollDown();
-    if (captureToSession) recordMessage({ kind: "user", text });
     return wrap;
   }
 
   function typingBubble() {
-    // Typing indicator is ephemeral UI — never recorded into a session.
     return jarvisBubble(
-      `<span class="typing"><span></span><span></span><span></span></span>`,
-      { captureToSession: false }
+      `<span class="typing"><span></span><span></span><span></span></span>`
     );
   }
 
@@ -205,48 +198,6 @@
         <div class="source__body">${md(source)}</div>
       </details>
     `;
-  }
-
-  // -------------------------------------------------------------
-  // Session capture
-  //
-  // We only capture into sessions when we're in `chat` mode (i.e. the
-  // user explicitly started a "New chat" or is continuing one). Setup
-  // story content stays out of the session list — Settings owns that.
-  // -------------------------------------------------------------
-  function makeSessionId() {
-    return `s-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
-  }
-
-  function shortTitle(text) {
-    const t = String(text || "").replace(/\s+/g, " ").trim();
-    if (t.length <= 40) return t || "Untitled chat";
-    return t.slice(0, 38).replace(/\s+\S*$/, "") + "…";
-  }
-
-  function recordMessage(msg) {
-    if (mode !== "chat") return;
-    if (msg.kind === "user") {
-      // First user message in a fresh chat → mint a new session.
-      if (pendingNewSession || !activeSessionId) {
-        const id = makeSessionId();
-        const session = {
-          id,
-          title: shortTitle(msg.text),
-          messages: [],
-          createdAt: Date.now(),
-        };
-        sessions.unshift(session);
-        activeSessionId = id;
-        pendingNewSession = false;
-      }
-    }
-    const session = findSession(activeSessionId);
-    if (!session) return;
-    session.messages.push(msg);
-    session.updatedAt = Date.now();
-    persistSessions();
-    renderSessionList();
   }
 
   // -------------------------------------------------------------
@@ -325,6 +276,17 @@
     setTimeout(() => card.remove(), 280);
   }
 
+  // Expose a tiny helper for workspace pages (Cockpit, etc.) that
+  // want to surface a soft toast without reaching into private
+  // pushDirectorNote internals. Single string → quick note; object
+  // shape mirrors pushDirectorNote.
+  window.directorNote = (input) => {
+    const opts = typeof input === "string"
+      ? { title: "Cockpit", text: input, autoDismiss: 3200 }
+      : { autoDismiss: 3200, ...input };
+    return pushDirectorNote(opts);
+  };
+
   function clearDirectorStack() {
     if (!$directorStack) return;
     $directorStack.innerHTML = "";
@@ -358,7 +320,7 @@
         <span class="status-line__icon is-busy"><span class="spinner"></span></span>
         <span class="status-line__label">${md(text)}…</span>
       </div>
-    `, { captureToSession: false });
+    `);
     await sleep(duration);
     bubble.querySelector(".status-line").innerHTML = `
       <span class="status-line__icon is-ok">
@@ -378,7 +340,7 @@
         <span class="status-line__label" style="min-width:160px">${md(step.text)}…</span>
         <div class="progress"><div class="progress__bar"></div></div>
       </div>
-    `, { captureToSession: false });
+    `);
     const bar = bubble.querySelector(".progress__bar");
     requestAnimationFrame(() => {
       bar.style.transition = `inset ${duration}ms cubic-bezier(.2,.7,.2,1)`;
@@ -397,7 +359,7 @@
 
   function renderAsk(step) {
     return new Promise((resolve) => {
-      const bubble = jarvisBubble(`<div>${md(step.text)}</div>`, { captureToSession: false });
+      const bubble = jarvisBubble(`<div>${md(step.text)}</div>`);
       const actions = document.createElement("div");
       actions.className = "actions";
       step.choices.forEach((c) => {
@@ -406,7 +368,7 @@
         btn.innerHTML = `${c.glyph ? `<span class="action__glyph">${c.glyph}</span>` : ""}${md(c.label)}`;
         btn.addEventListener("click", () => {
           [...actions.children].forEach((b) => (b.disabled = true));
-          userBubble(c.label, { captureToSession: false });
+          userBubble(c.label);
           resolve(c);
         });
         actions.appendChild(btn);
@@ -418,7 +380,7 @@
 
   function renderChoose(step) {
     return new Promise((resolve) => {
-      const bubble = jarvisBubble(`<div>${md(step.text)}</div>`, { captureToSession: false });
+      const bubble = jarvisBubble(`<div>${md(step.text)}</div>`);
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
@@ -441,7 +403,7 @@
         b.addEventListener("click", () => {
           [...grid.children].forEach((c) => (c.disabled = true));
           b.classList.add("is-selected");
-          userBubble(o.userText || `Use ${o.label}`, { captureToSession: false });
+          userBubble(o.userText || `Use ${o.label}`);
           resolve(o);
         });
         grid.appendChild(b);
@@ -456,7 +418,7 @@
       const bubble = jarvisBubble(`
         <div>${md(step.text)}</div>
         ${step.sub ? `<div class="bubble__hint">${md(step.sub)}</div>` : ""}
-      `, { captureToSession: false });
+      `);
       const card = document.createElement("div");
       card.className = "card card--multi";
       card.innerHTML = `
@@ -536,7 +498,7 @@
         const summary = labels.length === 0
           ? (step.emptyEcho || "Skip integrations for now.")
           : `Plug into ${labels.join(", ")}.`;
-        userBubble(summary, { captureToSession: false });
+        userBubble(summary);
         resolve({ picked, values: picked.map((p) => p.value) });
       });
 
@@ -548,7 +510,7 @@
 
   function renderLinkCard(step) {
     return new Promise((resolve) => {
-      const bubble = jarvisBubble("", { captureToSession: false });
+      const bubble = jarvisBubble("");
       const btn = document.createElement("button");
       btn.className = "linkcard";
       btn.innerHTML = `
@@ -574,7 +536,7 @@
           <span class="status-line__icon is-busy"><span class="spinner"></span></span>
           <span class="status-line__label">${md(text)}</span>
         </div>
-      `, { captureToSession: false });
+      `);
       const handler = () => {
         $sidepanel.removeEventListener(step.event, handler);
         bubble.querySelector(".status-line").innerHTML = `
@@ -592,7 +554,7 @@
   }
 
   async function renderMetricBoard(step) {
-    const bubble = jarvisBubble("", { captureToSession: false });
+    const bubble = jarvisBubble("");
     const board = document.createElement("div");
     board.className = "metric-board";
     const title = step.title
@@ -642,9 +604,9 @@
       const persona = CURRENT_PERSONA || {};
       const greeting = step.greeting || cfg.greeting || "Welcome,";
       const name = step.name || cfg.name || `${persona.name || "there"}!`;
-      const titleLead = step.titleLead || cfg.titleLead || "Build by describing";
-      const titleTail = step.titleTail || cfg.titleTail || "your vision...";
-      const cta = step.cta || cfg.cta || "Install ITSM";
+      const titleLead = step.titleLead || cfg.titleLead || "Start with";
+      const titleTail = step.titleTail || cfg.titleTail || "Autonomous ITSM";
+      const cta = step.cta || cfg.cta || "Get Started";
       const placeholder = step.placeholder || cfg.placeholder || "Ask anything";
 
       $workspace.classList.add("workspace--welcome");
@@ -732,7 +694,7 @@
 
   // slack-thread — compact Slack-Block-Kit-style card inside the chat.
   async function renderSlackThread(step) {
-    const bubble = jarvisBubble("", { captureToSession: false });
+    const bubble = jarvisBubble("");
     const block = document.createElement("div");
     block.className = "slack-block";
     block.innerHTML = `
@@ -770,25 +732,17 @@
   }
 
   // -------------------------------------------------------------
-  // Side panel — title-bar workspace surface (no URL chrome).
+  // Side panel — pure workspace surface (no chrome bar).
+  //
+  // The panel always renders edge-to-edge inside its grid column;
+  // when the user dismisses the chat (X in the chat header or the
+  // sidenav Jarvis tile), the workspace grid hands this column the
+  // entire canvas via `.workspace--chat-closed`.
   // -------------------------------------------------------------
-  function resolveTitle(pageKey, explicitTitle) {
-    if (explicitTitle) return explicitTitle;
-    if (PAGE_TITLES[pageKey]) return PAGE_TITLES[pageKey];
-    if (!pageKey) return "Workspace";
-    return pageKey
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-
-  function openBrowser(url, pageKey, title) {
+  function openBrowser(url, pageKey) {
     $sidepanel.removeAttribute("inert");
     $sidepanel.setAttribute("aria-hidden", "false");
     $workspace.classList.add("workspace--split");
-
-    if ($browserTitleText) {
-      $browserTitleText.textContent = resolveTitle(pageKey, title);
-    }
 
     $browserView.innerHTML = "";
     const factory = window.PAGES?.[pageKey];
@@ -804,40 +758,10 @@
 
   function closeBrowser() {
     $workspace.classList.remove("workspace--split");
-    $workspace.classList.remove("workspace--panel-fullscreen");
-    if ($browserFullscreen) {
-      $browserFullscreen.setAttribute("aria-pressed", "false");
-      $browserFullscreen.title = "Expand to full screen";
-      $browserFullscreen.setAttribute("aria-label", "Expand panel to full screen");
-    }
     $sidepanel.setAttribute("aria-hidden", "true");
     $sidepanel.setAttribute("inert", "");
     setTimeout(() => { $browserView.innerHTML = ""; }, 600);
   }
-
-  function toggleFullscreen() {
-    const nowFull = $workspace.classList.toggle("workspace--panel-fullscreen");
-    if ($browserFullscreen) {
-      $browserFullscreen.setAttribute("aria-pressed", String(nowFull));
-      $browserFullscreen.title = nowFull
-        ? "Collapse to side panel"
-        : "Expand to full screen";
-      $browserFullscreen.setAttribute(
-        "aria-label",
-        nowFull ? "Collapse panel to side view" : "Expand panel to full screen"
-      );
-    }
-  }
-
-  $browserClose.addEventListener("click", closeBrowser);
-  $browserFullscreen?.addEventListener("click", toggleFullscreen);
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && $workspace.classList.contains("workspace--panel-fullscreen")) {
-      e.preventDefault();
-      toggleFullscreen();
-    }
-  });
 
   // -------------------------------------------------------------
   // Story runner
@@ -895,7 +819,7 @@
       case "browser-close": closeBrowser(); break;
       case "wait-for":      await renderWaitFor(step); break;
       case "link-card":     await renderLinkCard(step); break;
-      case "user":          userBubble(step.text, { captureToSession: false }); break;
+      case "user":          userBubble(step.text); break;
       case "goto": {
         const idx = findStepIndex(story, step.to);
         if (idx >= 0) { storyIndex = idx; return true; }
@@ -949,23 +873,23 @@
 
       pushDirectorNote({
         title: "Setup complete",
-        text: "Cockpit, Horizon, and Incidents are now available in the sidebar.",
+        text: "Tower, Insight, Horizon, and Lens are now available in the sidebar.",
         sub: "You can come back to Settings any time.",
         actions: [
-          { label: "Open Cockpit", primary: true,
-            onClick: () => navigateTo("cockpit") },
+          { label: "Open Tower", primary: true,
+            onClick: () => navigateTo("tower") },
         ],
       });
     }
   }
 
   // -------------------------------------------------------------
-  // Sidenav — gating, collapse, sessions, navigation
+  // Sidenav — gating, collapse, navigation
   // -------------------------------------------------------------
-  // Pre-setup we hide Cockpit / Horizon / Incidents entirely; once
-  // Setup completes they reveal in place. Using `is-locked` (display:
-  // none) + the native `hidden` attribute keeps the items out of
-  // both visual flow AND the keyboard tab order in lockstep.
+  // Pre-setup we hide Tower / Insight / Horizon / Lens entirely;
+  // once Setup completes they reveal in place. Using `is-locked`
+  // (display: none) + the native `hidden` attribute keeps the items
+  // out of both visual flow AND the keyboard tab order in lockstep.
   //
   // `options.animate` is opt-in: when true, each newly-unlocked item
   // gets a `sidenav__item--revealing` class with a staggered delay so
@@ -974,9 +898,10 @@
   function applySidenavGating(options) {
     const animate = !!(options && options.animate);
     const gatedItems = [
-      { el: $navCockpit,   key: "cockpit",   title: "Cockpit · your day-1 control surface" },
-      { el: $navHorizon,   key: "horizon",   title: "Horizon · long-range planning" },
-      { el: $navIncidents, key: "incidents", title: "Incidents · live triage" },
+      { el: $navTower,   key: "tower",   title: "Tower · your day-1 control surface" },
+      { el: $navInsight, key: "insight", title: "Insight · trends, signals, and patterns" },
+      { el: $navHorizon, key: "horizon", title: "Horizon · long-range planning" },
+      { el: $navLens,    key: "lens",    title: "Lens · search across your IT graph" },
     ];
     gatedItems.forEach(({ el, title }, i) => {
       if (!el) return;
@@ -986,14 +911,14 @@
         el.removeAttribute("hidden");
         el.title = title;
         if (animate && wasLocked) {
-          // Per-item cascade — Cockpit first, then Horizon, then
-          // Incidents — so the eye sweeps top → bottom.
-          el.style.setProperty("--reveal-delay", `${i * 140}ms`);
+          // Per-item cascade — Tower first, then Insight, Horizon,
+          // and finally Lens — so the eye sweeps top → bottom.
+          el.style.setProperty("--reveal-delay", `${i * 120}ms`);
           el.classList.add("sidenav__item--revealing");
           // The longest animation (glow pulse × 2) finishes around
           // 3.5s after the cascade delay. Clear the class after
           // that so hover / focus state goes back to normal.
-          const clearAfterMs = 3800 + i * 140;
+          const clearAfterMs = 3800 + i * 120;
           window.setTimeout(() => {
             el.classList.remove("sidenav__item--revealing");
             el.style.removeProperty("--reveal-delay");
@@ -1010,13 +935,14 @@
   }
 
   function setActiveNavItem(key) {
-    [$navCockpit, $navHorizon, $navIncidents, $navSettings].forEach((el) => {
-      if (!el) return;
-      const active = el.dataset.nav === key;
-      el.classList.toggle("is-active", active);
-      if (active) el.setAttribute("aria-current", "page");
-      else        el.removeAttribute("aria-current");
-    });
+    [$navTower, $navInsight, $navHorizon, $navLens, $navSettings, $navProfile]
+      .forEach((el) => {
+        if (!el) return;
+        const active = el.dataset.nav === key;
+        el.classList.toggle("is-active", active);
+        if (active) el.setAttribute("aria-current", "page");
+        else        el.removeAttribute("aria-current");
+      });
   }
 
   function setCollapsed(collapsed) {
@@ -1026,63 +952,83 @@
     try { localStorage.setItem(SIDENAV_KEY, collapsed ? "1" : "0"); } catch (_) {}
   }
 
-  function renderSessionList() {
-    if (!$navSessionList) return;
-    $navSessionList.innerHTML = "";
-    if (sessions.length === 0) {
-      const li = document.createElement("li");
-      li.className = "sidenav__sessions-empty";
-      li.textContent = "No chats yet — ask Jarvis anything to start one.";
-      $navSessionList.appendChild(li);
-      return;
+  // -------------------------------------------------------------
+  // Chat-panel collapse
+  //
+  // The X icon on the chat header — or a click on the Jarvis tile
+  // pinned to the bottom of the sidenav — collapses the entire chat
+  // panel and hands the workspace over to the right-side page panel
+  // (Tower / Insight / Horizon / Lens). Clicking the Jarvis tile a
+  // second time restores the chat panel.
+  //
+  // `instant === true` is used at bootstrap so we don't run the
+  // panel-slide animation when restoring a persisted state on
+  // refresh — the panel just appears in its current shape immediately.
+  // -------------------------------------------------------------
+  function setChatClosed(closed, { instant = false } = {}) {
+    if (instant) {
+      $workspace.style.transition = "none";
     }
-    sessions.forEach((s) => {
-      const li = document.createElement("li");
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "sidenav__session" + (s.id === activeSessionId ? " is-active" : "");
-      btn.textContent = s.title;
-      btn.title = s.title;
-      btn.addEventListener("click", () => loadSession(s.id));
-      li.appendChild(btn);
-      $navSessionList.appendChild(li);
-    });
-  }
 
-  function loadSession(id) {
-    const session = findSession(id);
-    if (!session) return;
-    runToken += 1;       // stop any running story
-    activeSessionId = id;
-    pendingNewSession = false;
-    enterChatMode({ skipClearSession: true });
-    setActiveNavItem(null);
+    // Collapsing the chat always collapses the history drawer too —
+    // otherwise reopening the chat from the Jarvis tile would land
+    // mid-drawer with no obvious way out for casual demo viewers.
+    if (closed && $stage?.getAttribute("data-history") === "1") {
+      $stage.setAttribute("data-history", "0");
+      $chatHistory?.setAttribute("aria-hidden", "true");
+      $stageHistory?.setAttribute("aria-pressed", "false");
+      $stageHistory?.setAttribute("aria-label", "Open chat history");
+    }
 
-    // Replay the session's messages into the thread without re-recording.
-    $thread.innerHTML = "";
-    lastPersona = null;
-    session.messages.forEach((m) => {
-      if (m.kind === "user") {
-        userBubble(m.text, { captureToSession: false });
-      } else {
-        jarvisBubble(m.html, { sys: m.sys, captureToSession: false });
-      }
-    });
-    renderSessionList();
+    $workspace.classList.toggle("workspace--chat-closed", closed);
+
+    // Reflect the chat-panel state on the Jarvis tile.
+    //   aria-pressed=true  → chat is OPEN  (toggle would close it)
+    //   aria-pressed=false → chat is CLOSED (toggle would open it)
+    if ($navJarvis) {
+      $navJarvis.setAttribute("aria-pressed", String(!closed));
+      $navJarvis.title = closed ? "Open Jarvis" : "Hide Jarvis";
+      $navJarvis.setAttribute(
+        "aria-label",
+        closed ? "Open Jarvis chat panel" : "Hide Jarvis chat panel"
+      );
+    }
+
+    if ($stageClose) {
+      $stageClose.setAttribute("aria-expanded", String(!closed));
+    }
+
+    try { localStorage.setItem(CHAT_CLOSED_KEY, closed ? "1" : "0"); } catch (_) {}
+
+    if (instant) {
+      // Force a reflow then restore the transitions on the next frame
+      // so subsequent toggles animate normally.
+      void $workspace.offsetHeight;
+      requestAnimationFrame(() => {
+        $workspace.style.transition = "";
+      });
+    }
+
+    // When reopening the chat in the middle of a Setup/story run,
+    // we want the input to be ready for the next interrupt — but
+    // only after the slide-in finishes so focus doesn't fight the
+    // animation. Wrapped in a guard so non-chat surfaces (e.g. the
+    // chat is closed while a workspace page is loading) don't pull
+    // focus away from the page being viewed.
+    if (!closed && document.activeElement === document.body) {
+      window.setTimeout(() => $whisperInput?.focus({ preventScroll: true }), 320);
+    }
   }
 
   // Strip everything chapter-y from the workspace and present a clean
-  // chat surface. Used by "New chat" and by `loadSession`.
-  function enterChatMode({ skipClearSession = false } = {}) {
+  // chat surface. Used as an internal helper when the user asks Jarvis
+  // a free-text question from a workspace page (we drop them into the
+  // chat thread so the answer has somewhere to land).
+  function enterChatMode() {
     runToken += 1;
     mode = "chat";
     activeChapter = null;
     CURRENT_PERSONA = null;
-
-    if (!skipClearSession) {
-      activeSessionId = null;
-      pendingNewSession = true;
-    }
 
     $workspace.classList.remove("workspace--welcome");
     $stageMain.querySelectorAll(".chapter-welcome").forEach((n) => n.remove());
@@ -1094,27 +1040,58 @@
   }
 
   // -------------------------------------------------------------
-  // Workspace pages — Cockpit / Horizon / Incidents.
-  // For now we render lightweight placeholders directly into the
-  // chat column. They can be replaced with real factories later.
+  // Workspace pages — Tower / Insight / Horizon / Lens
+  //
+  // Each page mounts into the right-side panel via the shared
+  // browser surface (`openBrowser` + `window.PAGES`). The chat
+  // column on the left stays as-is so the user can interrupt with
+  // a Jarvis question without losing the page they were looking at,
+  // and clicking the Jarvis tile in the sidenav can collapse the
+  // chat column to give the page the full canvas.
   // -------------------------------------------------------------
   const WORKSPACE_PAGES = {
-    cockpit: {
-      title: "Cockpit",
+    tower: {
+      title: "Tower",
       lead: "Your day-1 control surface. Agents, signals, and sign-offs at a glance.",
       hint: "Design coming soon — this is the post-setup landing surface for Sarah.",
     },
-    horizon: {
-      title: "Horizon",
-      lead: "Long-range planning view. Track trends, capacity, and upcoming change windows.",
+    insight: {
+      title: "Insight",
+      lead: "Trends, capacity, and pattern detection across your IT graph.",
       hint: "Design coming soon.",
     },
-    incidents: {
-      title: "Incidents",
-      lead: "Live triage. Open incidents, who's on call, and the running RCA.",
+    horizon: {
+      title: "Horizon",
+      lead: "Long-range planning. Track upcoming change windows and forecast risk.",
+      hint: "Design coming soon.",
+    },
+    lens: {
+      title: "Lens",
+      lead: "Search across every service, asset, and incident in the ontology.",
       hint: "Design coming soon.",
     },
   };
+
+  // Register a generic placeholder factory for each workspace page so
+  // `openBrowser(null, key)` can mount it. Stories register their own
+  // richer factories (e.g. the Setup story's "cockpit" page) before
+  // app.js runs; `Object.assign` here preserves those entries and only
+  // fills in the gaps for the four nav surfaces.
+  window.PAGES = window.PAGES || {};
+  Object.entries(WORKSPACE_PAGES).forEach(([key, cfg]) => {
+    if (window.PAGES[key]) return; // story-provided factory wins
+    window.PAGES[key] = (panel) => {
+      panel.innerHTML = `
+        <div class="workspace-placeholder">
+          <div class="workspace-placeholder__inner">
+            <div class="workspace-placeholder__eyebrow">${md(cfg.title)}</div>
+            <h2 class="workspace-placeholder__title">${md(cfg.lead)}</h2>
+            <p class="workspace-placeholder__hint">${md(cfg.hint)}</p>
+          </div>
+        </div>
+      `;
+    };
+  });
 
   function navigateTo(key) {
     const cfg = WORKSPACE_PAGES[key];
@@ -1125,26 +1102,17 @@
     mode = "page";
     activeChapter = null;
     CURRENT_PERSONA = null;
-    activeSessionId = null;
-    pendingNewSession = false;
 
     $workspace.classList.remove("workspace--welcome");
     $stageMain.querySelectorAll(".chapter-welcome").forEach((n) => n.remove());
-    $thread.innerHTML = "";
-    lastPersona = null;
-    closeBrowser();
     setActiveNavItem(key);
 
-    const placeholder = document.createElement("div");
-    placeholder.className = "workspace-placeholder";
-    placeholder.innerHTML = `
-      <div class="workspace-placeholder__inner">
-        <div class="workspace-placeholder__eyebrow">${md(cfg.title)}</div>
-        <h2 class="workspace-placeholder__title">${md(cfg.lead)}</h2>
-        <p class="workspace-placeholder__hint">${md(cfg.hint)}</p>
-      </div>
-    `;
-    $thread.appendChild(placeholder);
+    // Mount the page in the right-side panel — the workspace grid
+    // moves to its split layout (chat column shrinks, page column
+    // takes ~60%). If the chat is currently dismissed (Jarvis tile
+    // pressed off), the workspace--chat-closed class is still
+    // applied and the page expands to fill the entire canvas.
+    openBrowser(null, key);
   }
 
   // Re-enter Setup. Resets the story and re-runs it from the beginning.
@@ -1158,8 +1126,6 @@
     mode = "setup";
     activeChapter = chapter;
     CURRENT_PERSONA = chapter.persona;
-    activeSessionId = null;
-    pendingNewSession = false;
 
     document.documentElement.style.setProperty(
       "--chapter-accent", chapter.persona.accent || "var(--accent-1)"
@@ -1195,9 +1161,6 @@
     await sleep(550);
     const html = md(answer) + sourceDisclosure(source);
     typing.querySelector(".bubble__text").innerHTML = html;
-    // Re-record this jarvis message into the active session (typing
-    // bubbles aren't captured, but the resolved answer should be).
-    recordMessage({ kind: "jarvis", html });
   }
 
   async function renderFallback() {
@@ -1208,7 +1171,6 @@
       "Ask me about the install, the CMDB, integrations, or how to roll back changes."
     );
     typing.querySelector(".bubble__text").innerHTML = html;
-    recordMessage({ kind: "jarvis", html });
   }
 
   // Single entry point for free-text questions from the dock whisper.
@@ -1216,31 +1178,25 @@
   // Behavior depends on `mode`:
   //   • setup → the question is treated as an inline interrupt; the
   //     bubble + FAQ answer are appended to the running thread but
-  //     the story keeps playing underneath. Nothing is recorded into
-  //     a session (sessions are owned by the chat surface, not setup).
-  //   • chat  → the question creates / extends the active session
-  //     (auto-recorded by the bubble factories + renderAnswer).
-  //   • page  → the user navigated to Cockpit/Horizon/Incidents and
-  //     then asked a question. We treat that as starting a fresh
-  //     chat (session-worthy) so the placeholder doesn't trap them.
+  //     the story keeps playing underneath.
+  //   • chat  → ordinary back-and-forth on the chat surface.
+  //   • page  → the user navigated to Tower/Insight/Horizon/Lens and
+  //     then asked a question. We promote them to chat mode so the
+  //     answer has a thread to land in.
   async function handleWhisper(rawText) {
     const text = (rawText || "").trim();
     if (!text) return;
 
     if ($whisperInput) $whisperInput.value = "";
 
-    // Special control phrases — always allowed regardless of mode.
-    if (/^(new chat|fresh chat|start over)$/i.test(text)) {
-      enterChatMode();
-      return;
-    }
+    // Special control phrase — re-run Setup from the beginning.
     if (/^(open settings|back to setup|setup)$/i.test(text)) {
       startSetup();
       return;
     }
 
     // From a workspace page, the chat surface is empty — promote the
-    // user to chat mode so their question can become a real session.
+    // user to chat mode so their question has somewhere to land.
     if (mode === "page") {
       enterChatMode();
     }
@@ -1264,21 +1220,288 @@
     setCollapsed(!isCollapsed);
   });
 
-  $navNewChat.addEventListener("click", () => enterChatMode());
-  $navSettings.addEventListener("click", () => startSetup());
-  $navCockpit.addEventListener("click", (e) => {
-    if ($navCockpit.disabled) { e.preventDefault(); return; }
-    navigateTo("cockpit");
+  // Chat-panel header X — dismiss the chat (workspace page below
+  // takes the full canvas). `setChatClosed` also collapses the
+  // history drawer so reopening the chat lands on the thread.
+  $stageClose?.addEventListener("click", () => setChatClosed(true));
+
+  // -----------------------------------------------------------------
+  // CHAT-HISTORY DRAWER
+  // -----------------------------------------------------------------
+  // Dummy past-conversation entries for the demo. Each item is a
+  // (title, preview) pair grouped by the human-readable date label
+  // we want to display. `private: true` adds a small lock glyph next
+  // to the title — mirrors how Slack flags restricted channels in
+  // the reference design. In production this list would be paginated
+  // from the Jarvis chat-store; today it's a hand-curated set of
+  // conversations that fit Sarah's IT-admin persona.
+  const CHAT_HISTORY = [
+    {
+      date: "Tuesday, May 12th",
+      items: [
+        {
+          title: "Change the title from HRSM to ITSM",
+          preview: "Unfortunately, this canvas is read-only for you, so I'm queuing the rename for an editor.",
+        },
+      ],
+    },
+    {
+      date: "Friday, May 8th",
+      items: [
+        {
+          title: "Summarise servicecloud-proactive-itsm-wa…",
+          preview: "Got it! Let me fetch messages from after 7:54 PM today.",
+          private: true,
+        },
+        {
+          title: "You have created the core stack using the Rea…",
+          preview: "Got the full context. @Kumar Ankit is asking why you chose the legacy path.",
+        },
+        {
+          title: "I want wispr flow access — what do I do, IT appro…",
+          preview: "Looks like the Techforce bot didn't have enough context. Routing to Identity.",
+        },
+      ],
+    },
+    {
+      date: "Thursday, May 7th",
+      items: [
+        {
+          title: "I want everything related to GUS that's been …",
+          preview: "The first search didn't find an exact channel match. Let me widen the window.",
+        },
+      ],
+    },
+    {
+      date: "Tuesday, May 5th",
+      items: [
+        {
+          title: "Can you look through my activity threads from …",
+          preview: "I'll dig through your recent activity threads right now and pull anything urgent.",
+        },
+        {
+          title: "What is SI in ITSM",
+          preview: "SI stands for Service Integration — the practice of coordinating across vendors.",
+        },
+      ],
+    },
+    {
+      date: "Monday, May 4th",
+      items: [
+        {
+          title: "Tell me more about workshop preparation ma…",
+          preview: "Let me fetch more context from all three conversations and stitch them together.",
+        },
+        {
+          title: "Can you look through my activity threads fro…",
+          preview: "Now let me look at the most relevant threads from the past week.",
+        },
+      ],
+    },
+    {
+      date: "Sunday, May 3rd",
+      items: [
+        {
+          title: "Auto-rotate the service principals on payments-gateway",
+          preview: "Scheduling rotation for next Friday's change window. Coordinating with Identity.",
+          private: true,
+        },
+        {
+          title: "What's the current SLA on payments-gateway?",
+          preview: "99.95% uptime, measured per calendar month. Last breach was Feb 14 — 7m 18s.",
+        },
+      ],
+    },
+  ];
+
+  // Inline-SVG lock glyph for the private-thread flag. Kept here (not
+  // in CSS) so it inherits currentColor from the title row and stays
+  // crisp in both themes without a second asset round-trip.
+  const HISTORY_LOCK_ICON =
+    `<svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+       <rect x="3" y="6.4" width="8" height="5.6" rx="1"/>
+       <path d="M4.6 6.4V4.6a2.4 2.4 0 0 1 4.8 0v1.8"/>
+     </svg>`;
+
+  // Same pattern as the cockpit factory: local HTML-escape because
+  // the page-level `md()` helper lives inside its own IIFE scope.
+  const escHistory = (s) => String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+  // Live-filter state. Bumped by the search input handler; consumed
+  // by renderChatHistory so every keystroke yields a fresh DOM.
+  let historyQuery = "";
+
+  function renderChatHistory() {
+    if (!$chatHistoryBody) return;
+    const q = historyQuery.trim().toLowerCase();
+
+    // Case-insensitive substring match against title + preview.
+    // Groups with zero surviving items collapse so the date headers
+    // never sit alone above an empty list.
+    const groups = q
+      ? CHAT_HISTORY
+          .map((g) => ({
+            ...g,
+            items: g.items.filter(
+              (it) =>
+                it.title.toLowerCase().includes(q) ||
+                it.preview.toLowerCase().includes(q)
+            ),
+          }))
+          .filter((g) => g.items.length > 0)
+      : CHAT_HISTORY;
+
+    if (groups.length === 0) {
+      $chatHistoryBody.innerHTML = `
+        <div class="chat-history__empty">
+          No conversations match <strong>"${escHistory(historyQuery)}"</strong>.
+        </div>
+      `;
+      return;
+    }
+
+    $chatHistoryBody.innerHTML = groups.map((group) => `
+      <section class="chat-history__group">
+        <h3 class="chat-history__date">${escHistory(group.date)}</h3>
+        <ul class="chat-history__list">
+          ${group.items.map((item) => `
+            <li class="chat-history__item" role="listitem" tabindex="0"
+                data-title="${escHistory(item.title)}"
+                aria-label="Open conversation: ${escHistory(item.title)}">
+              <div class="chat-history__entry-title">
+                <span class="chat-history__entry-name">${escHistory(item.title)}</span>
+                ${item.private ? HISTORY_LOCK_ICON : ""}
+              </div>
+              <div class="chat-history__entry-sub">${escHistory(item.preview)}</div>
+            </li>
+          `).join("")}
+        </ul>
+      </section>
+    `).join("");
+  }
+
+  function setHistoryOpen(open) {
+    if (!$stage || !$chatHistory) return;
+    $stage.setAttribute("data-history", open ? "1" : "0");
+    $chatHistory.setAttribute("aria-hidden", String(!open));
+    $stageHistory?.setAttribute("aria-pressed", String(open));
+    $stageHistory?.setAttribute(
+      "aria-label",
+      open ? "Close chat history" : "Open chat history"
+    );
+    if (open) {
+      renderChatHistory();
+      // Drop focus into the search field — the most likely next
+      // action and the canonical "command" for the drawer now that
+      // the header has no other affordances.
+      $chatHistory.querySelector(".chat-history__search-input")?.focus();
+    } else {
+      // Reset the live filter so reopening the drawer always lands
+      // on the full, unfiltered list (matches the chat-thread reset
+      // semantics when the chat panel is dismissed).
+      historyQuery = "";
+      const $input = $chatHistory.querySelector(".chat-history__search-input");
+      if ($input) $input.value = "";
+      $stageHistory?.focus();
+    }
+  }
+
+  // History icon = toggle. Pressed-state reflects drawer visibility.
+  $stageHistory?.addEventListener("click", () => {
+    const isOpen = $stage?.getAttribute("data-history") === "1";
+    setHistoryOpen(!isOpen);
   });
-  $navHorizon.addEventListener("click", (e) => {
+
+  // Live-filter — every keystroke re-renders against the dummy data.
+  // The list is tiny (≤10 entries) so a full re-render is cheaper
+  // than per-row classToggle gymnastics and keeps the empty-state
+  // path unified with the initial render.
+  $("#chatHistorySearch")?.addEventListener("input", (e) => {
+    historyQuery = e.target.value;
+    renderChatHistory();
+  });
+
+  // Delegated handlers for the filter button + item clicks. The
+  // search field is excluded explicitly so clicks inside it don't
+  // get treated as a row activation.
+  $chatHistory?.addEventListener("click", (e) => {
+    if (e.target.closest(".chat-history__search")) return;
+    if (e.target.closest(".chat-history__filter")) {
+      pushDirectorNote({
+        title: "Filter history",
+        text: "Filtering past conversations is coming in a future build.",
+        autoDismiss: 2400,
+      });
+      return;
+    }
+    const item = e.target.closest(".chat-history__item");
+    if (item) {
+      const title = item.getAttribute("data-title") || "this conversation";
+      setHistoryOpen(false);
+      pushDirectorNote({
+        title: "Restoring conversation",
+        text: title,
+        sub: "Demo mode — past chats aren't wired up yet.",
+        autoDismiss: 2800,
+      });
+    }
+  });
+
+  // Keyboard parity — Esc closes the drawer (also when typing in
+  // the search field), Enter/Space activates a focused item.
+  $chatHistory?.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setHistoryOpen(false);
+      return;
+    }
+    const item = e.target.closest?.(".chat-history__item");
+    if (item && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      item.click();
+    }
+  });
+
+  // Jarvis tile in the sidenav — toggle the chat panel open/closed.
+  // `aria-pressed=true` means the chat is currently open, so a click
+  // should close it; `aria-pressed=false` means it's closed, so a
+  // click should open it.
+  $navJarvis?.addEventListener("click", () => {
+    const open = $navJarvis.getAttribute("aria-pressed") === "true";
+    setChatClosed(open);
+  });
+
+  $navSettings.addEventListener("click", () => startSetup());
+
+  // Gated workspace nav — each item opens its page in the right-side
+  // panel via `navigateTo`. The `disabled` guard is belt-and-braces;
+  // gated items are also `hidden`, so they shouldn't normally be
+  // reachable until Setup completes.
+  $navTower?.addEventListener("click", (e) => {
+    if ($navTower.disabled) { e.preventDefault(); return; }
+    navigateTo("tower");
+  });
+  $navInsight?.addEventListener("click", (e) => {
+    if ($navInsight.disabled) { e.preventDefault(); return; }
+    navigateTo("insight");
+  });
+  $navHorizon?.addEventListener("click", (e) => {
     if ($navHorizon.disabled) { e.preventDefault(); return; }
     navigateTo("horizon");
   });
-  $navIncidents.addEventListener("click", (e) => {
-    if ($navIncidents.disabled) { e.preventDefault(); return; }
-    navigateTo("incidents");
+  $navLens?.addEventListener("click", (e) => {
+    if ($navLens.disabled) { e.preventDefault(); return; }
+    navigateTo("lens");
   });
-  $navProfile.addEventListener("click", () => {
+
+  $navProfile?.addEventListener("click", () => {
+    setActiveNavItem("profile");
     pushDirectorNote({
       title: "Profile",
       text: "Sarah Chen · IT Admin · Acme Health.",
@@ -1294,15 +1517,46 @@
   });
 
   // -------------------------------------------------------------
-  // Bootstrap — restore sidenav state, gate items, render sessions,
-  // and auto-launch the Setup chapter on first paint.
+  // Bootstrap — restore sidenav state, gate items, and auto-launch
+  // the Setup chapter on first paint.
+  //
+  // Deep links (URL hash) bypass the setup story so the Cockpit
+  // (and the other workspace surfaces) can be linked to directly:
+  //   #cockpit | #tower   → open the Cockpit full-canvas
+  //   #insight             → open Insight
+  //   #horizon             → open Horizon
+  //   #lens                → open Lens
+  // The deep-link path treats Setup as already complete (so the
+  // nav reveals without the install cascade) and dismisses the
+  // chat panel so the surface gets the entire canvas.
   // -------------------------------------------------------------
   (function bootstrap() {
     let initialCollapsed = false;
     try { initialCollapsed = localStorage.getItem(SIDENAV_KEY) === "1"; } catch (_) {}
     setCollapsed(initialCollapsed);
-    applySidenavGating();
-    renderSessionList();
-    startSetup();
+
+    const hash = (location.hash || "").replace(/^#/, "").toLowerCase();
+    const deepLinkPage = {
+      cockpit: "tower",      // Cockpit is the Tower nav item's page
+      tower:   "tower",
+      insight: "insight",
+      horizon: "horizon",
+      lens:    "lens",
+    }[hash];
+
+    if (deepLinkPage) {
+      // Skip the setup story — jump straight to the requested
+      // workspace surface. The chat panel is closed so the page
+      // gets the full canvas (matches the design comp).
+      setupComplete = true;
+      applySidenavGating();
+      setChatClosed(true, { instant: true });
+      $workspace.classList.remove("workspace--welcome");
+      navigateTo(deepLinkPage);
+    } else {
+      setChatClosed(false, { instant: true });
+      applySidenavGating();
+      startSetup();
+    }
   })();
 })();

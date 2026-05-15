@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvis · v5 Mobile · Preview</title>
+  <link rel="icon" type="image/png" href="assets/jarvis-mark.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Restore the user's chosen theme from localStorage so re-opens
+    // remember whether they were demoing in light or dark.
+    (function () {
+      try {
+        const t = localStorage.getItem("jarvis-mobile-theme");
+        if (t === "dark" || t === "light") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body class="preview-page">
+
+  <!-- Page heading + subtitle -->
+  <header class="preview-head">
+    <h1 class="preview-head__title">Jarvis · v5 Mobile</h1>
+    <p class="preview-head__sub">Onboarding Day · Priya Menon · HR Admin · TechCorp</p>
+  </header>
+
+  <!-- Device size + theme toggles -->
+  <div class="preview-controls">
+    <div class="seg" role="tablist" aria-label="Device size">
+      <button class="seg__btn" type="button" data-device="se"      aria-pressed="false">iPhone SE</button>
+      <button class="seg__btn" type="button" data-device="pro"     aria-pressed="true">iPhone 15 Pro</button>
+      <button class="seg__btn" type="button" data-device="pro-max" aria-pressed="false">15 Pro Max</button>
+    </div>
+    <button class="theme-toggle" type="button" id="themeToggle" aria-label="Toggle theme">
+      <svg id="themeIconLight" width="14" height="14" viewBox="0 0 16 16" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.2"/>
+        <path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7 3.4 3.4"/>
+      </svg>
+      <svg id="themeIconDark" width="14" height="14" viewBox="0 0 16 16" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+        <path d="M13.5 9.4A6 6 0 1 1 6.6 2.5a4.7 4.7 0 0 0 6.9 6.9Z"/>
+      </svg>
+      <span id="themeLabel">Light</span>
+    </button>
+  </div>
+
+  <!-- The phone itself -->
+  <div class="phone" id="phone" data-device="pro" role="figure" aria-label="iPhone preview of the mobile app">
+    <div class="phone__btns" aria-hidden="true"><span></span><span></span></div>
+    <div class="phone__island" aria-hidden="true"></div>
+    <div class="phone__screen">
+      <iframe class="phone__iframe" id="phoneFrame"
+              src="index.html"
+              title="Jarvis mobile app preview"
+              loading="lazy"></iframe>
+    </div>
+  </div>
+
+  <p class="preview-foot">
+    This is the same app you'd run on a real phone — the bezel is just a CSS frame around <code>index.html</code>.
+    Open <code>index.html</code> directly on your phone for the full-screen experience.
+  </p>
+
+  <script>
+    // -------- Device-size toggle --------
+    const phone = document.getElementById("phone");
+    const seg = document.querySelectorAll(".seg__btn");
+    seg.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dev = btn.getAttribute("data-device");
+        phone.setAttribute("data-device", dev);
+        seg.forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      });
+    });
+
+    // -------- Theme toggle (light <-> dark) --------
+    // We control the parent <html data-theme>, then ping the iframe to
+    // re-read it. The iframe reads the parent's attribute on load
+    // (see the inline script in index.html) AND honors postMessage
+    // events sent from here.
+    const root = document.documentElement;
+    const toggle = document.getElementById("themeToggle");
+    const iconLight = document.getElementById("themeIconLight");
+    const iconDark = document.getElementById("themeIconDark");
+    const label = document.getElementById("themeLabel");
+    const frame = document.getElementById("phoneFrame");
+
+    function getEffectiveTheme() {
+      const explicit = root.getAttribute("data-theme");
+      if (explicit) return explicit;
+      return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function applyToggleLabel(theme) {
+      const isDark = theme === "dark";
+      iconLight.style.display = isDark ? "none"  : "block";
+      iconDark.style.display  = isDark ? "block" : "none";
+      label.textContent = isDark ? "Dark" : "Light";
+    }
+    function pushThemeToFrame(theme) {
+      try {
+        const doc = frame.contentDocument;
+        if (doc && doc.documentElement) {
+          doc.documentElement.setAttribute("data-theme", theme);
+        }
+      } catch (_) { /* same-origin only — ok in local dev */ }
+    }
+    function setTheme(theme) {
+      root.setAttribute("data-theme", theme);
+      try { localStorage.setItem("jarvis-mobile-theme", theme); } catch (_) {}
+      applyToggleLabel(theme);
+      pushThemeToFrame(theme);
+    }
+    toggle.addEventListener("click", () => {
+      const next = getEffectiveTheme() === "dark" ? "light" : "dark";
+      setTheme(next);
+    });
+
+    // First paint — sync the toggle to the current theme.
+    applyToggleLabel(getEffectiveTheme());
+
+    // Once the iframe loads, push the parent's theme into it (handles
+    // the case where the parent has an explicit theme but the iframe
+    // booted before we could pass it down).
+    frame.addEventListener("load", () => {
+      pushThemeToFrame(getEffectiveTheme());
+    });
+  </script>
+</body>
+</html>

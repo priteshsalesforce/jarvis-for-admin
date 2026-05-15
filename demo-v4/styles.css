@@ -7428,3 +7428,388 @@ section.lobby[hidden]  { display: none; }
   }
   .inc-summary-drawer__panel { transition: none; }
 }
+
+/* =====================================================================
+   AGENT DETAIL PAGE
+   ---------------------------------------------------------------------
+   Mounted when an agent card in the Cockpit is clicked. Stacked
+   sections inside the existing .v4-page container so it inherits the
+   shared 1080px reading column + header chrome:
+
+     1. .v4-page__head — agent identity (name + chip + status badge),
+                         description, and lead. Promoted from the old
+                         ad-hero card so the page reads like every
+                         other v4 detail page.
+     2. .ad-coaching   — soft callout when the agent is drifting (warm
+                         amber) or just-created (calm accent-1 wash).
+     3. .ad-matrix     — unified "operating signals" matrix: 12 cells in
+                         a 4×3 grid of trust / throughput / outcomes.
+                         Replaces the old split ad-hero+ad-kpis layout
+                         so all live numbers read as one coherent table.
+     4. .ad-work       — current work items (typed pill + id + title +
+                         state).
+
+   Coaching uses a warm amber wash so it reads as a soft alert without
+   competing with critical-incident chrome.
+   ===================================================================== */
+.v4-page--agent-detail { gap: 20px; }
+
+/* "← Cockpit" back affordance sits at the top-left of the page as a direct
+   flex child (was nested inside .v4-page__head-actions). Keep it shrink-to-fit
+   so the column flex layout doesn't stretch the pill across the reading
+   column. */
+.v4-page--agent-detail__back {
+  align-self: flex-start;
+  width: fit-content;
+}
+
+/* Identity row + agent description live in the page header now (promoted
+   from the old ad-hero head). The name row carries the page-level h2
+   (.ad-hero__name) plus the level chip + status badge, so it doubles as
+   the page title — bump the name's type up to match other v4 page titles. */
+.v4-page--agent-detail .v4-page__head .ad-hero__name-row { margin-top: 4px; }
+.v4-page--agent-detail .v4-page__head .ad-hero__name {
+  font-size: 22px;
+}
+.v4-page--agent-detail .v4-page__head .ad-hero__sub { margin-top: 8px; }
+.v4-page--agent-detail .v4-page__head .v4-page__lead { margin-top: 6px; }
+
+/* ---------- Identity row primitives (still used inside .v4-page__head) ---------- */
+.ad-hero__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ad-hero__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.01em;
+}
+.ad-hero__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.ad-hero__dot { color: var(--ink-mute); font-weight: 700; }
+.ad-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.ad-status-badge--drift {
+  background: rgba(255, 154, 61, .12);
+  color: var(--accent-warn, #c2741c);
+}
+.ad-status-badge--ok {
+  background: rgba(40, 200, 118, .12);
+  color: var(--accent-ok);
+}
+.ad-status-badge--new {
+  background: rgba(47, 92, 255, .10);
+  color: var(--accent-1);
+}
+.ad-hero__sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+.ad-arrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.ad-arrow.ad-up   { color: var(--accent-ok); }
+.ad-arrow.ad-down { color: #d34646; }
+
+/* ---------- Operating-signals matrix ----------------------------------
+   12 KPI tiles in a 4×3 grid (Trust / Throughput / Outcomes flow across
+   rows). Visual treatment intentionally mirrors the Cockpit `.kpi` cards
+   — each .ad-cell is its own bordered card on bg-1, with a matching
+   hover state — so a user moving from Cockpit → agent detail recognises
+   the metric language at a glance. Replaces the old split .ad-hero
+   (6-up borderless strip) + .ad-kpis (7-up tile row), which fought
+   each other for visual weight. */
+.ad-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ad-matrix__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ad-matrix__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.005em;
+}
+.ad-matrix__lede {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.ad-matrix__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.ad-cell {
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.ad-cell:hover {
+  border-color: color-mix(in srgb, var(--accent-1) 35%, var(--line));
+  box-shadow: 0 6px 18px rgba(54, 67, 142, .06);
+}
+/* Label is the "what this is" line — promoted to ink at 13px / 600 to
+   match the Cockpit .kpi__label so users read the metric name first
+   and the number second. */
+.ad-cell__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ad-cell__value {
+  margin-top: 2px;
+  font-size: clamp(20px, 2.4cqw + 12px, 26px);
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.01em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+.ad-cell__sub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  line-height: 1.4;
+}
+
+/* Coaching callout — warm amber wash on top of the hero card. The
+   --new variant (freshly created agents) swaps to a calm accent-1
+   wash so the page never looks alarming on day one. */
+.ad-coaching {
+  position: relative;
+  background: rgba(255, 154, 61, .08);
+  border: 1px solid rgba(255, 154, 61, .28);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
+  column-gap: 16px;
+  row-gap: 6px;
+  align-items: center;
+}
+.ad-coaching__eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 154, 61, .18);
+  color: #a35a10;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  justify-self: start;
+}
+.ad-coaching__sub {
+  grid-column: 1;
+  grid-row: 1;
+  margin-left: 130px;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+}
+.ad-coaching__title {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -.005em;
+}
+.ad-coaching__body {
+  grid-column: 1;
+  grid-row: 3;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  line-height: 1.55;
+}
+.ad-coaching__cta {
+  grid-column: 2;
+  grid-row: 2 / 4;
+  align-self: center;
+  white-space: nowrap;
+}
+.ad-coaching--new {
+  background: rgba(47, 92, 255, .07);
+  border-color: rgba(47, 92, 255, .25);
+}
+
+/* ---------- Current work items ---------- */
+.ad-work__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ad-work__title-h {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.ad-work__count {
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+.ad-work__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.ad-work__row {
+  display: grid;
+  grid-template-columns: 56px 96px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.ad-work__row:last-child { border-bottom: 0; }
+.ad-work__type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 0;
+  border-radius: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.ad-work__type--inc {
+  background: rgba(255, 95, 95, .08);
+  color: #c84545;
+  border-color: rgba(255, 95, 95, .22);
+}
+.ad-work__type--chg {
+  background: rgba(126, 96, 255, .10);
+  color: #6b4cff;
+  border-color: rgba(126, 96, 255, .25);
+}
+.ad-work__type--case {
+  background: rgba(47, 92, 255, .08);
+  color: var(--accent-1);
+  border-color: rgba(47, 92, 255, .22);
+}
+.ad-work__type--task {
+  background: rgba(40, 200, 118, .10);
+  color: var(--accent-ok);
+  border-color: rgba(40, 200, 118, .22);
+}
+.ad-work__id {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  letter-spacing: .02em;
+}
+.ad-work__main { min-width: 0; }
+.ad-work__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ad-work__sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+.ad-work__state {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.ad-work__row[data-type="inc"] .ad-work__state::before {
+  content: "•";
+  margin-right: 6px;
+  color: var(--accent-1);
+  font-weight: 700;
+}
+
+/* ---------- Responsive — collapse to fewer matrix columns on narrow panes ---------- */
+@media (max-width: 960px) {
+  .ad-matrix__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .ad-matrix__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ad-cell { padding: 12px 14px; }
+  .ad-cell__value { font-size: 20px; }
+  .ad-work__row {
+    grid-template-columns: 56px 1fr;
+    row-gap: 4px;
+  }
+  .ad-work__id    { grid-column: 1 / -1; }
+  .ad-work__main  { grid-column: 1 / -1; }
+  .ad-work__state { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .ad-matrix__grid { grid-template-columns: 1fr; }
+}

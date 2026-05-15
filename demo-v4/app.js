@@ -1590,11 +1590,20 @@
     });
   }
 
+  // Sub-surfaces that don't have their own sidenav slot but should
+  // light up an existing one. Agent detail is reached from the
+  // Cockpit so the Cockpit (Tower) item stays the active waypoint
+  // while the user drills in.
+  const NAV_KEY_ALIAS = {
+    "agent-detail": "tower",
+  };
+
   function setActiveNavItem(key) {
+    const navKey = NAV_KEY_ALIAS[key] || key;
     [$navTower, $navInsight, $navHorizon, $navLens, $navSettings, $navProfile]
       .forEach((el) => {
         if (!el) return;
-        const active = el.dataset.nav === key;
+        const active = el.dataset.nav === navKey;
         el.classList.toggle("is-active", active);
         if (active) el.setAttribute("aria-current", "page");
         else        el.removeAttribute("aria-current");
@@ -1756,6 +1765,15 @@
       lead: "P1 · live timeline with agent orchestration.",
       hint: "Auto-refreshes as agents act.",
     },
+    // Agent detail surface — mounted when a cockpit agent card is
+    // clicked (or when the wizard's just-shipped agent is opened
+    // from the cockpit list). The factory in stories/02-admin-sarah.js
+    // reads the agent from window.__activeAgentDetail.
+    "agent-detail": {
+      title: "Agent detail",
+      lead: "Live signals, coaching, and current work for this agent.",
+      hint: "Open from the Cockpit · click any agent card.",
+    },
   };
 
   // Register a generic placeholder factory for each workspace page so
@@ -1837,11 +1855,19 @@
   // Quick-action shortcuts. `page` is the WORKSPACE_PAGES key that
   // navigateTo() mounts when the chiclet is clicked. `badge` shows
   // a small count pill on the right (used by "Today's approvals").
+  //
+  // The `add-agent` chiclet routes to the Cockpit (Tower) and then
+  // auto-launches the in-chat Add Agent wizard — see the special
+  // case in openFromHome(). The `healthcheck` entry stays
+  // registered (no chiclet rendered) so the trending-card "Run a
+  // full health check" CTA below can still look up its page key
+  // through the shared HOME_CHICLETS registry.
   const HOME_CHICLETS = [
     { id: "cockpit",     label: "Open Cockpit",      page: "tower" },
     { id: "approvals",   label: "Today's approvals", page: "approvals",   badge: "4" },
     { id: "incidents",   label: "Recent incidents",  page: "incidents" },
-    { id: "healthcheck", label: "Run health check",  page: "healthcheck" },
+    { id: "add-agent",   label: "Add Agent",         page: "tower" },
+    { id: "healthcheck", label: "Run health check",  page: "healthcheck", hidden: true },
   ];
 
   // Awaiting-approval rows. Same shape as the Cockpit's signoffs so
@@ -1925,6 +1951,7 @@
     cockpit:     `Your **Cockpit** is open. Live signals from all 25 agents across Identity, Cost, Reliability and Compliance.`,
     approvals:   `**4 items** are waiting for your decision. Approving releases the agent's plan; deferring buys you 24 hours.`,
     incidents:   `**Recent incidents** — last 7 days. Tap any row to see what happened, who fixed it, and how long it took.`,
+    "add-agent": `Let's spin up a new agent. I'll ask you a few questions \u2014 jobs-to-be-done, domain, level \u2014 and queue the eval pre-flight.`,
     healthcheck: `Running a **live health check** across your critical services. Each agent reports back as it finishes.`,
   };
 
@@ -2064,9 +2091,12 @@
           <span class="home__title-tail">${md(titleTail)}</span>
         </h1>
 
-        <!-- Quick-action chiclets — each opens the right panel -->
+        <!-- Quick-action chiclets — each opens the right panel.
+             Entries marked hidden:true stay registered in
+             HOME_CHICLETS (so renderHomeMore can still resolve
+             their page key) but don't render in the chiclet row. -->
         <div class="home__chiclets" role="group" aria-label="Quick actions">
-          ${HOME_CHICLETS.map((c) => `
+          ${HOME_CHICLETS.filter((c) => !c.hidden).map((c) => `
             <button class="home__chiclet" type="button"
                     data-chiclet="${c.id}" data-page="${c.page}">
               <span class="home__chiclet-icon" aria-hidden="true">${HOME_SPARKLE}</span>
@@ -2267,6 +2297,18 @@
 
     // Mount the destination page in the right panel.
     navigateTo(chiclet.page);
+
+    // Special case — the Add Agent chiclet drops the user on the
+    // Cockpit AND immediately kicks off the in-chat wizard. We
+    // wait a beat for the context bubble + page mount to settle
+    // so the wizard's first question lands cleanly underneath.
+    if (chicletId === "add-agent") {
+      setTimeout(() => {
+        if (agentWizard.active) return;       // double-tap guard
+        userBubble("Add Agent");
+        agentWizard.start();
+      }, 700);
+    }
   }
 
   function startHome() {
@@ -3362,6 +3404,31 @@
     }
     INCIDENT.startedAt = Date.now();
     openIncident({});
+  };
+
+  // Cockpit → Agent detail shortcut. The cockpit factory in
+  // stories/02-admin-sarah.js wires each agent card's click +
+  // keyboard activation to this helper. We stash the agent on
+  // window so the agent-detail page factory (also in the same
+  // story file) can read it after navigateTo() remounts the
+  // panel — navigateTo() itself doesn't carry custom payloads.
+  // Falls back to a director-note on missing data so the click
+  // never silently no-ops.
+  window.__openAgentDetail = (agent) => {
+    if (!agent || !agent.name) {
+      pushDirectorNote({ title: "Agent detail", text: "No agent selected.",
+        autoDismiss: 1800 });
+      return;
+    }
+    window.__activeAgentDetail = agent;
+    navigateTo("agent-detail");
+  };
+
+  // Back-link from the agent-detail page to the Cockpit. Kept on
+  // window because the page factory lives outside this IIFE.
+  window.__navigateToCockpit = () => {
+    window.__activeAgentDetail = null;
+    navigateTo("tower");
   };
 
   // Tear down all incident state — phase, timers, timeline, bar, page

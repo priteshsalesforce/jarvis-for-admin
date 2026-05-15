@@ -1314,9 +1314,20 @@
         { id: "compliance",  label: "Compliance" }
       ];
 
+      // ----- Wizard-session stash ---------------------------------------
+      // Hoisted to the top of the factory so both the KPI strip and
+      // the agents-array initialiser below can read it. Holds the
+      // agents the Add Agent wizard has committed in the current
+      // session — replayed at the top of the cockpit on re-mount so a
+      // freshly-created agent survives a navigation roundtrip.
+      const _wizardSession = (window.__wizardAddedAgents = window.__wizardAddedAgents || []);
+
       // ----- KPI strip ---------------------------------------------------
+      // AI Agents starts at the baseline roster and absorbs any
+      // wizard-created agents from the current session so the
+      // headline number stays truthful across navigations.
       const kpis = [
-        { label: "AI Agents",            value: "34",
+        { label: "AI Agents",            value: String(34 + _wizardSession.length),
           metas: [
             { text: "+2 discovered",          tone: "ok"   },
             { text: "2 pending registration", tone: "warn" }
@@ -1373,7 +1384,14 @@
       // status badges are silenced — the bar + colour is enough.
       // `let` (not `const`) so the Add Agent wizard can `unshift` a new
       // agent into the list when the user confirms creation.
+      //
+      // The default 8 are the "shipped" roster. Anything the wizard has
+      // already committed in this session is replayed at the top (via
+      // `_wizardSession` declared near the top of this factory) so a
+      // freshly-created agent survives a navigation roundtrip (e.g. the
+      // user clicks the new agent → opens its detail page → comes back).
       let agents = [
+        ..._wizardSession.map((a) => ({ ...a })),
         { name: "RemediationAgent", level: "L3", instances: 3, domain: "reliability",
           body: "Watching checkout-api; deferred 1 rollback to a human.",
           trust: 90, trend: "down", load: 0.46, barRisk: 22, tone: "cool", status: "new" },
@@ -1775,7 +1793,10 @@
         });
       });
 
-      // Agent card click + keyboard
+      // Agent card click + keyboard. We look up the full agent
+      // record (so the detail page can render trust / load / domain
+      // etc.) by name; falls back to a minimal stub if the card
+      // markup ever drifts ahead of the data array.
       function wireAgentCards() {
         panel.querySelectorAll(".agent").forEach((card) => {
           if (card.dataset.wired === "1") return;
@@ -1784,7 +1805,14 @@
           card.setAttribute("role", "button");
           const name = card.querySelector(".agent__name")?.textContent || "Agent";
           card.setAttribute("aria-label", `Open ${name} detail`);
-          const open = () => note(`Opening ${name} — detail view coming online.`);
+          const open = () => {
+            const agent = agents.find((a) => a.name === name) || { name };
+            if (typeof window.__openAgentDetail === "function") {
+              window.__openAgentDetail(agent);
+            } else {
+              note(`Opening ${name} — detail view coming online.`);
+            }
+          };
           card.addEventListener("click", open);
           card.addEventListener("keydown", (ev) => {
             if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); }
@@ -1820,7 +1848,7 @@
       const onAddAgent = (e) => {
         const a = (e && e.detail) || null;
         if (!a || !a.name) return;
-        agents.unshift({
+        const fresh = {
           name:  a.name,
           level: a.level || "L2",
           instances: 1,
@@ -1828,7 +1856,13 @@
           body:  a.body  || "New agent — warming up.",
           trust: 88, trend: "flat", load: 0.05, barRisk: 5,
           tone:  "cool", status: "new",
-        });
+        };
+        agents.unshift(fresh);
+        // Persist for cockpit re-mounts (e.g. user opens the agent
+        // detail page and navigates back). Idempotent on name.
+        if (!_wizardSession.some((x) => x.name === fresh.name)) {
+          _wizardSession.unshift(fresh);
+        }
         activeDomain = "all";
         rerenderChips();
         rerenderAgents();
@@ -2490,6 +2524,321 @@
       // chiclet semantics live in one place.
       if (typeof window.__incHandleAction === "function") {
         window.__incHandleAction(action);
+      }
+    });
+  };
+
+  // -----------------------------------------------------------------
+  // Agent detail page
+  // -----------------------------------------------------------------
+  // Mounted when the user clicks an agent card in the Cockpit. The
+  // navigateTo() flow doesn't carry payloads so the cockpit stashes
+  // the selected agent on window.__activeAgentDetail before the
+  // route swap; we read it here on first paint.
+  //
+  // Shape follows the spec image:
+  //   - Hero header: icon + name + level chip + domain badge,
+  //     one-line summary, inline metrics strip (TRUST, THROUGHPUT,
+  //     ACCURACY, REGRET, LOAD NOW, EVENTS), and an urgent-coaching
+  //     callout when trust is drifting (drops the callout when the
+  //     agent is newly created / still warming up).
+  //   - KPI tiles row: 24h volume, auto-resolved %, deferrals, etc.
+  //   - Current work items: typed pills (INC / CASE / CHG / TASK)
+  //     leading a tabular list of the agent's active load. Items
+  //     are domain-tailored so the page reads as plausibly THIS
+  //     agent's queue (e.g. OnboardingAgent shows provisioning
+  //     incidents, not card-auth rollbacks).
+  // -----------------------------------------------------------------
+  pages["agent-detail"] = (panel) => {
+    const agent = window.__activeAgentDetail || {
+      name: "Agent", level: "L2", domain: "reliability",
+      body: "Watching the service — first runs incoming.",
+      trust: 88, trend: "flat", load: 0.05, status: "new",
+    };
+
+    // Cheap deterministic hash so each agent gets a stable, distinct
+    // metric set without having to hand-author one per agent. Same
+    // input → same numbers across reloads.
+    const hash = (() => {
+      const s = String(agent.name || "agent");
+      let h = 0;
+      for (let i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+      return Math.abs(h);
+    })();
+    const pick = (i, lo, hi) =>
+      lo + ((hash >> (i * 3)) & 0xff) % Math.max(1, hi - lo + 1);
+    const isNew = agent.status === "new";
+    const trust = Math.round(agent.trust ?? 88);
+    // Drift is the gap between trust and the 100% ceiling — used as
+    // both the header coaching trigger and the urgency framing.
+    const drift = Math.max(0, 100 - trust);
+    const accuracy   = isNew ? 92.0 : Math.min(99.5, 88 + (pick(0, 0, 80) / 10));
+    const regret     = isNew ? 0.3  : Math.max(0.1, (pick(1, 5, 28) / 10));
+    const throughput = isNew ? 24   : pick(2, 180, 540);
+    const loadNow    = (agent.load != null ? agent.load : (pick(3, 22, 78) / 100));
+    const events24h  = isNew ? 6 : pick(4, 240, 720);
+    const autoPct    = isNew ? 100 : 78 + (pick(5, 0, 18));
+    const autoCount  = Math.round(events24h * (autoPct / 100));
+    const deferred   = events24h - autoCount;
+    const deferPct   = events24h ? +(deferred / events24h * 100).toFixed(1) : 0;
+    const overrides  = isNew ? 0 : Math.round(deferred * 0.3);
+    const overridePct = events24h ? +(overrides / events24h * 100).toFixed(1) : 0;
+    const novelDec   = isNew ? 0 : pick(6, 2, 12);
+    const traceDepth = isNew ? 2.0 : +((pick(7, 28, 55) / 10).toFixed(1));
+    const timeToAct  = isNew ? 18 : pick(0, 22, 92);
+
+    const domainLabel = ({
+      reliability: "Reliability", cost: "Cost",
+      identity: "Identity",      compliance: "Compliance",
+    })[agent.domain] || "Reliability";
+
+    const arrow = (delta, neg = false) => {
+      if (delta === 0) return "";
+      const up = delta > 0;
+      const color = (up !== neg) ? "ad-up" : "ad-down";
+      return `<span class="ad-arrow ${color}">${up ? "▲" : "▼"} ${Math.abs(delta)}</span>`;
+    };
+
+    // Status pill next to the name. Drift on warm agents, "warming
+    // up" on freshly created ones (so the OnboardingAgent doesn't
+    // pretend to have 7 days of telemetry the moment it ships).
+    const headerBadge = isNew
+      ? `<span class="ad-status-badge ad-status-badge--new">WARMING UP</span>`
+      : drift >= 8
+        ? `<span class="ad-status-badge ad-status-badge--drift">DRIFT</span>`
+        : `<span class="ad-status-badge ad-status-badge--ok">ON TARGET</span>`;
+
+    // Coaching callout — only shown when the agent has enough runs
+    // to actually be drifting. New agents see a calmer "what to
+    // expect" callout in its place.
+    const coachingHTML = isNew
+      ? `
+        <div class="ad-coaching ad-coaching--new">
+          <h3 class="ad-coaching__title">${escV4(agent.name)} — calibration period</h3>
+          <p class="ad-coaching__body">
+            Trust score will recalculate after the first 48h of supervised runs.
+            I'll surface a coaching session here if anything looks off during warm-up.
+          </p>
+          <button type="button" class="v4-btn v4-btn--primary ad-coaching__cta" data-ad-action="open-coaching">
+            See coaching plan
+          </button>
+        </div>`
+      : `
+        <div class="ad-coaching">
+          <span class="ad-coaching__eyebrow">URGENT COACHING</span>
+          <div class="ad-coaching__sub">opened today · last action 07:48 · trust ${trust}% ▾</div>
+          <h3 class="ad-coaching__title">${escV4(agent.name)} — ${domainLabel.toLowerCase()} confidence drift</h3>
+          <p class="ad-coaching__body">
+            Trust score on ${domainLabel.toLowerCase()}-related actions dropped to ${trust}% over the last
+            48h, with two near-misses on the active path. The pattern: recent deployments are correlated
+            with brief saturation spikes that look like the rollback signal — I'd like to retrain the
+            confidence head against the latest window.
+          </p>
+          <button type="button" class="v4-btn v4-btn--primary ad-coaching__cta" data-ad-action="open-coaching">
+            Open session
+          </button>
+        </div>`;
+
+    // ---- Current work items (domain-tailored) ---------------------
+    // Hand-authored short lists so the page reads as plausible for
+    // each domain. Falls through to the reliability set if a new
+    // domain is added without a matching catalogue.
+    const WORK_BY_DOMAIN = {
+      identity: [
+        { type: "INC",  id: "INC-44318", title: "New-hire access — Salesforce + Slack provisioning stuck",
+          sub: "P2 · IT-services queue open",                    state: "Active · onboarding flow paused" },
+        { type: "INC",  id: "INC-44219", title: "MFA reset loop — 14 users on VPN",
+          sub: "P3 · vendor handed off",                          state: "Resolved · vendor handed off" },
+        { type: "CASE", id: "CASE-44102", title: "Manager-of-record mismatch · Workday → Salesforce",
+          sub: "Resolved · auto-closed",                          state: "Resolved · auto-closed in customer voice" },
+        { type: "CHG",  id: "CHG-9921",  title: "okta · role-mapping rollout",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+        { type: "CHG",  id: "CHG-9922",  title: "scim · provisioning template update",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+        { type: "TASK", id: "TASK-2207", title: "Audit stale service principals (qtr review)",
+          sub: "Scheduled · Friday window",                       state: "Queued · Friday window" },
+      ],
+      cost: [
+        { type: "INC",  id: "INC-44210", title: "AWS data-warehouse · runaway cluster cost",
+          sub: "P2 · vendor case open",                           state: "Active · FinOps engaged" },
+        { type: "CASE", id: "CASE-44119", title: "Idle Figma seats — 47 reclaimable",
+          sub: "Resolved · auto-reclaim batched",                 state: "Resolved · auto-closed in customer voice" },
+        { type: "CHG",  id: "CHG-9930",  title: "Right-size redshift clusters (3 nodes → 2)",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+        { type: "CHG",  id: "CHG-9931",  title: "Adobe CC seat re-allocation",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+      ],
+      compliance: [
+        { type: "INC",  id: "INC-44512", title: "SOX control 4.2 — evidence gap on payments-gateway",
+          sub: "P2 · attestation pending",                        state: "Active · audit team engaged" },
+        { type: "CASE", id: "CASE-44188", title: "GDPR data-export request · in-flight",
+          sub: "Resolved · auto-closed",                          state: "Resolved · auto-closed in customer voice" },
+        { type: "CHG",  id: "CHG-9940",  title: "Quarterly KYC sweep cadence update",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+        { type: "TASK", id: "TASK-2214", title: "Refresh 4 controls awaiting attestation",
+          sub: "Scheduled · this week",                           state: "Queued · this week" },
+      ],
+      reliability: [
+        { type: "INC",  id: "INC-44318", title: "SAP S/4HANA · ERP DB lock contention",
+          sub: "P2 · vendor case open",                           state: "Active · Manufacturing IT engaged" },
+        { type: "INC",  id: "INC-44219", title: "AWS NLB regional latency",
+          sub: "P3 · vendor handed off",                          state: "Resolved · vendor handed off" },
+        { type: "CASE", id: "CASE-44102", title: "Laptop performance — Zoom plugin",
+          sub: "Resolved · auto-closed",                          state: "Resolved · auto-closed in customer voice" },
+        { type: "CHG",  id: "CHG-9921",  title: "checkout-api · feature flag rollout",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+        { type: "CHG",  id: "CHG-9922",  title: "payments-gateway · canary rollout",
+          sub: "Held against freeze lane",                        state: "Held · against Saturday freeze lane" },
+      ],
+    };
+    let work = WORK_BY_DOMAIN[agent.domain] || WORK_BY_DOMAIN.reliability;
+    if (isNew) {
+      // Warming-up agents only have queued / scheduled rows — they
+      // haven't picked up active production load yet.
+      work = work.filter((w) => /Queued|Scheduled/i.test(w.state) || w.type === "TASK").slice(0, 2);
+      if (work.length === 0) {
+        work = [{ type: "TASK", id: "TASK-2210", title: "First supervised run — dry-mode",
+          sub: "Scheduled · today",                              state: "Queued · today" }];
+      }
+    }
+
+    const renderWorkRow = (w) => `
+      <li class="ad-work__row" data-type="${escV4(w.type.toLowerCase())}">
+        <span class="ad-work__type ad-work__type--${escV4(w.type.toLowerCase())}">${escV4(w.type)}</span>
+        <span class="ad-work__id">${escV4(w.id)}</span>
+        <div class="ad-work__main">
+          <div class="ad-work__title">${escV4(w.title)}</div>
+          <div class="ad-work__sub">${escV4(w.sub)}</div>
+        </div>
+        <span class="ad-work__state">${escV4(w.state)}</span>
+      </li>
+    `;
+
+    panel.innerHTML = `
+      <div class="page v4-page v4-page--agent-detail">
+        <button type="button" class="v4-btn v4-btn--ghost v4-page--agent-detail__back" data-ad-action="back-to-cockpit">
+          <span aria-hidden="true">←</span> Cockpit
+        </button>
+
+        <header class="v4-page__head">
+          <div>
+            <div class="v4-page__eyebrow">${escV4(domainLabel)} agent</div>
+            <div class="ad-hero__name-row">
+              <h2 class="ad-hero__name">${escV4(agent.name)}</h2>
+              <span class="ad-hero__chip">${escV4(agent.level || "L2")}</span>
+              <span class="ad-hero__dot" aria-hidden="true">·</span>
+              ${headerBadge}
+            </div>
+            <p class="ad-hero__sub">${escV4(agent.body || "Watching · first runs pending.")}</p>
+            <p class="v4-page__lead">
+              Live signals, coaching, and the active work this agent is carrying right now.
+            </p>
+          </div>
+        </header>
+
+        ${coachingHTML}
+
+        <section class="ad-matrix" aria-label="Operating signals">
+          <header class="ad-matrix__head">
+            <h3 class="ad-matrix__title">Operating signals</h3>
+            <span class="ad-matrix__lede">trust · throughput · outcomes</span>
+          </header>
+          <ul class="ad-matrix__grid">
+            <li class="ad-cell">
+              <div class="ad-cell__label">Trust · 7D</div>
+              <div class="ad-cell__value">
+                ${trust}%
+                ${drift > 0 && !isNew ? `<span class="ad-arrow ad-down">▾ ${drift}pp</span>` : ""}
+              </div>
+              <div class="ad-cell__sub">${isNew ? "calibrating" : "rolling 7-day median"}</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Accuracy</div>
+              <div class="ad-cell__value">${accuracy.toFixed(1)}%</div>
+              <div class="ad-cell__sub">first-pass correct</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Regret</div>
+              <div class="ad-cell__value">${regret.toFixed(1)}%</div>
+              <div class="ad-cell__sub">actions later undone</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Novel decisions</div>
+              <div class="ad-cell__value">${novelDec}</div>
+              <div class="ad-cell__sub">${isNew ? "n/a yet" : "awaiting curation"}</div>
+            </li>
+
+            <li class="ad-cell">
+              <div class="ad-cell__label">Events · 24h</div>
+              <div class="ad-cell__value">${events24h}</div>
+              <div class="ad-cell__sub">${isNew ? "first runs in" : `~${Math.round(events24h / 24)}/hr avg`}</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Throughput · 7D</div>
+              <div class="ad-cell__value">${throughput}</div>
+              <div class="ad-cell__sub">events handled</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Load now</div>
+              <div class="ad-cell__value">${Number(loadNow).toFixed(2)}</div>
+              <div class="ad-cell__sub">queue capacity</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Avg time-to-act</div>
+              <div class="ad-cell__value">${timeToAct}s</div>
+              <div class="ad-cell__sub">${isNew ? "first runs in" : `${arrow(-6)} vs. last week`}</div>
+            </li>
+
+            <li class="ad-cell">
+              <div class="ad-cell__label">Auto-resolved</div>
+              <div class="ad-cell__value">${autoPct}%</div>
+              <div class="ad-cell__sub">${autoCount} of ${events24h}</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Deferred to human</div>
+              <div class="ad-cell__value">${deferred}</div>
+              <div class="ad-cell__sub">${deferPct}% ${arrow(isNew ? 0 : 1.2, true)}</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Human overrides</div>
+              <div class="ad-cell__value">${overrides}</div>
+              <div class="ad-cell__sub">${overridePct}% ${arrow(isNew ? 0 : -0.4)}</div>
+            </li>
+            <li class="ad-cell">
+              <div class="ad-cell__label">Median trace depth</div>
+              <div class="ad-cell__value">${traceDepth}</div>
+              <div class="ad-cell__sub">sense → reason → policy → act</div>
+            </li>
+          </ul>
+        </section>
+
+        <section class="ad-work" aria-label="Current work items">
+          <header class="ad-work__head">
+            <h3 class="ad-work__title-h">Current work items</h3>
+            <span class="ad-work__count">${work.length} active</span>
+          </header>
+          <ul class="ad-work__list">
+            ${work.map(renderWorkRow).join("")}
+          </ul>
+        </section>
+      </div>
+    `;
+
+    // ---- Wiring ----------------------------------------------------
+    panel.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-ad-action]");
+      if (!t) return;
+      const action = t.getAttribute("data-ad-action");
+      if (action === "back-to-cockpit" || action === "clear-filter") {
+        if (typeof window.__navigateToCockpit === "function") {
+          window.__navigateToCockpit();
+        } else if (typeof window.directorNote === "function") {
+          window.directorNote("Back to Cockpit.");
+        }
+      } else if (action === "open-coaching") {
+        if (typeof window.directorNote === "function") {
+          window.directorNote(`${agent.name} · coaching session — opening soon.`);
+        }
       }
     });
   };

@@ -154,10 +154,13 @@ input, textarea { font: inherit; color: inherit; }
 /* ============================================================
    FLOATING TOP CHROME — circular buttons that float over every
    view (home, chat, right). Same translucent treatment.
-     • .ham-btn  — top-RIGHT, opens the drawer (every view).
-     • .back-btn — top-LEFT, visible on the CHAT and RIGHT views;
-                   takes the user back to home and cancels any
-                   in-flight story.
+     • .back-btn — top-LEFT slot 1 (left: 16px). Visible on CHAT
+                   and RIGHT views only. Returns to home and
+                   cancels any in-flight story.
+     • .ham-btn  — top-LEFT slot 2 — sits 8px to the right of the
+                   back button when it is visible (left: 64px),
+                   otherwise collapses back to slot 1 on home
+                   (left: 16px). Opens the drawer.
    ============================================================ */
 .ham-btn,
 .back-btn {
@@ -173,11 +176,15 @@ input, textarea { font: inherit; color: inherit; }
   display: inline-flex; align-items: center; justify-content: center;
   box-shadow: var(--shadow-card);
   z-index: 10;
+  transition: left .18s ease;
 }
-.ham-btn  { right: 16px; }
 .back-btn { left: 16px; display: none; }     /* hidden on home */
+.ham-btn  { left: 16px; }                    /* slot 1 on home */
 .app[data-view="chat"]  .back-btn,
 .app[data-view="right"] .back-btn { display: inline-flex; }
+/* When back is visible, hamburger shifts to slot 2 (40 + 8 + 16 = 64). */
+.app[data-view="chat"]  .ham-btn,
+.app[data-view="right"] .ham-btn { left: 64px; }
 .ham-btn:active,
 .back-btn:active { transform: scale(.95); }
 

@@ -1785,257 +1785,1445 @@
   Object.assign(window.PAGES = window.PAGES || {}, pages);
   // Tower is the active nav item that opens the Cockpit. Aliasing it
   // here means the workspace placeholder in app.js stays untouched
-  // while Sarah lands on her control surface the moment she taps
-  // Tower in the sidenav.
+  // while the IT admin lands on the control surface the moment they
+  // tap Tower in the sidenav.
   window.PAGES.tower = window.PAGES.cockpit;
 
+  /* ===============================================================
+     Alex (IT Architect) chapter — Act 1 → 5 page factories.
+     ---------------------------------------------------------------
+     Each factory mounts into the right-side panel and listens for
+     `panelEvent` dispatches from the chat side to unlock its phases
+     in step with the dialogue. They follow the shared pattern from
+     the bootstrap reveal: render a static skeleton, then progressive
+     enhancement on each phase event.
+     =============================================================== */
+
+  // Tiny shared escape used inside this block. Mirrors the engine's
+  // markdown escape but kept local so this page block stays portable.
+  const escAlex = (s) => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  // Stagger helper: returns a Promise that resolves after `ms`. Used
+  // inside event handlers to spread visual reveals over time without
+  // tying up the chat-side runner.
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Bind a panel-event handler that auto-detaches when the page is
+  // replaced. Without this, every chapter replay would stack a fresh
+  // listener on the sidepanel (memory leak + double-fires on reruns).
+  function bindPanelEvent(panel, eventName, handler) {
+    const sidepanel = panel.closest(".sidepanel") || panel.parentNode;
+    sidepanel.addEventListener(eventName, handler);
+    const observer = new MutationObserver(() => {
+      if (!panel.isConnected || panel.childElementCount === 0) {
+        sidepanel.removeEventListener(eventName, handler);
+        observer.disconnect();
+      }
+    });
+    observer.observe(panel.parentNode || panel, { childList: true });
+  }
+
+  /* ---------- Act 1 · Foundation activated ---------- */
+  // Hero header + 4 status cards (ITSM modules / CMDB framework /
+  // Portal & Service Catalog / Agentforce). Cards are dim until their
+  // phase event fires, then they animate "live". The CMDB card stays
+  // visually empty (rows but no data) — that's the whole point: the
+  // framework is in place, discovery hasn't run yet.
+  const ACT1_MODULES = [
+    "Incident management", "Problem management",
+    "Change management",   "Release management",
+    "Service-Level Agreements", "Assignment rules"
+  ];
+  const ACT1_CMDB_GROUPS = [
+    { id: "srv", label: "Servers",   ready: "Schema ready · 0 CIs" },
+    { id: "end", label: "Endpoints", ready: "Schema ready · 0 CIs" },
+    { id: "app", label: "Apps",      ready: "Schema ready · 0 CIs" },
+    { id: "net", label: "Network",   ready: "Schema ready · 0 CIs" }
+  ];
+  const ACT1_PORTAL_TICKETS = [
+    { id: "INC-104821", subj: "VPN drops every 30 min in Bengaluru", sla: "P2 · 02:14", chip: "Incident" },
+    { id: "REQ-204117", subj: "Provision Figma seat for new joiner", sla: "Std · auto-approve", chip: "Request" },
+    { id: "INC-104822", subj: "Outlook search not returning results", sla: "P3 · 03:48", chip: "Incident" },
+    { id: "REQ-204118", subj: "Access to Snowflake reporting role",  sla: "Std · awaiting mgr", chip: "Request" },
+    { id: "PRB-040912", subj: "Repeat printer driver crashes (NYC)", sla: "P3 · 05:11", chip: "Problem" }
+  ];
+  const ACT1_KB_ARTICLES = [
+    "How to enrol in MFA",
+    "Resetting your laptop password",
+    "Requesting access to a SaaS tool",
+    "Connecting to Acme VPN from a personal device"
+  ];
+
+  function act1FoundationPage(panel) {
+    panel.innerHTML = `
+      <div class="al-page al-foundation" data-phase="boot">
+        <header class="al-page__head">
+          <div class="al-page__eyebrow">
+            <span class="al-page__pulse" aria-hidden="true"></span>
+            <span>Foundation · Acme Global IT</span>
+          </div>
+          <h1 class="al-page__title">Bootstrapping your <strong>ITSM foundation</strong></h1>
+          <p class="al-page__sub">No manual installs. Every block below activates the moment its phase completes — no page reloads, no waiting for a release window.</p>
+        </header>
+
+        <section class="al-card al-card--modules" data-act1-card="modules">
+          <header class="al-card__head">
+            <span class="al-card__num">1</span>
+            <h3>ITSM modules</h3>
+            <span class="al-card__count"><span data-act1-modules-count>0</span><span class="al-card__total">/${ACT1_MODULES.length} live</span></span>
+            <span class="al-card__check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+            </span>
+          </header>
+          <ul class="al-modules">
+            ${ACT1_MODULES.map((m) => `
+              <li class="al-mod" data-act1-mod>
+                <span class="al-mod__check" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                </span>
+                <span class="al-mod__label">${escAlex(m)}</span>
+                <span class="al-mod__hint">configured</span>
+              </li>
+            `).join("")}
+          </ul>
+          <div class="al-card__caption">Default routing rules + SLAs applied · reversible for 30 days.</div>
+        </section>
+
+        <section class="al-card al-card--cmdb" data-act1-card="cmdb">
+          <header class="al-card__head">
+            <span class="al-card__num">2</span>
+            <h3>CMDB framework</h3>
+            <span class="al-pill al-pill--muted" data-act1-cmdb-pill>Empty · ready for discovery</span>
+            <span class="al-card__check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+            </span>
+          </header>
+          <div class="al-cmdb-grid">
+            ${ACT1_CMDB_GROUPS.map((g) => `
+              <div class="al-cmdb-tile" data-cmdb-id="${g.id}">
+                <div class="al-cmdb-tile__bar" aria-hidden="true"></div>
+                <div class="al-cmdb-tile__label">${escAlex(g.label)}</div>
+                <div class="al-cmdb-tile__hint">${escAlex(g.ready)}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="al-card__caption">Schemas + relationships defined — populate via the Discovery agent next.</div>
+        </section>
+
+        <section class="al-card al-card--portal" data-act1-card="portal">
+          <header class="al-card__head">
+            <span class="al-card__num">3</span>
+            <h3>Service Portal + Catalog</h3>
+            <span class="al-pill" data-act1-portal-pill>seeded</span>
+            <span class="al-card__check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+            </span>
+          </header>
+          <div class="al-portal">
+            <div class="al-portal__col al-portal__col--queue">
+              <div class="al-portal__heading">Live ticket queue</div>
+              <ul class="al-portal__list">
+                ${ACT1_PORTAL_TICKETS.map((t) => `
+                  <li class="al-ticket">
+                    <span class="al-ticket__chip al-ticket__chip--${t.chip.toLowerCase()}">${escAlex(t.chip)}</span>
+                    <div class="al-ticket__body">
+                      <div class="al-ticket__subj">${escAlex(t.subj)}</div>
+                      <div class="al-ticket__meta">${escAlex(t.id)} · ${escAlex(t.sla)}</div>
+                    </div>
+                  </li>
+                `).join("")}
+              </ul>
+            </div>
+            <div class="al-portal__col al-portal__col--side">
+              <div class="al-portal__heading">Knowledge articles</div>
+              <ul class="al-portal__kb">
+                ${ACT1_KB_ARTICLES.map((k) => `<li>${escAlex(k)}</li>`).join("")}
+              </ul>
+              <div class="al-portal__heading al-portal__heading--spaced">Catalog items</div>
+              <div class="al-portal__chips">
+                <span class="al-chip">New laptop</span>
+                <span class="al-chip">VPN access</span>
+                <span class="al-chip">Software install</span>
+                <span class="al-chip">Office equipment</span>
+              </div>
+            </div>
+          </div>
+          <div class="al-card__caption">Sample data populated · employees can self-serve from minute one.</div>
+        </section>
+
+        <section class="al-card al-card--af" data-act1-card="agentforce">
+          <header class="al-card__head">
+            <span class="al-card__num">4</span>
+            <h3>Agentforce</h3>
+            <span class="al-pill al-pill--brand" data-act1-af-pill>configured</span>
+            <span class="al-card__check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+            </span>
+          </header>
+          <div class="al-af-grid">
+            <div class="al-af-tile">
+              <div class="al-af-tile__label">Brand</div>
+              <div class="al-af-tile__value">Acme Global</div>
+              <div class="al-af-tile__sub">Logo + colours applied to every channel</div>
+            </div>
+            <div class="al-af-tile">
+              <div class="al-af-tile__label">Business hours</div>
+              <div class="al-af-tile__value">Follow-the-sun · 24/5</div>
+              <div class="al-af-tile__sub">EMEA · APAC · NAMER on rotation</div>
+            </div>
+            <div class="al-af-tile">
+              <div class="al-af-tile__label">Channels</div>
+              <div class="al-af-tile__value">Slack · Teams · Email</div>
+              <div class="al-af-tile__sub">Portal embed pending Go-Live</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    `;
+
+    const root        = panel.querySelector(".al-foundation");
+    const setPhaseDone = (key) => {
+      const card = root.querySelector(`[data-act1-card="${key}"]`);
+      if (card) card.classList.add("is-done");
+    };
+
+    bindPanelEvent(panel, "act1:phase:modules", async () => {
+      const card = root.querySelector('[data-act1-card="modules"]');
+      if (!card) return;
+      card.classList.add("is-active");
+      const mods = card.querySelectorAll("[data-act1-mod]");
+      const counter = card.querySelector("[data-act1-modules-count]");
+      for (let i = 0; i < mods.length; i++) {
+        await wait(180);
+        mods[i].classList.add("is-on");
+        if (counter) counter.textContent = String(i + 1);
+      }
+      setPhaseDone("modules");
+    });
+
+    bindPanelEvent(panel, "act1:phase:cmdb", async () => {
+      const card = root.querySelector('[data-act1-card="cmdb"]');
+      if (!card) return;
+      card.classList.add("is-active");
+      const tiles = card.querySelectorAll(".al-cmdb-tile");
+      for (let i = 0; i < tiles.length; i++) {
+        await wait(220);
+        tiles[i].classList.add("is-on");
+      }
+      setPhaseDone("cmdb");
+    });
+
+    bindPanelEvent(panel, "act1:phase:portal", () => {
+      const card = root.querySelector('[data-act1-card="portal"]');
+      if (!card) return;
+      card.classList.add("is-active");
+      const items = card.querySelectorAll(".al-ticket");
+      items.forEach((el, i) => setTimeout(() => el.classList.add("is-on"), 120 + i * 110));
+      setTimeout(() => setPhaseDone("portal"), 120 + items.length * 110);
+    });
+
+    bindPanelEvent(panel, "act1:phase:agentforce", () => {
+      const card = root.querySelector('[data-act1-card="agentforce"]');
+      if (!card) return;
+      card.classList.add("is-active");
+      setTimeout(() => setPhaseDone("agentforce"), 600);
+    });
+  }
+
+  /* ---------- Act 2 · AWS credential pane ---------- */
+  function act2AwsCredentialsPage(panel, ctx) {
+    panel.innerHTML = `
+      <div class="al-page al-creds">
+        <header class="al-creds__brand">
+          <div class="al-creds__logo">
+            <svg viewBox="0 0 64 38" width="56" height="34" aria-hidden="true">
+              <text x="0" y="22" font-family="Inter, system-ui" font-weight="800" font-size="22" fill="#ff9900">aws</text>
+              <path d="M2 30 Q22 38 60 30" fill="none" stroke="#ff9900" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="al-creds__brand-name">Amazon Web Services</div>
+            <div class="al-creds__brand-sub">Cloud Discovery · IAM credentials required</div>
+          </div>
+        </header>
+
+        <div class="al-creds__card">
+          <h3 class="al-creds__title">Connect your AWS account</h3>
+          <p class="al-creds__note">Jarvis Discovery uses these read-only IAM credentials to enumerate <strong>EC2</strong>, <strong>S3</strong>, <strong>IAM</strong>, <strong>RDS</strong>, and <strong>Lambda</strong> resources. Nothing is written back to your account.</p>
+
+          <div class="al-field">
+            <label for="awsAccessKey">Access Key ID</label>
+            <input id="awsAccessKey" type="text" autocomplete="off" value="AKIAIOSFODNN7EXAMPLE" />
+          </div>
+          <div class="al-field">
+            <label for="awsSecret">Secret Access Key</label>
+            <input id="awsSecret" type="password" autocomplete="off" value="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" />
+          </div>
+          <div class="al-field-row">
+            <div class="al-field">
+              <label for="awsRegion">Default region</label>
+              <select id="awsRegion">
+                <option>us-east-1 · N. Virginia</option>
+                <option>us-west-2 · Oregon</option>
+                <option>eu-west-1 · Ireland</option>
+                <option selected>ap-south-1 · Mumbai</option>
+              </select>
+            </div>
+            <div class="al-field">
+              <label for="awsRole">Assumed role (optional)</label>
+              <input id="awsRole" type="text" placeholder="arn:aws:iam::… (leave blank for direct)" />
+            </div>
+          </div>
+
+          <div class="al-creds__perms">
+            <div class="al-creds__perms-head">Required permissions</div>
+            <ul>
+              <li><span>ec2:Describe*</span><span>read</span></li>
+              <li><span>s3:List*, s3:GetBucketLocation</span><span>read</span></li>
+              <li><span>iam:List*, iam:Get*</span><span>read</span></li>
+            </ul>
+          </div>
+
+          <button class="al-creds__connect" id="awsConnectBtn" type="button">
+            <span class="al-creds__connect-glyph" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none"
+                   stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 8h10M9 4l4 4-4 4"/>
+              </svg>
+            </span>
+            <span>Connect AWS</span>
+          </button>
+          <div class="al-creds__foot">By connecting, you authorise Jarvis to perform read-only discovery on this account.</div>
+        </div>
+      </div>
+    `;
+
+    const btn = panel.querySelector("#awsConnectBtn");
+    btn.addEventListener("click", () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+      btn.innerHTML = `<span class="btn-spinner"></span><span>Authenticating…</span>`;
+      setTimeout(() => {
+        btn.classList.remove("is-loading");
+        btn.classList.add("is-done");
+        btn.innerHTML = `
+          <span class="al-creds__connect-glyph" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+          </span>
+          <span>Connected</span>`;
+        ctx.dispatch("aws-connect");
+      }, 1400);
+    });
+  }
+
+  /* ---------- Act 2 + 3 · Service Graph ---------- */
+  // Live SVG graph that pulses dots as resources are discovered, then
+  // links them to existing Salesforce records. The cert-expiry alert
+  // ribbon arrives via a separate event in Act 3.
+  const SVC_NODES = [
+    { id: "ec2-app01",  type: "ec2", x:  90, y:  60, label: "ec2-app-01" },
+    { id: "ec2-app02",  type: "ec2", x: 200, y:  40, label: "ec2-app-02" },
+    { id: "ec2-app03",  type: "ec2", x: 320, y:  60, label: "ec2-web-03" },
+    { id: "ec2-db01",   type: "ec2", x: 110, y: 160, label: "ec2-db-01"  },
+    { id: "ec2-db02",   type: "ec2", x: 300, y: 170, label: "ec2-db-02"  },
+    { id: "s3-cust",    type: "s3",  x: 410, y: 110, label: "s3-customer-data" },
+    { id: "s3-logs",    type: "s3",  x: 380, y: 220, label: "s3-app-logs" },
+    { id: "s3-back",    type: "s3",  x:  60, y: 240, label: "s3-backups" },
+    { id: "lam-auth",   type: "lam", x: 220, y: 220, label: "λ-auth-service" },
+    { id: "iam-role",   type: "iam", x: 230, y: 110, label: "iam-cross-acct" },
+    { id: "sf-cust360", type: "sf",  x: 470, y:  60, label: "Salesforce · Cust360" },
+    { id: "sf-billing", type: "sf",  x: 470, y: 180, label: "Salesforce · Billing" }
+  ];
+  const SVC_EDGES = [
+    ["ec2-app01", "ec2-db01"], ["ec2-app02", "ec2-db01"],
+    ["ec2-app02", "iam-role"], ["ec2-app03", "ec2-db02"],
+    ["ec2-app01", "lam-auth"], ["lam-auth", "s3-logs"],
+    ["ec2-db01", "s3-back"],   ["s3-cust",   "sf-cust360"],
+    ["ec2-app03", "sf-cust360"], ["ec2-db02", "sf-billing"],
+    ["lam-auth", "sf-cust360"], ["iam-role",  "sf-billing"]
+  ];
+
+  function act2ServiceGraphPage(panel) {
+    const NODE_COUNT = SVC_NODES.length;
+    const REL_COUNT  = SVC_EDGES.length;
+    panel.innerHTML = `
+      <div class="al-page al-graph" data-phase="scanning">
+        <header class="al-page__head">
+          <div class="al-page__eyebrow">
+            <span class="al-page__pulse" aria-hidden="true"></span>
+            <span>Cloud Discovery · AWS · ap-south-1</span>
+          </div>
+          <h1 class="al-page__title">Materializing your <strong>Service Graph</strong></h1>
+          <p class="al-page__sub">Each node is a real configuration item — pulses while being discovered, locks once it's stitched into the graph.</p>
+        </header>
+
+        <div class="al-graph__alert" data-graph-alert hidden>
+          <span class="al-graph__alert-icon" aria-hidden="true">⚠</span>
+          <div>
+            <div class="al-graph__alert-title">3 SSL certificates expiring in &lt; 48 hours</div>
+            <div class="al-graph__alert-sub" data-graph-alert-sub>portal.acme.com · api.internal · vault.internal</div>
+          </div>
+          <span class="al-graph__alert-status" data-graph-alert-status>Awaiting routing</span>
+        </div>
+
+        <div class="al-graph__stats">
+          <div class="al-stat">
+            <div class="al-stat__value" data-graph-cis>0</div>
+            <div class="al-stat__label">Configuration items</div>
+          </div>
+          <div class="al-stat">
+            <div class="al-stat__value" data-graph-rels>0</div>
+            <div class="al-stat__label">Relationships</div>
+          </div>
+          <div class="al-stat">
+            <div class="al-stat__value"><span data-graph-linked>0</span><span class="al-stat__suffix">/4</span></div>
+            <div class="al-stat__label">Salesforce records linked</div>
+          </div>
+        </div>
+
+        <div class="al-graph__canvas-wrap">
+          <svg class="al-graph__svg" viewBox="0 0 540 300" preserveAspectRatio="xMidYMid meet" aria-label="AWS service graph">
+            <g class="al-graph__edges" data-graph-edges>
+              ${SVC_EDGES.map((e, i) => {
+                const a = SVC_NODES.find((n) => n.id === e[0]);
+                const b = SVC_NODES.find((n) => n.id === e[1]);
+                if (!a || !b) return "";
+                const isSf = a.type === "sf" || b.type === "sf";
+                return `<line data-edge="${i}" data-edge-sf="${isSf ? 1 : 0}"
+                              x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+              }).join("")}
+            </g>
+            <g class="al-graph__nodes" data-graph-nodes>
+              ${SVC_NODES.map((n) => `
+                <g class="al-graph__node al-graph__node--${n.type}" data-node-id="${n.id}" transform="translate(${n.x}, ${n.y})">
+                  <circle class="al-graph__node-pulse" r="14" />
+                  <circle class="al-graph__node-dot"   r="6" />
+                  <text class="al-graph__node-label" x="0" y="22" text-anchor="middle">${escAlex(n.label)}</text>
+                </g>
+              `).join("")}
+            </g>
+          </svg>
+          <div class="al-graph__legend">
+            <span class="al-graph__legend-item"><span class="al-graph__legend-dot al-graph__legend-dot--ec2"></span>EC2</span>
+            <span class="al-graph__legend-item"><span class="al-graph__legend-dot al-graph__legend-dot--s3"></span>S3</span>
+            <span class="al-graph__legend-item"><span class="al-graph__legend-dot al-graph__legend-dot--lam"></span>Lambda</span>
+            <span class="al-graph__legend-item"><span class="al-graph__legend-dot al-graph__legend-dot--iam"></span>IAM</span>
+            <span class="al-graph__legend-item"><span class="al-graph__legend-dot al-graph__legend-dot--sf"></span>Salesforce</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const root      = panel.querySelector(".al-graph");
+    const cisEl     = root.querySelector("[data-graph-cis]");
+    const relsEl    = root.querySelector("[data-graph-rels]");
+    const linkedEl  = root.querySelector("[data-graph-linked]");
+    const nodes     = Array.from(root.querySelectorAll(".al-graph__node"));
+    const awsNodes  = nodes.filter((n) => n.dataset.nodeId.startsWith("ec2-") ||
+                                          n.dataset.nodeId.startsWith("s3-")  ||
+                                          n.dataset.nodeId.startsWith("lam-") ||
+                                          n.dataset.nodeId.startsWith("iam-"));
+    const sfNodes   = nodes.filter((n) => n.dataset.nodeId.startsWith("sf-"));
+    const edges     = Array.from(root.querySelectorAll("[data-edge]"));
+    const sfEdges   = edges.filter((e) => e.dataset.edgeSf === "1");
+    const awsEdges  = edges.filter((e) => e.dataset.edgeSf !== "1");
+
+    let ciNum = 0;
+    let relNum = 0;
+
+    bindPanelEvent(panel, "graph:phase:scan", async () => {
+      root.dataset.phase = "scanning";
+      for (let i = 0; i < awsNodes.length; i++) {
+        await wait(220);
+        awsNodes[i].classList.add("is-on");
+        ciNum += 1;
+        cisEl.textContent = String(ciNum);
+      }
+      // First wave of intra-AWS relationships also lights up here.
+      for (let i = 0; i < awsEdges.length; i++) {
+        await wait(140);
+        awsEdges[i].classList.add("is-on");
+        relNum += 1;
+        relsEl.textContent = String(relNum);
+      }
+    });
+
+    bindPanelEvent(panel, "graph:phase:link", async () => {
+      root.dataset.phase = "linking";
+      for (let i = 0; i < sfNodes.length; i++) {
+        await wait(280);
+        sfNodes[i].classList.add("is-on");
+        ciNum += 1;
+        cisEl.textContent = String(ciNum);
+        linkedEl.textContent = String(Math.min(i + 1, 4));
+      }
+      for (let i = 0; i < sfEdges.length; i++) {
+        await wait(180);
+        sfEdges[i].classList.add("is-on", "is-sf");
+        relNum += 1;
+        relsEl.textContent = String(relNum);
+      }
+    });
+
+    bindPanelEvent(panel, "graph:phase:complete", () => {
+      root.dataset.phase = "complete";
+      cisEl.textContent = "20";
+      relsEl.textContent = "32";
+      linkedEl.textContent = "4";
+      // Reveal the cert alert as the discovery wraps up.
+      const alert = root.querySelector("[data-graph-alert]");
+      if (alert) {
+        alert.hidden = false;
+        requestAnimationFrame(() => alert.classList.add("is-on"));
+      }
+    });
+
+    bindPanelEvent(panel, "graph:phase:cert-routed", () => {
+      const status = root.querySelector("[data-graph-alert-status]");
+      if (status) {
+        status.textContent = "Routed · CertOps + Physical Security";
+        status.classList.add("is-done");
+      }
+    });
+  }
+
+  /* ---------- Act 4 · Agent Workforce (multi-phase) ---------- */
+  // Three internal phases:
+  //   wf:phase:fleet         — show 50+ agents with 3 recommended highlighted
+  //   wf:phase:azure-creds   — switch to Azure AD credentials + JTBD upload
+  //   wf:phase:builder       — switch to Austin Access Agent builder spin-up
+  //   wf:phase:builder-step  — animate the builder mapping
+  const WF_RECOMMENDED = ["Software Assistance", "System & File Access Assistance", "System Password Reset Assistance"];
+  const WF_FLEET = [
+    "Incident Triage", "Change Approval", "Knowledge Drafting", "Asset Lifecycle",
+    "License Reclaim", "Patch Wave Planner", "Vulnerability Scanner", "Backup Verification",
+    "Identity Provisioning", "Access Reviewer", "Onboarding Bot", "Offboarding Bot",
+    "Endpoint Posture", "VPN Health", "DNS Watcher", "Cert Renewal",
+    "Quota Watcher", "Cost Sentinel", "Vendor Comms", "Contract Reminder",
+    "Procurement Helper", "Print Queue Fixer", "Wifi Diagnostics", "Office Comms",
+    "Travel Profile", "Expense Routing", "Meeting Room Booker", "Mobile Enrolment",
+    "Policy Reminder", "Audit Pack", "DR Drill Runner", "Chaos Game-day",
+    "Performance Tuner", "DB Connection Pool", "Kafka Lag Watcher", "Cluster Drainer",
+    "Helm Releaser", "Argo Sync", "Feature-flag Janitor", "Secret Rotator",
+    "PII Sweep", "DLP Quarantine", "Slack Triage", "Teams Triage",
+    "Zoom Health", "Tenant Migrator", "Region Failover", "Compliance Briefer"
+  ];
+
+  function act4WorkforcePage(panel, ctx) {
+    panel.innerHTML = `
+      <div class="al-page al-wf" data-wf-phase="fleet">
+
+        <!-- ===== Phase A: agent fleet picker ===== -->
+        <section class="al-wf__phase al-wf__phase--fleet" data-wf-section="fleet">
+          <header class="al-page__head">
+            <div class="al-page__eyebrow">
+              <span class="al-page__pulse" aria-hidden="true"></span>
+              <span>Agent Fleet · ${WF_FLEET.length + WF_RECOMMENDED.length}+ available</span>
+            </div>
+            <h1 class="al-page__title">Pick your <strong>workforce</strong></h1>
+            <p class="al-page__sub">Recommended agents are pre-selected based on your discovered network. You can edit the selection on the right.</p>
+          </header>
+
+          <div class="al-wf__rec">
+            <div class="al-wf__rec-head">
+              <span class="al-wf__rec-eyebrow">Recommended for Acme Global</span>
+              <span class="al-wf__rec-count">3 selected</span>
+            </div>
+            <div class="al-wf__rec-grid">
+              ${WF_RECOMMENDED.map((name, i) => `
+                <article class="al-wf-card al-wf-card--rec" data-wf-rec="${i}">
+                  <header class="al-wf-card__head">
+                    <span class="al-wf-card__glyph" aria-hidden="true">${escAlex(name.charAt(0))}</span>
+                    <span class="al-wf-card__name">${escAlex(name)}</span>
+                    <span class="al-wf-card__check" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                    </span>
+                  </header>
+                  <div class="al-wf-card__body">${escAlex(
+                    name.startsWith("Software") ? "Help users find, request and install approved software." :
+                    name.startsWith("System &") ? "Grant just-in-time access to files, drives and shared systems." :
+                    "Recover passwords + MFA enrolment without a ticket."
+                  )}</div>
+                  <footer class="al-wf-card__foot">
+                    <span class="al-wf-card__chip">Trust 0.94</span>
+                    <span class="al-wf-card__chip al-wf-card__chip--rec">Recommended</span>
+                  </footer>
+                </article>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="al-wf__more">
+            <div class="al-wf__more-head">
+              <span class="al-wf__more-eyebrow">Other available agents</span>
+              <span class="al-wf__more-hint">${WF_FLEET.length} more · scroll to browse</span>
+            </div>
+            <div class="al-wf__more-grid">
+              ${WF_FLEET.map((name) => `
+                <div class="al-wf-mini">
+                  <span class="al-wf-mini__glyph" aria-hidden="true">${escAlex(name.charAt(0))}</span>
+                  <span class="al-wf-mini__name">${escAlex(name)}</span>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== Phase B: Azure AD creds + JTBD upload ===== -->
+        <section class="al-wf__phase al-wf__phase--creds" data-wf-section="creds" hidden>
+          <header class="al-page__head">
+            <div class="al-page__eyebrow">
+              <span class="al-page__pulse" aria-hidden="true"></span>
+              <span>Pre-flight · Credentials &amp; JTBD</span>
+            </div>
+            <h1 class="al-page__title">Two things before we activate</h1>
+            <p class="al-page__sub">Password Reset needs your Azure AD bridge; the custom Austin Access agent needs the workflow it should automate.</p>
+          </header>
+
+          <div class="al-wf__creds-grid">
+            <div class="al-creds__card al-creds__card--inline">
+              <h3 class="al-creds__title">
+                <span class="al-creds__title-logo" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path fill="#0078D4" d="M3 5l9-2v9H3zM3 12h9v9l-9-2zM13 3l8 2v8h-8zM13 12h8v8l-8 2z"/>
+                  </svg>
+                </span>
+                Azure Active Directory
+              </h3>
+              <p class="al-creds__note">Required for the <strong>Password Reset Assistance</strong> agent — service principal with <code>User.ReadWrite.All</code> + <code>Directory.AccessAsUser.All</code>.</p>
+              <div class="al-field">
+                <label for="azureTenant">Tenant ID</label>
+                <input id="azureTenant" type="text" value="acme-global.onmicrosoft.com" />
+              </div>
+              <div class="al-field">
+                <label for="azureClient">Client ID</label>
+                <input id="azureClient" type="text" value="b14a7505-96e9-4cf5-8db8-9b1d4d5f3a1c" />
+              </div>
+              <div class="al-field">
+                <label for="azureSecret">Client secret</label>
+                <input id="azureSecret" type="password" value="••••••••••••••••••••" />
+              </div>
+            </div>
+
+            <div class="al-jtbd">
+              <h3 class="al-jtbd__title">Job to be Done</h3>
+              <p class="al-jtbd__note">Upload the workflow your custom <strong>Austin Building Access</strong> agent should automate. Jarvis will parse it and map each step to security groups + IoT endpoints.</p>
+              <label class="al-jtbd__drop" for="wfJtbdFile" data-wf-drop>
+                <span class="al-jtbd__drop-glyph" aria-hidden="true">⬆</span>
+                <span class="al-jtbd__drop-title" data-wf-drop-title>Drop a JTBD PDF or click to choose</span>
+                <span class="al-jtbd__drop-sub"  data-wf-drop-sub>Recommended: <strong>Austin_Access_Workflow.pdf</strong></span>
+                <input id="wfJtbdFile" type="file" accept="application/pdf" hidden />
+              </label>
+              <button type="button" class="al-jtbd__sample" data-wf-sample>Use the sample workflow</button>
+            </div>
+          </div>
+
+          <div class="al-wf__creds-actions">
+            <button class="al-creds__connect al-creds__connect--full" id="wfCredsContinue" type="button" disabled>
+              <span class="al-creds__connect-glyph" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="14" height="14" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 8h10M9 4l4 4-4 4"/>
+                </svg>
+              </span>
+              <span data-wf-creds-label>Upload a JTBD file to continue</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ===== Phase C: Builder spin-up ===== -->
+        <section class="al-wf__phase al-wf__phase--builder" data-wf-section="builder" hidden>
+          <header class="al-page__head">
+            <div class="al-page__eyebrow">
+              <span class="al-page__pulse" aria-hidden="true"></span>
+              <span>Agentforce Builder · austin-access-agent</span>
+            </div>
+            <h1 class="al-page__title">Spinning up <strong>Austin Access Agent</strong></h1>
+            <p class="al-page__sub">Mapping your JTBD to local security groups and the Austin IoT gateway.</p>
+          </header>
+
+          <div class="al-builder">
+            <ol class="al-builder__steps">
+              <li class="al-builder__step" data-builder-step="parse">
+                <span class="al-builder__step-num">1</span>
+                <div class="al-builder__step-body">
+                  <div class="al-builder__step-name">Parsing <code>Austin_Access_Workflow.pdf</code></div>
+                  <div class="al-builder__step-sub">Extracted 7 job steps · 3 decision branches</div>
+                </div>
+                <span class="al-builder__step-status" data-builder-status>queued</span>
+              </li>
+              <li class="al-builder__step" data-builder-step="groups">
+                <span class="al-builder__step-num">2</span>
+                <div class="al-builder__step-body">
+                  <div class="al-builder__step-name">Mapping to security groups</div>
+                  <div class="al-builder__step-sub" data-builder-groups>—</div>
+                </div>
+                <span class="al-builder__step-status" data-builder-status>queued</span>
+              </li>
+              <li class="al-builder__step" data-builder-step="iot">
+                <span class="al-builder__step-num">3</span>
+                <div class="al-builder__step-body">
+                  <div class="al-builder__step-name">Wiring up Austin IoT gateway</div>
+                  <div class="al-builder__step-sub" data-builder-iot>—</div>
+                </div>
+                <span class="al-builder__step-status" data-builder-status>queued</span>
+              </li>
+              <li class="al-builder__step" data-builder-step="draft">
+                <span class="al-builder__step-num">4</span>
+                <div class="al-builder__step-body">
+                  <div class="al-builder__step-name">Drafting agent skill graph</div>
+                  <div class="al-builder__step-sub" data-builder-draft>—</div>
+                </div>
+                <span class="al-builder__step-status" data-builder-status>queued</span>
+              </li>
+            </ol>
+
+            <aside class="al-builder__preview">
+              <div class="al-builder__preview-head">
+                <span class="al-builder__preview-mark" aria-hidden="true">A</span>
+                <div>
+                  <div class="al-builder__preview-name">Austin Access Agent</div>
+                  <div class="al-builder__preview-sub">Custom · v0.1 draft</div>
+                </div>
+                <span class="al-pill al-pill--muted" data-builder-pill>drafting…</span>
+              </div>
+              <ul class="al-builder__preview-list">
+                <li><span>Skills</span><strong data-builder-skills>0</strong></li>
+                <li><span>Triggers</span><strong data-builder-triggers>0</strong></li>
+                <li><span>Endpoints</span><strong data-builder-endpoints>0</strong></li>
+                <li><span>Trust score</span><strong data-builder-trust>—</strong></li>
+              </ul>
+            </aside>
+          </div>
+        </section>
+      </div>
+    `;
+
+    const root = panel.querySelector(".al-wf");
+    const setPhase = (key) => {
+      root.dataset.wfPhase = key;
+      root.querySelectorAll("[data-wf-section]").forEach((s) => {
+        s.hidden = s.dataset.wfSection !== key;
+      });
+    };
+
+    bindPanelEvent(panel, "wf:phase:fleet", () => setPhase("fleet"));
+
+    bindPanelEvent(panel, "wf:phase:azure-creds", () => {
+      setPhase("creds");
+      // Wire JTBD upload + sample-use → enable Continue button.
+      const drop      = root.querySelector("[data-wf-drop]");
+      const dropTitle = root.querySelector("[data-wf-drop-title]");
+      const dropSub   = root.querySelector("[data-wf-drop-sub]");
+      const sample    = root.querySelector("[data-wf-sample]");
+      const cont      = root.querySelector("#wfCredsContinue");
+      const contLbl   = root.querySelector("[data-wf-creds-label]");
+      const fileInput = root.querySelector("#wfJtbdFile");
+
+      const markUploaded = (name) => {
+        drop.classList.add("is-uploaded");
+        dropTitle.textContent = `Uploaded · ${name}`;
+        dropSub.innerHTML = `Parsed <strong>7 steps</strong> · <strong>3 branches</strong>`;
+        cont.disabled = false;
+        contLbl.textContent = "Continue · spin up the builder";
+      };
+
+      fileInput.addEventListener("change", (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) markUploaded(f.name);
+      });
+      sample.addEventListener("click", () => markUploaded("Austin_Access_Workflow.pdf"));
+      cont.addEventListener("click", () => {
+        if (cont.disabled) return;
+        cont.disabled = true;
+        cont.classList.add("is-loading");
+        cont.innerHTML = `<span class="btn-spinner"></span><span>Verifying…</span>`;
+        setTimeout(() => ctx.dispatch("wf-creds-uploaded"), 1100);
+      });
+    });
+
+    bindPanelEvent(panel, "wf:phase:builder", async () => {
+      setPhase("builder");
+      // Animate the four builder steps in sequence with rich micro-copy.
+      const steps = Array.from(root.querySelectorAll(".al-builder__step"));
+      const skills    = root.querySelector("[data-builder-skills]");
+      const triggers  = root.querySelector("[data-builder-triggers]");
+      const endpoints = root.querySelector("[data-builder-endpoints]");
+      const trust     = root.querySelector("[data-builder-trust]");
+      const pill      = root.querySelector("[data-builder-pill]");
+      const groupsTxt = root.querySelector("[data-builder-groups]");
+      const iotTxt    = root.querySelector("[data-builder-iot]");
+      const draftTxt  = root.querySelector("[data-builder-draft]");
+
+      const setStatus = (i, label) => {
+        const status = steps[i]?.querySelector("[data-builder-status]");
+        if (status) {
+          status.textContent = label;
+          status.dataset.state = label.toLowerCase().replace(/[^a-z]/g, "");
+        }
+      };
+
+      const start = (i, label) => {
+        steps[i].classList.add("is-active");
+        setStatus(i, label || "running…");
+      };
+      const done = (i) => {
+        steps[i].classList.remove("is-active");
+        steps[i].classList.add("is-done");
+        setStatus(i, "done");
+      };
+
+      await wait(250);
+      start(0);
+      await wait(900); done(0);
+
+      start(1);
+      await wait(600);
+      groupsTxt.textContent = "AUS-Bldg-Access · AUS-Bldg-After-Hours · AUS-Visitor-Mgmt";
+      skills.textContent = "4";
+      triggers.textContent = "2";
+      await wait(600); done(1);
+
+      start(2);
+      await wait(700);
+      iotTxt.textContent = "Gateway: aus-iot-01.acme.local · 18 readers paired";
+      endpoints.textContent = "18";
+      await wait(500); done(2);
+
+      start(3);
+      await wait(800);
+      draftTxt.innerHTML = "Skill graph compiled · 4 skills · 2 triggers · 18 endpoints";
+      trust.textContent = "0.86 (draft)";
+      pill.textContent = "drafted · awaiting tests";
+      pill.classList.remove("al-pill--muted");
+      pill.classList.add("al-pill--brand");
+      await wait(400); done(3);
+    });
+  }
+
+  /* ---------- Act 5 · Go-Live (multi-phase) ---------- */
+  // Internal phases:
+  //   live:phase:tests       — show eval-runner UI (skeleton)
+  //   live:phase:eval-gen    — generate test cases
+  //   live:phase:eval-run    — run + auto-fix + re-run
+  //   live:phase:mapping     — switch to user mapping view
+  //   live:phase:mapping-done
+  //   live:phase:dashboard   — final System Health dashboard
+  //   live:phase:notification — finale toast in the dashboard
+  function act5GoLivePage(panel) {
+    panel.innerHTML = `
+      <div class="al-page al-live" data-live-phase="tests">
+
+        <!-- ===== Phase A: Eval runner ===== -->
+        <section class="al-live__phase" data-live-section="tests">
+          <header class="al-page__head">
+            <div class="al-page__eyebrow">
+              <span class="al-page__pulse" aria-hidden="true"></span>
+              <span>Pre-activation · Automated testing</span>
+            </div>
+            <h1 class="al-page__title">Testing <strong>4 agents</strong> against company standards</h1>
+            <p class="al-page__sub">Eval sets are auto-generated, run, and any failures are auto-refined until every guardrail passes.</p>
+          </header>
+
+          <div class="al-live__guardrails">
+            <span class="al-guard">Security · OWASP top 10</span>
+            <span class="al-guard">Safety · prompt-injection &amp; jailbreak</span>
+            <span class="al-guard">GDPR · PII handling</span>
+            <span class="al-guard">SOC 2 · audit trail</span>
+          </div>
+
+          <div class="al-eval">
+            ${[
+              { name: "Software Assistance",       trust: "0.94" },
+              { name: "Access Assistance",         trust: "0.92" },
+              { name: "Password Reset Assistance", trust: "0.95" },
+              { name: "Austin Access Agent",       trust: "0.86" }
+            ].map((a, i) => `
+              <article class="al-eval-card" data-eval-card="${i}">
+                <header class="al-eval-card__head">
+                  <span class="al-eval-card__glyph">${escAlex(a.name.charAt(0))}</span>
+                  <div>
+                    <div class="al-eval-card__name">${escAlex(a.name)}</div>
+                    <div class="al-eval-card__sub">trust ${escAlex(a.trust)} · 320 cases queued</div>
+                  </div>
+                  <span class="al-eval-card__status" data-eval-status>queued</span>
+                </header>
+                <div class="al-eval-card__bar">
+                  <div class="al-eval-card__bar-fill" data-eval-fill style="width:0%"></div>
+                </div>
+                <ul class="al-eval-card__metrics">
+                  <li><span>Pass</span><strong data-eval-pass>0</strong></li>
+                  <li><span>Auto-fix</span><strong data-eval-fix>0</strong></li>
+                  <li><span>Coverage</span><strong data-eval-cov>0%</strong></li>
+                </ul>
+              </article>
+            `).join("")}
+          </div>
+        </section>
+
+        <!-- ===== Phase B: User access mapping ===== -->
+        <section class="al-live__phase" data-live-section="mapping" hidden>
+          <header class="al-page__head">
+            <div class="al-page__eyebrow">
+              <span class="al-page__pulse" aria-hidden="true"></span>
+              <span>Access provisioning · 5,000 users</span>
+            </div>
+            <h1 class="al-page__title">Mapping access for your <strong>workforce</strong></h1>
+            <p class="al-page__sub">Auto-granting users in good standing; flagging users currently 'on notice' for manual manager approval.</p>
+          </header>
+
+          <div class="al-mapping">
+            <div class="al-mapping__hero">
+              <div class="al-mapping__total" data-map-total>0 / 5,000</div>
+              <div class="al-mapping__bar" aria-hidden="true">
+                <div class="al-mapping__bar-fill" data-map-fill style="width:0%"></div>
+              </div>
+            </div>
+            <div class="al-mapping__split">
+              <div class="al-split al-split--ok">
+                <div class="al-split__label">Auto-granted</div>
+                <div class="al-split__value" data-map-ok>0</div>
+                <div class="al-split__note">Users in good standing · provisioned in real time</div>
+              </div>
+              <div class="al-split al-split--flag">
+                <div class="al-split__label">Flagged · manager approval</div>
+                <div class="al-split__value" data-map-flag>0</div>
+                <div class="al-split__note">Users on performance notice or pending offboarding</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== Phase C: System Health dashboard ===== -->
+        <section class="al-live__phase al-live__phase--dash" data-live-section="dashboard" hidden>
+          <header class="al-page__head">
+            <div class="al-page__eyebrow al-page__eyebrow--ok">
+              <span class="al-page__pulse al-page__pulse--ok" aria-hidden="true"></span>
+              <span>Live · System Health · Acme Global</span>
+            </div>
+            <h1 class="al-page__title">Your IT estate, <strong>at a glance</strong></h1>
+          </header>
+
+          <div class="al-dash">
+            <div class="al-dash__kpis">
+              <div class="al-kpi"><div class="al-kpi__label">Active agents</div><div class="al-kpi__value">4</div><div class="al-kpi__trend">+1 (Austin Access)</div></div>
+              <div class="al-kpi"><div class="al-kpi__label">Users provisioned</div><div class="al-kpi__value">5,000</div><div class="al-kpi__trend">4,598 auto · 402 pending</div></div>
+              <div class="al-kpi"><div class="al-kpi__label">CIs under management</div><div class="al-kpi__value">20</div><div class="al-kpi__trend">+ Salesforce records linked</div></div>
+              <div class="al-kpi"><div class="al-kpi__label">SLA breaches today</div><div class="al-kpi__value">0</div><div class="al-kpi__trend">All on track</div></div>
+            </div>
+
+            <div class="al-dash__cols">
+              <section class="al-dash__col">
+                <h4 class="al-dash__heading">Agent activity (last 60 min)</h4>
+                <ul class="al-dash__list">
+                  <li><span class="al-dash__pill al-dash__pill--ok">SW</span><span>Software Assistance</span><span class="al-dash__count">14 actions</span></li>
+                  <li><span class="al-dash__pill al-dash__pill--ok">AC</span><span>Access Assistance</span><span class="al-dash__count">9 actions</span></li>
+                  <li><span class="al-dash__pill al-dash__pill--ok">PR</span><span>Password Reset</span><span class="al-dash__count">6 actions</span></li>
+                  <li><span class="al-dash__pill al-dash__pill--brand">AA</span><span>Austin Access</span><span class="al-dash__count">1 action</span></li>
+                </ul>
+              </section>
+              <section class="al-dash__col">
+                <h4 class="al-dash__heading">Pending sign-offs</h4>
+                <ul class="al-dash__list">
+                  <li><span class="al-dash__pill al-dash__pill--warn">!</span><span>402 'on notice' user grants</span><span class="al-dash__count">manager review</span></li>
+                  <li><span class="al-dash__pill al-dash__pill--ok">✓</span><span>3 SSL certs · CertOps queue</span><span class="al-dash__count">SLA 4h</span></li>
+                </ul>
+              </section>
+            </div>
+
+            <div class="al-dash__finale" data-live-finale hidden>
+              <div class="al-dash__finale-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              </div>
+              <div>
+                <div class="al-dash__finale-title">Austin Access Agent provisioned a badge for a new hire.</div>
+                <div class="al-dash__finale-sub">Password Reset Assistance is standing by · Software Assistance handled a Figma request 28s ago.</div>
+              </div>
+              <span class="al-pill al-pill--brand">just now</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    `;
+
+    const root = panel.querySelector(".al-live");
+    const setPhase = (key) => {
+      root.dataset.livePhase = key;
+      root.querySelectorAll("[data-live-section]").forEach((s) => {
+        s.hidden = s.dataset.liveSection !== key;
+      });
+    };
+
+    bindPanelEvent(panel, "live:phase:tests", () => setPhase("tests"));
+
+    bindPanelEvent(panel, "live:phase:eval-gen", () => {
+      const cards = root.querySelectorAll("[data-eval-card]");
+      cards.forEach((c) => {
+        c.classList.add("is-active");
+        const status = c.querySelector("[data-eval-status]");
+        if (status) status.textContent = "generating cases…";
+      });
+    });
+
+    bindPanelEvent(panel, "live:phase:eval-run", async () => {
+      const cards = Array.from(root.querySelectorAll("[data-eval-card]"));
+      const targets = [
+        { pass: 318, fix: 4 },
+        { pass: 320, fix: 2 },
+        { pass: 319, fix: 3 },
+        { pass: 314, fix: 9 }
+      ];
+      // Fire all four card animations in parallel; each takes roughly
+      // the same duration so the dashboard moment lands in sync.
+      await Promise.all(cards.map((card, i) => (async () => {
+        const fill   = card.querySelector("[data-eval-fill]");
+        const passEl = card.querySelector("[data-eval-pass]");
+        const fixEl  = card.querySelector("[data-eval-fix]");
+        const covEl  = card.querySelector("[data-eval-cov]");
+        const status = card.querySelector("[data-eval-status]");
+        const t = targets[i];
+        const steps = 24;
+        for (let s = 1; s <= steps; s++) {
+          await wait(80);
+          const ratio = s / steps;
+          fill.style.width = `${Math.round(ratio * 100)}%`;
+          passEl.textContent = String(Math.round(t.pass * ratio));
+          if (s > steps * 0.4 && s <= steps * 0.8) {
+            fixEl.textContent = String(Math.round(t.fix * ((s - steps * 0.4) / (steps * 0.4))));
+            status.textContent = "auto-fixing…";
+          } else if (s > steps * 0.8) {
+            fixEl.textContent = String(t.fix);
+            status.textContent = "verifying fixes…";
+          } else {
+            status.textContent = "running…";
+          }
+          covEl.textContent = `${Math.round(ratio * 100)}%`;
+        }
+        passEl.textContent = String(t.pass);
+        fixEl.textContent  = String(t.fix);
+        covEl.textContent  = "100%";
+        status.textContent = "all guardrails passed";
+        status.dataset.state = "passed";
+        card.classList.add("is-passed");
+      })()));
+    });
+
+    bindPanelEvent(panel, "live:phase:mapping", () => {
+      setPhase("mapping");
+    });
+
+    bindPanelEvent(panel, "live:phase:mapping-done", async () => {
+      const total = root.querySelector("[data-map-total]");
+      const fill  = root.querySelector("[data-map-fill]");
+      const ok    = root.querySelector("[data-map-ok]");
+      const flag  = root.querySelector("[data-map-flag]");
+      const steps = 30;
+      for (let s = 1; s <= steps; s++) {
+        await wait(60);
+        const ratio = s / steps;
+        const okN   = Math.round(4598 * ratio);
+        const flagN = Math.round(402  * ratio);
+        const sum   = okN + flagN;
+        total.textContent = `${sum.toLocaleString()} / 5,000`;
+        fill.style.width  = `${Math.round((sum / 5000) * 100)}%`;
+        ok.textContent    = okN.toLocaleString();
+        flag.textContent  = flagN.toLocaleString();
+      }
+      total.textContent = "5,000 / 5,000";
+      fill.style.width = "100%";
+      ok.textContent   = "4,598";
+      flag.textContent = "402";
+    });
+
+    bindPanelEvent(panel, "live:phase:dashboard", () => setPhase("dashboard"));
+
+    bindPanelEvent(panel, "live:phase:notification", () => {
+      const finale = root.querySelector("[data-live-finale]");
+      if (!finale) return;
+      finale.hidden = false;
+      requestAnimationFrame(() => finale.classList.add("is-on"));
+    });
+  }
+
+  // Register the new factories. We don't redeclare existing keys, so
+  // the cockpit / itsm-bootstrap pages above keep working unchanged.
+  Object.assign(window.PAGES, {
+    "act1-foundation":  act1FoundationPage,
+    "aws-credentials":  act2AwsCredentialsPage,
+    "service-graph":    act2ServiceGraphPage,
+    "agent-workforce":  act4WorkforcePage,
+    "agent-go-live":    act5GoLivePage
+  });
+
   // ----- Chapter registration -----------------------------------
+  // Persona: Alex Kim, IT Architect at Acme Global — standing up a
+  // fresh ITSM org for a 5,000-employee, multi-region workforce. The
+  // chapter id stays `admin-sarah` so the engine's `startSetup()` and
+  // any deep-link history keeps working without churn.
   const chapter = {
     id: "admin-sarah",
     title: "The Setup",
-    blurb: "Sarah installs IT Services in 8 minutes. By 1 PM, every employee has met Jarvis.",
+    blurb: "Alex stands up a 5,000-employee, multi-region IT org — foundation, fleet, and go-live in minutes.",
     persona: {
-      name: "Sarah",
-      role: "IT Admin",
-      avatarText: "S",
+      name: "Alex",
+      role: "IT Architect",
+      avatarText: "A",
       accent: "var(--persona-admin)"
     },
-    intentKeywords: ["admin", "sarah", "setup", "install", "itsm", "cmdb", "splunk", "cockpit"],
-    endline: "ITSM is live. Sarah's Cockpit is ready — her day-1 control surface is one click away.",
+    intentKeywords: ["admin", "alex", "setup", "install", "itsm", "cmdb", "discovery", "agent", "fleet", "go live"],
+    endline: "Setup complete — your Tower is live with real-time System Health.",
 
+    // The two opener prompts the welcome screen surfaces as one-tap
+    // chips. Either one (or the Get-Started button, or any free-text
+    // entry in the welcome composer) drops the user into Act 1.
     suggestedQuestions: [
-      "Why install CMDB first?",
-      "What if my CMDB has dirty data?",
-      "Can I roll this back?",
-      "What changes for employees today?"
+      "I need to set up my IT service management",
+      "How can you help?"
     ],
 
     faqs: [
       {
-        match: /cmdb.*first|why.*cmdb/i,
+        match: /how can you help|what can you do|what do you do/i,
         answer:
-          "CMDB is the **graph** Jarvis reasons over. Without it, every recommendation is a guess. We install it first because it lights up topology, change-impact, and incident correlation — these power every later chapter (the burnout flag, the breach causal map, the Wall Board)."
+          "I'm your **Setup Agent**. I can stand up your **ITSM foundation** (incidents, problems, changes, releases, SLAs, CMDB, Portal, Agentforce), populate your **CMDB** via cloud / network / agent / dynamic discovery, deploy your **agent fleet**, and walk every agent through **automated security, safety, and GDPR testing** before go-live."
       },
       {
-        match: /dirty data|messy|stale|bad data|wrong/i,
+        match: /set ?up|set up|itsm|service management/i,
         answer:
-          "Jarvis assumes your CMDB is partially stale. The discovery agent reconciles three sources (asset DB, Mule Agent Fabric runtime relationships, SSO group memberships) and only writes back **HIGH-confidence** matches. Conflicts go to a review queue with diff cards.",
-        source: "CMDB integration with Mule Agent Fabric — see Amarendra's deck."
+          "Just hit **Get Started** (or the chip above). I'll configure incident + problem + change management, SLAs, your CMDB framework, the Service Portal + Catalog, and Agentforce — then walk you through discovery, agent fleet, and go-live."
+      },
+      {
+        match: /cmdb|configuration item|ci/i,
+        answer:
+          "Your CMDB is populated by the **Discovery agent**. I support **Cloud (AWS/Azure/vCenter)**, **Network**, **Agent-based**, and **Dynamic** discovery. You'll typically start with Cloud — it has zero on-host footprint."
+      },
+      {
+        match: /aws|azure|vcenter|cloud/i,
+        answer:
+          "Cloud discovery uses **read-only IAM credentials** to enumerate resources via the provider APIs. We never write back. AWS surfaces EC2 / S3 / IAM / RDS / Lambda; Azure adds AAD; vCenter covers on-prem virtualization."
+      },
+      {
+        match: /agent|workforce|fleet/i,
+        answer:
+          "There are **50+ out-of-the-box agents**. Based on your discovered network, I usually recommend **Software Assistance**, **Access Assistance**, and **Password Reset**. You can also describe a custom job-to-be-done and the **Agentforce Builder** will spin up a custom agent."
+      },
+      {
+        match: /test|guardrail|gdpr|security|safety/i,
+        answer:
+          "Every agent is tested against your **security**, **safety**, and **GDPR** standards before activation. I auto-generate eval sets, run them, auto-fix any failures, and re-run until all guardrails pass."
       },
       {
         match: /roll ?back|undo|reverse|uninstall/i,
         answer:
-          "**Yes — every action.** All writes are reversible for **30 days** by default; the audit log shows the diff and a one-click revert. Domain packs can be uninstalled cleanly without dropping CMDB nodes."
-      },
-      {
-        match: /employees|notice|change|disruption|impact/i,
-        answer:
-          "On Day 1, employees notice **one thing**: a Slack DM from Jarvis introducing itself, plus instant access for any \"need access to X\" request. No password resets, no portals, no ticket forms unless they want one."
-      },
-      {
-        match: /slack reveal|broadcast|announce|company-wide|reveal/i,
-        answer:
-          "When Sarah approves, Jarvis posts a personalized DM to every employee in the org. The message acknowledges them by name, mentions one tangible thing it already noticed about their setup (e.g., \"your laptop battery is degrading — replacement on the way\"), and offers itself as a Slack-first IT partner."
-      },
-      {
-        match: /splunk|datadog|observability/i,
-        answer:
-          "The Splunk path is fully wired in this demo. Datadog works the same way (different SSO endpoint, different log schema). You can wire both — Jarvis dedupes incidents across providers."
+          "**Yes — every action.** All writes are reversible for **30 days** by default. Domain packs can be uninstalled cleanly without dropping CMDB nodes."
       }
     ],
 
-    // Cinematic welcome shown when the chapter loads — replaces the
-    // legacy "Hi Sarah… Begin setup?" intro. Clicking "Install ITSM"
-    // jumps straight into the existing setup beat ("begin").
+    // Cinematic welcome shown when the chapter loads. The two chips
+    // mirror Alex's natural openers — clicking either is the same as
+    // typing it and hitting send. The CTA falls back to a sensible
+    // canned ask if Alex doesn't pick a chip or type anything.
     welcome: {
       greeting: "Welcome,",
-      name: "Sarah!",
-      titleLead: "Start with",
-      titleTail: "Agentic IT Service",
+      name: "Alex!",
+      titleLead: "Stand up your",
+      titleTail: "Agentic IT Service Management",
       cta: "Get Started",
-      placeholder: "Ask anything",
-      goto: "begin"
+      placeholder: "Tell me what you need to set up…",
+      chips: [
+        "I need to set up my IT service management",
+        "How can you help?"
+      ],
+      defaultOpener: "I need to set up my IT service management Org, how can you help?",
+      goto: "act1-intro"
     },
 
     story: [
-      { type: "welcome", goto: "begin" },
+      { type: "welcome", goto: "act1-intro" },
 
-      // Establish vocabulary up-front so the "Install ITSM" CTA Sarah
-      // just clicked maps cleanly to the "CMDB" install we're about
-      // to propose. Without this line, the jump from "ITSM" to "CMDB"
-      // reads as two unrelated products.
-      { id: "begin", type: "say",
-        text: "Starting setup. **ITSM** ships in three parts — and the **CMDB** is the foundation everything else reasons over. Let's start there.",
-        pause: 250 },
-
-      // ---- Context Q&A FIRST. We right-size BEFORE proposing the
-      //      install — committing Sarah to a CMDB install before we
-      //      know the shape of her org would be backwards.
-      //      Industry question removed: Acme **Health** already implies
-      //      HLS, and the answer was never used downstream.
-      { type: "say",
-        text: "**Two quick questions** before I propose the install.",
-        pause: 200 },
-
-      { type: "choose",
-        text: "Roughly how many employees does Acme Health have?",
-        options: [
-          { label: "Under 1,000",       value: "small",      logo: "S",
-            color: "linear-gradient(135deg,#9aa6c8,#c2cae3)",
-            sub: "Single region · lean ops" },
-          { label: "1,000 – 10,000",    value: "mid",        logo: "M",
-            color: "linear-gradient(135deg,#6f5fff,#a25cff)",
-            sub: "Multi-site · several BUs" },
-          { label: "10,000+",           value: "enterprise", logo: "L",
-            color: "linear-gradient(135deg,#2f5cff,#6a4dff)",
-            sub: "Global · 24/7 follow-the-sun" }
-        ]
-      },
-
-      { type: "multi-choose",
-        text: "Which of these tools should I plug into right now?",
-        sub: "Pick what's already in your stack — you can add more later.",
-        headline: "Identity & observability",
-        confirmLabel: "Continue setup",
-        options: [
-          { label: "Okta",            value: "okta",
-            logo: "Okta",            color: "#007DC1",
-            sub: "Workforce identity & SSO" },
-          { label: "Microsoft Intune", value: "intune",
-            logo: "MS",              color: "#0078D4",
-            sub: "Endpoint management" },
-          { label: "AWS",             value: "aws",
-            logo: "AWS",             color: "linear-gradient(135deg,#FF9900,#FF6A00)",
-            sub: "Cloud infra & telemetry" },
-          { label: "Splunk",          value: "splunk",
-            logo: "assets/Splunk.png",
-            sub: "Logs · SIEM · observability" }
-        ]
-      },
-
-      // Licence check belongs HERE — now that we know what to license.
-      // (Previously it ran before the user had picked anything, which
-      // made it feel like ceremonial filler.)
-      { type: "status", text: "Checking licences for selected integrations",
-                        duration: 2000, doneText: "Licences validated" },
-
-      // Echo the choices back so the context Q&A feels earned and
-      // Jarvis's reasoning is visible (Rule C3 — transparency).
-      { type: "say",
-        text: "Locked in — sizing for **mid-size healthcare**, plugging into **Okta, Intune, AWS, Splunk**.",
-        pause: 250 },
-
-      // Single primary install CTA. Surfaces the rollback affordance
-      // up-front so Sarah can commit with confidence. The old "Skip
-      // CMDB" branch was a dead-end (later steps still opened the
-      // CMDB dashboard regardless), so it's been retired.
-      { type: "ask",
-        text: "I'll install the **CMDB** package first — it's the graph everything else reasons over. Every action is **reversible for 30 days**.",
-        choices: [
-          { label: "Install CMDB", value: "yes", primary: true }
-        ]
-      },
-
-      // ---- Splunk auth FIRST so the bootstrap can honestly claim it
-      //      ingests live telemetry. Old order ran "materializing
-      //      service graph from telemetry" before Splunk was authed —
-      //      reverse causality that any observability admin would clock.
-      { type: "say",
-        text: "Authenticating **Splunk** so the bootstrap can ingest from your live telemetry.",
-        pause: 250 },
-      { type: "browser", url: "https://login.splunk.com/sso", page: "splunk-auth", title: "Splunk · Single Sign-On" },
-
-      { type: "wait-for", event: "splunk-login", text: "Waiting for you to authenticate…" },
-
-      { type: "status", text: "Exchanging tokens",
-                        duration: 1800, doneText: "Splunk authenticated" },
-
-      { type: "browser-close" },
-
-      // ---- Bootstrap reveal — telemetry is now live, so the phases
-      //      below are truthful rather than aspirational.
-      { type: "say",
-        text: "Telemetry online. **Watch the right pane** — your IT landscape is about to come alive.",
+      /* ============================================================
+         ACT 1 · The Foundation ("IT Service Management")
+         ----------------------------------------------------------
+         Alex's opener was already posted as the user bubble by the
+         welcome step, so we land directly on the Setup Agent's reply.
+         Right pane: act1-foundation, lit phase-by-phase.
+         ============================================================ */
+      { id: "act1-intro", type: "say",
+        text:
+          "I can handle the **foundational setup** for you. This includes configuring **incident** and **problem management**, **release management**, **SLAs**, and **assignment rules**. I'll also initialize your **CMDB**, set up your **Portal** with an integrated **Service Catalog**, and enable **Agentforce** with your company branding and business hours.",
         pause: 350 },
 
+      { type: "ask",
+        text:
+          "Want me to **populate the environment with sample data** for incidents, knowledge articles, and queues — so you can see it in action?",
+        choices: [
+          { label: "Yes, go for it", value: "yes", primary: true }
+        ] },
+
+      { type: "say",
+        text: "On it — bootstrapping the foundation now. **Watch the right pane** — every block lights up the moment its phase completes.",
+        pause: 200 },
+
       { type: "browser",
-        url:  "https://itsm.salesforce.com/cmdb/bootstrap",
-        page: "itsm-bootstrap",
-        title: "ITSM bootstrap · Acme Health",
-        pause: 600
-      },
+        url:  "https://itsm.salesforce.com/foundation",
+        page: "act1-foundation",
+        title: "ITSM Foundation · Acme Global",
+        pause: 600 },
 
-      { type: "progress",
-        text: "Activating specialized AI agents",
-        duration: 2400,
-        doneText: "**50+** specialized AI agents online",
-        panelEvent: "bs:phase:agents" },
+      { type: "progress", text: "Configuring incident, problem &amp; change management",
+                          duration: 2000, doneText: "ITSM modules online",
+                          panelEvent: "act1:phase:modules" },
 
-      { type: "progress",
-        text: "Materializing service graph from live Splunk + AWS telemetry",
-        duration: 2400,
-        doneText: "Service graph materialized · **142** services",
-        panelEvent: "bs:phase:services" },
+      { type: "progress", text: "Initializing CMDB framework",
+                          duration: 1700, doneText: "CMDB framework ready · empty, awaiting discovery",
+                          panelEvent: "act1:phase:cmdb" },
 
-      { type: "progress",
-        text: "Populating dynamic CMDB",
-        duration: 2600,
-        doneText: "CMDB populated · **12,847** CIs without manual entry",
-        panelEvent: "bs:phase:cmdb" },
+      { type: "progress", text: "Standing up Portal + Service Catalog",
+                          duration: 1900, doneText: "Service Portal live · sample catalog seeded",
+                          panelEvent: "act1:phase:portal" },
 
-      { type: "progress",
-        text: "Loading intelligence layers",
-        duration: 2200,
-        doneText: "User · Identity · Agent graphs ready",
-        panelEvent: "bs:phase:layers" },
+      { type: "progress", text: "Enabling Agentforce with your branding",
+                          duration: 1600, doneText: "Agentforce configured · branding + business hours applied",
+                          panelEvent: "act1:phase:agentforce" },
 
-      { type: "progress",
-        text: "Importing domain knowledge",
-        duration: 2200,
-        doneText: "**500+** failure patterns + resolution playbooks loaded",
-        panelEvent: "bs:phase:knowledge" },
-
-      // The "aha" reveal — the entire IT landscape, mapped in real time.
       { type: "say",
-        text: "**There it is, Sarah.** Your entire IT landscape — servers, apps, agents, dependencies — mapped in real time. **More accurate than a year of manual CMDB work.**",
-        pause: 450,
-        panelEvent: "bs:phase:reveal" },
+        text:
+          "**Foundation is live** — no manual installs, no waiting on a release window. Your CMDB framework is in place but empty; the Portal is already serving sample tickets, and Agentforce is ready on Slack, Teams, and email.",
+        pause: 400 },
 
-      // ---- Final wiring — pipelines & routing depend on the bootstrap
-      //      graph being materialised, so they sit after the reveal.
-      { type: "progress", text: "Provisioning data pipelines",
-                          duration: 2200, doneText: "Pipelines provisioned" },
-      { type: "progress", text: "Configuring incident routing",
-                          duration: 2000, doneText: "Routing live" },
-
-      // Setup closer — keeps the bootstrap reveal panel on screen as
-      // the visual confirmation. (We deliberately don't switch the
-      // right pane to a separate CMDB dashboard here — the live
-      // landscape graph IS the evidence the install worked.)
+      /* ============================================================
+         ACT 2 · The Infrastructure (Discovery)
+         ----------------------------------------------------------
+         Discovery method picker → cloud → AWS → credential pane →
+         Service Graph materializes in the right pane.
+         ============================================================ */
       { type: "say",
-        text: "All set — **ITSM is live**. Your IT landscape stays on the right.",
-        pause: 300 },
+        text:
+          "Now let's **populate that CMDB**. I support four discovery methods — which would you like to configure first?",
+        pause: 250 },
 
-      // Cockpit handoff — give Sarah an explicit, in-flow doorway to
-      // her control surface. The card is a single-click swap for the
-      // right pane (bootstrap reveal → Cockpit) so she can choose
-      // when to leave the install confirmation.
+      { type: "choose",
+        text: "Pick a discovery method.",
+        options: [
+          { label: "Cloud",       value: "cloud",
+            logo: "☁",  color: "linear-gradient(135deg,#2f5cff,#6a4dff)",
+            sub: "AWS · Azure · vCenter · API-driven" },
+          { label: "Network",     value: "network",
+            logo: "🌐", color: "linear-gradient(135deg,#0bb6c7,#1b8cd8)",
+            sub: "Open ports per endpoint · longer setup" },
+          { label: "Agent-based", value: "agent",
+            logo: "⚙",  color: "linear-gradient(135deg,#ff8a4c,#ff5f5f)",
+            sub: "Agents on every machine · creds required" },
+          { label: "Dynamic",     value: "dynamic",
+            logo: "✦",  color: "linear-gradient(135deg,#9aa6c8,#c2cae3)",
+            sub: "Telemetry + log inference · zero-touch" }
+        ] },
+
       { type: "say",
-        text: "Whenever you're ready, here's your **control surface** — open it when you want to see what I'm watching, what's pending your sign-off, and where the org stands today.",
+        text:
+          "Good pick. **Cloud** is the lowest-touch path. I explicitly support **AWS**, **Azure**, and **vCenter** — each one needs connection credentials. Which provider are we connecting?",
+        pause: 250 },
+
+      { type: "choose",
+        text: "Pick a cloud provider.",
+        options: [
+          { label: "AWS",     value: "aws",
+            logo: "AWS", color: "linear-gradient(135deg,#FF9900,#FF6A00)",
+            sub: "EC2 · S3 · Lambda · IAM" },
+          { label: "Azure",   value: "azure",
+            logo: "Az",  color: "linear-gradient(135deg,#0078D4,#5EC0FF)",
+            sub: "Compute · Storage · AAD" },
+          { label: "vCenter", value: "vcenter",
+            logo: "vC",  color: "linear-gradient(135deg,#1C5BD9,#8E32E0)",
+            sub: "On-prem virtualization" }
+        ] },
+
+      { type: "say",
+        text: "Opening the credential pane on the right. Drop your AWS keys in and we'll connect.",
+        pause: 200 },
+
+      { type: "browser",
+        url:  "https://itsm.salesforce.com/discovery/aws",
+        page: "aws-credentials",
+        title: "AWS · Connect" },
+
+      { type: "wait-for", event: "aws-connect",
+                          text: "Waiting for the AWS connection…",
+                          doneText: "AWS connected · read-only IAM verified" },
+
+      { type: "say",
+        text:
+          "Connected. **Watch the right pane** — the Service Graph is materializing in real time as I scan your account and link the resources back to existing Salesforce records.",
+        pause: 250 },
+
+      { type: "browser",
+        url:  "https://itsm.salesforce.com/discovery/aws/graph",
+        page: "service-graph",
+        title: "Service Graph · AWS · ap-south-1",
+        pause: 400 },
+
+      { type: "progress", text: "Scanning EC2, S3, IAM &amp; Lambda via AWS APIs",
+                          duration: 2500, doneText: "Cloud assets discovered",
+                          panelEvent: "graph:phase:scan" },
+
+      { type: "progress", text: "Linking discovered CIs to Salesforce records",
+                          duration: 2200, doneText: "CI relationships established",
+                          panelEvent: "graph:phase:link" },
+
+      { type: "ask",
+        text:
+          "**AWS connected.** Want to also run **Network** or **Agent-based** discovery? Heads-up on the technical asks: Network needs ports opened on every endpoint; Agent-based needs an agent installed on every machine + credentials.",
+        choices: [
+          { label: "Skip — let's look at Cloud results", value: "skip", primary: true },
+          { label: "Schedule Network for later",         value: "later" }
+        ] },
+
+      /* ============================================================
+         ACT 3 · The Brain (Domain Intelligence)
+         ----------------------------------------------------------
+         Discovery summary + the SSL cert alert + routing.
+         ============================================================ */
+      { type: "say",
+        text:
+          "Discovery complete. I've found **20 Configuration Items** and established **32 relationships**. Your Service Graph is ready to view.",
+        pause: 350,
+        panelEvent: "graph:phase:complete" },
+
+      { type: "ask",
+        text:
+          "**⚠ Alert** — I've discovered **three SSL certificates** expiring within **48 hours**: one on your customer portal, two on internal APIs. Should I assign a task to the **physical security team** for badge access + the **CertOps** team for renewal?",
+        choices: [
+          { label: "Yes — route immediately", value: "yes", primary: true }
+        ] },
+
+      { type: "status", text: "Routing tasks: SSL renewal → CertOps · badge access → Physical Security",
+                        duration: 1600,
+                        doneText: "3 tasks routed · CertOps SLA 4h · PhysSec SLA 24h",
+                        panelEvent: "graph:phase:cert-routed" },
+
+      /* ============================================================
+         ACT 4 · The Workforce (Agent Fleet & Vibe Coding)
+         ----------------------------------------------------------
+         Right pane is a multi-phase workforce page:
+            fleet → azure-creds → builder
+         ============================================================ */
+      { type: "say",
+        text:
+          "**Infrastructure is mapped.** Now let's deploy your workforce. I have **50+ out-of-the-box agents** — based on your discovered network, I recommend starting with these three:\n\n• **Software Assistance**\n• **System &amp; File Access Assistance**\n• **System Password Reset Assistance**",
+        pause: 400 },
+
+      { type: "browser",
+        url:  "https://itsm.salesforce.com/agents/fleet",
+        page: "agent-workforce",
+        title: "Agent Fleet · Acme Global",
+        pause: 400,
+        panelEvent: "wf:phase:fleet" },
+
+      { type: "ask",
+        text: "Want to deploy the recommended three?",
+        choices: [
+          { label: "Yes — plus a custom agent for Austin building access", value: "custom", primary: true }
+        ] },
+
+      { type: "say",
+        text:
+          "Noted. Two requirements before I can spin those up:\n\n• Because you picked **Password Reset**, I need your **Azure AD credentials** to provision the integration.\n• For your custom **Austin building access** agent, please upload a **Job to be Done (JTBD)** file and I'll spin up the agent builder.",
+        pause: 300,
+        panelEvent: "wf:phase:azure-creds" },
+
+      { type: "wait-for", event: "wf-creds-uploaded",
+                          text: "Waiting for Azure AD credentials and the JTBD file…",
+                          doneText: "Azure AD verified · JTBD parsed (7 steps · 3 branches)" },
+
+      { type: "say",
+        text:
+          "Credentials accepted. JTBD parsed. The **Agentforce Builder** is spinning up your custom agent now — mapping each job step to security groups and the **Austin IoT gateway**.",
+        pause: 250,
+        panelEvent: "wf:phase:builder" },
+
+      { type: "status", text: "Agentforce Builder · drafting Austin Access Agent",
+                        duration: 4200,
+                        doneText: "Austin Access Agent v0.1 drafted · 4 skills · 18 endpoints" },
+
+      /* ============================================================
+         ACT 5 · The Go-Live (Guardrails & Channels)
+         ----------------------------------------------------------
+         Right pane runs eval-runner → user mapping → System Health.
+         ============================================================ */
+      { type: "say",
+        text:
+          "Your agents are **drafted**. Before activation, every agent must be tested against company **security**, **safety**, and **GDPR** standards.",
+        pause: 250 },
+
+      { type: "ask",
+        text: "Shall I run the **automated testing** process?",
+        choices: [
+          { label: "Yes, run the tests", value: "yes", primary: true }
+        ] },
+
+      { type: "browser",
+        url:  "https://itsm.salesforce.com/agents/go-live",
+        page: "agent-go-live",
+        title: "Agent Go-Live · Acme Global",
+        pause: 400,
+        panelEvent: "live:phase:tests" },
+
+      { type: "progress", text: "Generating eval sets · 320 test cases per agent",
+                          duration: 2200, doneText: "Eval sets generated · 1,280 cases queued",
+                          panelEvent: "live:phase:eval-gen" },
+
+      { type: "progress", text: "Running tests · auto-fixing failures · re-running",
+                          duration: 3200, doneText: "All guardrails passed · Security · Safety · GDPR · SOC 2",
+                          panelEvent: "live:phase:eval-run" },
+
+      { type: "say",
+        text:
+          "**Testing complete — all guardrails passed.** Now I'm mapping access to your **5,000 users** based on location and payroll data. I'm flagging users 'on notice' for manual manager approval; the rest are provisioned automatically.",
+        pause: 350,
+        panelEvent: "live:phase:mapping" },
+
+      { type: "progress", text: "Mapping access for 5,000 users",
+                          duration: 2400,
+                          doneText: "**4,598** auto-granted · **402** flagged for manager approval",
+                          panelEvent: "live:phase:mapping-done" },
+
+      { type: "ask",
+        text: "**Ready for deployment.** Shall we go live?",
+        choices: [
+          { label: "Go live", value: "live", primary: true }
+        ] },
+
+      { type: "say",
+        text:
+          "**Live.** Your agents are on duty. The right pane is your live System Health dashboard — I'll surface anything notable here.",
+        pause: 400,
+        panelEvent: "live:phase:dashboard" },
+
+      { type: "say",
+        text:
+          "Heads up — **the Austin Access Agent just provisioned a badge for a new hire**, and **Password Reset Assistance** is standing by.",
+        pause: 250,
+        panelEvent: "live:phase:notification" },
+
+      { type: "say",
+        text:
+          "Whenever you're ready, here's your **control surface** — open it when you want to see what I'm watching, what's pending your sign-off, and where the org stands today.",
         pause: 250 },
 
       { type: "link-card",
-        title: "The Cockpit",
-        sub: "Your day-1 control surface · agents, signals & sign-offs",
+        title: "The Tower",
+        sub:   "Your day-1 control surface · agents, signals &amp; sign-offs",
         icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`,
-        url:  "https://itsm.salesforce.com/cockpit",
-        page: "cockpit",
+        url:  "https://itsm.salesforce.com/tower",
+        page: "tower",
         pause: 200 },
 
-      // End the chapter on the Cockpit handoff. The earlier Slack
-      // company-wide reveal beat used to live here; it's been pulled
-      // so install confirmation → control-surface handoff is the
-      // entire arc.
       { type: "end" }
     ]
   };

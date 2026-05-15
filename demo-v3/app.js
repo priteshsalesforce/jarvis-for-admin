@@ -608,6 +608,16 @@
       const titleTail = step.titleTail || cfg.titleTail || "Agentic IT Service";
       const cta = step.cta || cfg.cta || "Get Started";
       const placeholder = step.placeholder || cfg.placeholder || "Ask anything";
+      // Suggestion chips above the whisper bar — clicking a chip is the
+      // same as typing it and hitting send, but in one tap. The chapter
+      // can declare them via `welcome.chips` (preferred) or fall back
+      // to the existing `suggestedQuestions` so older chapters still work.
+      const chips = (step.chips || cfg.chips || activeChapter?.suggestedQuestions || []).slice(0, 3);
+      // Default opener that's posted as Alex's first user bubble when
+      // the user hits "Get Started" without typing/clicking anything.
+      // Lets the right pane look like a natural answer to a real ask
+      // instead of magic-by-default.
+      const defaultOpener = step.defaultOpener || cfg.defaultOpener || cta;
 
       $workspace.classList.add("workspace--welcome");
 
@@ -633,6 +643,24 @@
             </span>
             <span>${md(cta)}</span>
           </button>
+          ${chips.length ? `
+            <div class="chapter-welcome__chips" role="group" aria-label="Suggested prompts">
+              ${chips.map((c, i) => `
+                <button type="button" class="chapter-welcome__chip"
+                        data-chip-index="${i}"
+                        title="Send: ${md(c)}">
+                  <span class="chapter-welcome__chip-glyph" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none"
+                         stroke="currentColor" stroke-width="1.6"
+                         stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 8h10M9 4l4 4-4 4"/>
+                    </svg>
+                  </span>
+                  <span>${md(c)}</span>
+                </button>
+              `).join("")}
+            </div>
+          ` : ""}
           <div class="chapter-welcome__composer">
             <div class="whisper" role="group" aria-label="${md(placeholder)}">
               <div class="whisper__row whisper__row--input">
@@ -673,19 +701,42 @@
 
       $stageMain.appendChild(hero);
 
-      const finish = () => {
+      // The welcome step now resolves with `{ entryText }` — the words
+      // the user actually committed to (typed prompt, clicked chip, or
+      // the chapter's defaultOpener when they used the bare CTA). This
+      // lets the next story step post a believable user bubble before
+      // the agent's reply lands. Resolving with the empty string would
+      // cause the chapter to skip the bubble entirely.
+      const finish = (entryText) => {
         hero.classList.add("chapter-welcome--leaving");
         setTimeout(() => {
           if (hero.parentNode) hero.remove();
           $workspace.classList.remove("workspace--welcome");
-          resolve();
+          resolve({ entryText: (entryText || "").trim() });
         }, 320);
       };
 
-      hero.querySelector("#chapterWelcomeCta").addEventListener("click", finish);
-      hero.querySelector("#chapterWelcomeSend").addEventListener("click", finish);
-      hero.querySelector("#chapterWelcomeInput").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") finish();
+      const inputEl = hero.querySelector("#chapterWelcomeInput");
+      const submitFromInput = () => {
+        const v = (inputEl && inputEl.value || "").trim();
+        finish(v || defaultOpener);
+      };
+
+      hero.querySelector("#chapterWelcomeCta").addEventListener("click", () => finish(defaultOpener));
+      hero.querySelector("#chapterWelcomeSend").addEventListener("click", submitFromInput);
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); submitFromInput(); }
+      });
+
+      // Chip click — same as typing the chip text and hitting send.
+      // We mirror the chip into the input briefly for the visual cue
+      // (without waiting on it) so the user sees what was sent.
+      hero.querySelectorAll(".chapter-welcome__chip").forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          const text = chips[i] || defaultOpener;
+          if (inputEl) inputEl.value = text;
+          finish(text);
+        });
       });
 
       requestAnimationFrame(() => hero.classList.add("chapter-welcome--in"));
@@ -780,7 +831,14 @@
     }
 
     switch (step.type) {
-      case "welcome":       await renderWelcomeStep(step); break;
+      case "welcome": {
+        // Welcome resolves with the prompt the user committed to. We
+        // post that as the first user bubble so the agent's reply that
+        // follows reads as an answer to a real question, not a script.
+        const result = await renderWelcomeStep(step);
+        if (result && result.entryText) userBubble(result.entryText);
+        break;
+      }
       case "say":           await renderSay(step); break;
       case "note":          await renderNote(step); break;
       case "status":        await renderStatus(step); break;
@@ -1053,7 +1111,7 @@
     tower: {
       title: "Tower",
       lead: "Your day-1 control surface. Agents, signals, and sign-offs at a glance.",
-      hint: "Design coming soon — this is the post-setup landing surface for Sarah.",
+      hint: "Design coming soon — this is the post-setup landing surface for Alex.",
     },
     insight: {
       title: "Insight",
@@ -1504,7 +1562,7 @@
     setActiveNavItem("profile");
     pushDirectorNote({
       title: "Profile",
-      text: "Sarah Chen · IT Admin · Acme Health.",
+      text: "Alex Kim · IT Architect · Acme Global.",
       sub: "Profile + workspace settings coming soon.",
       autoDismiss: 3200,
     });

@@ -32,6 +32,7 @@
   const rightPane     = document.getElementById("rightPane");
   const bottombar     = document.getElementById("bottombar");
   const hamburgerBtn  = document.getElementById("hamburgerBtn");
+  const backBtn       = document.getElementById("backBtn");
   const drawer        = document.getElementById("drawer");
   const drawerScrim   = document.getElementById("drawerScrim");
   const drawerItems   = document.getElementById("drawerItems");
@@ -131,6 +132,17 @@
   }
   hamburgerBtn.addEventListener("click", openDrawer);
   drawerScrim.addEventListener("click", closeDrawer);
+
+  // Back button — only shown on the chat view (per CSS). Bumps the
+  // run token so any in-flight story (incident / wizard) is
+  // cancelled cleanly, then drops the user back on home.
+  backBtn.addEventListener("click", () => {
+    runToken += 1;
+    wizardState.active = false;
+    wizardState.pendingText = null;
+    bottombar.dataset.state = "idle";
+    showHome();
+  });
 
   drawerItems.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-drawer-item]");

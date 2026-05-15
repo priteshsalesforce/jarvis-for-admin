@@ -83,7 +83,10 @@
       </span>
     </div>
 
-    <!-- ----- Floating hamburger (top-left, sits over every view) ----- -->
+    <!-- ----- Floating top chrome -----
+         Hamburger sits TOP-RIGHT on every view.
+         Back button sits TOP-LEFT, only visible on the chat view
+         (CSS hides it on home + right). -->
     <button class="ham-btn" id="hamburgerBtn"
             type="button" aria-label="Open menu" aria-controls="drawer" aria-expanded="false">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -91,6 +94,15 @@
         <line x1="4" y1="7"  x2="20" y2="7"/>
         <line x1="4" y1="13" x2="20" y2="13"/>
         <line x1="4" y1="19" x2="14" y2="19"/>
+      </svg>
+    </button>
+
+    <button class="back-btn" id="backBtn"
+            type="button" aria-label="Back to home">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
       </svg>
     </button>
 

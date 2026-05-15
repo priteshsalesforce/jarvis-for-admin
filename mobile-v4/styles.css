@@ -152,13 +152,17 @@ input, textarea { font: inherit; color: inherit; }
 .status-bar__icons svg { display: block; }
 
 /* ============================================================
-   FLOATING HAMBURGER — top-left, sits over every view (home,
-   chat, right). Same circular treatment in all three states.
+   FLOATING TOP CHROME — circular buttons that float over every
+   view (home, chat, right). Same translucent treatment.
+     • .ham-btn  — top-RIGHT, opens the drawer (every view).
+     • .back-btn — top-LEFT, only visible on the CHAT view; takes
+                   the user back to home and cancels any in-flight
+                   story.
    ============================================================ */
-.ham-btn {
+.ham-btn,
+.back-btn {
   position: absolute;
   top: calc(var(--status-bar-h) + env(safe-area-inset-top, 0px) + 12px);
-  left: 16px;
   width: 40px; height: 40px;
   border-radius: 50%;
   border: 1px solid var(--panel-hairline);
@@ -170,7 +174,11 @@ input, textarea { font: inherit; color: inherit; }
   box-shadow: var(--shadow-card);
   z-index: 10;
 }
-.ham-btn:active { transform: scale(.95); }
+.ham-btn  { right: 16px; }
+.back-btn { left: 16px; display: none; }     /* hidden by default */
+.app[data-view="chat"] .back-btn { display: inline-flex; }
+.ham-btn:active,
+.back-btn:active { transform: scale(.95); }
 
 /* ============================================================
    DRAWER (slide-in left) — Workspace + Settings + Jarvis +

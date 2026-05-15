@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+  preview.html — Desktop wrapper for mobile-v4
+  -----------------------------------------------------------------
+  Renders index.html inside a CSS iPhone bezel so reviewers can
+  see the mobile experience without grabbing a real phone. Three
+  device sizes (SE / Pro / Pro Max) and a theme toggle. The story
+  toggle deep-links into one of the two arcs by appending a hash
+  (`#incident` or `#add-agent`) — the embedded app picks it up.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvis · v4 Mobile · Preview</title>
+
+  <link rel="icon" type="image/png" href="assets/jarvis-mark.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem("jarvis-mobile-v4-theme");
+        if (saved === "dark" || saved === "light") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body class="preview-page">
+
+  <header class="preview-head">
+    <h1 class="preview-head__title">Jarvis · v4 Mobile</h1>
+    <p class="preview-head__sub">IT Manager · IndiaFirst Bank · John Mathew</p>
+  </header>
+
+  <div class="preview-controls">
+    <div class="seg" role="tablist" aria-label="Device size">
+      <button class="seg__btn" type="button" data-device="se"      aria-pressed="false">iPhone SE</button>
+      <button class="seg__btn" type="button" data-device="pro"     aria-pressed="true">iPhone 15 Pro</button>
+      <button class="seg__btn" type="button" data-device="pro-max" aria-pressed="false">Pro Max</button>
+    </div>
+    <button class="theme-toggle" type="button" id="themeToggle" aria-label="Toggle theme">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <span id="themeLabel">Light</span>
+    </button>
+  </div>
+
+  <!-- The phone itself -->
+  <div class="phone" id="phone" data-device="pro" role="figure"
+       aria-label="iPhone preview of the v4 mobile app">
+    <div class="phone__btns" aria-hidden="true"><span></span><span></span></div>
+    <div class="phone__island" aria-hidden="true"></div>
+    <div class="phone__screen">
+      <iframe class="phone__iframe" id="phoneFrame"
+              src="index.html"
+              title="Jarvis v4 mobile app preview"
+              loading="lazy"></iframe>
+    </div>
+  </div>
+
+  <p class="preview-foot">
+    The exact same app you'd run on a real phone — the bezel is just a
+    CSS frame around <code>index.html</code>. Open <code>index.html</code>
+    on your phone for the full-screen experience. Tap the
+    <strong>Add Agent</strong> chiclet for the wizard story, or the red
+    <strong>Open incident</strong> button on the home card for the P1
+    flow.
+  </p>
+
+  <script>
+    // ---------- Device size switcher ----------
+    const phone = document.getElementById("phone");
+    const segBtns = document.querySelectorAll(".seg__btn");
+    segBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        segBtns.forEach((b) => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+        phone.dataset.device = btn.dataset.device;
+      });
+    });
+
+    // ---------- Theme toggle (also flips iframe theme via localStorage) ----------
+    const themeBtn = document.getElementById("themeToggle");
+    const themeLabel = document.getElementById("themeLabel");
+    function syncLabel() {
+      const v = document.documentElement.getAttribute("data-theme");
+      themeLabel.textContent = v === "dark" ? "Dark" : v === "light" ? "Light" : "Auto";
+    }
+    syncLabel();
+    themeBtn.addEventListener("click", () => {
+      const cur = document.documentElement.getAttribute("data-theme");
+      const next = cur === "dark" ? "light" : cur === "light" ? "" : "dark";
+      if (next) document.documentElement.setAttribute("data-theme", next);
+      else      document.documentElement.removeAttribute("data-theme");
+      try { localStorage.setItem("jarvis-mobile-v4-theme", next); } catch (_) {}
+      syncLabel();
+      // Reload the iframe so its <html data-theme> is recomputed.
+      const f = document.getElementById("phoneFrame");
+      f.src = f.src;
+    });
+  </script>
+</body>
+</html>

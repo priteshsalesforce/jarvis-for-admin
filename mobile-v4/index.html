@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<!--
+  Jarvis · v4 Mobile (IT Manager · IndiaFirst Bank · John)
+  -----------------------------------------------------------------
+  Three-pane shell:
+    1. Home  — hero + chiclets + inline composer + cards
+    2. Chat  — Jarvis conversation, status lines, contextual chiclets
+    3. Right — Cockpit canvas (KPIs, AI Agents list, The Team)
+
+  Chrome:
+    • A floating circular hamburger button sits TOP-LEFT, over every
+      view (mirrors the position of the v4 desktop sidenav).
+    • The drawer (slide-in left) carries Workspace items, Settings,
+      a Jarvis pill, and the Profile block (name/role/email).
+    • One bottombar slot at the bottom — its contents swap based on
+      the current view:
+        - HOME  → empty (composer is inline up top)
+        - CHAT  → composer + small right-panel switcher pill
+        - RIGHT → small Jarvis pill + wider current-tab pill
+      When chat is generating UI for the right panel, the right
+      switcher pill pulses with a generating animation.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7ff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0a0f24" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Jarvis IT" />
+  <title>Jarvis · IT Manager · IndiaFirst Bank</title>
+
+  <link rel="icon" type="image/png" href="assets/jarvis-mark.png" />
+  <link rel="apple-touch-icon" href="assets/jarvis-mark.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <script>
+    // Theme: persisted choice wins, otherwise follow the system.
+    (function () {
+      try {
+        const saved = localStorage.getItem("jarvis-mobile-v4-theme");
+        if (saved === "dark" || saved === "light") {
+          document.documentElement.setAttribute("data-theme", saved);
+        }
+      } catch (_) {}
+    })();
+  </script>
+</head>
+<body>
+  <!-- Ambient background blobs -->
+  <div class="bg-orb bg-orb--a" aria-hidden="true"></div>
+  <div class="bg-orb bg-orb--b" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       APP SHELL
+       ============================================================ -->
+  <div class="app" id="app" data-view="home">
+
+    <!-- ----- Faux iOS status bar ----- -->
+    <div class="status-bar" id="statusBar">
+      <span class="status-bar__time" id="statusTime">9:41</span>
+      <span class="status-bar__icons" aria-hidden="true">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="none">
+          <rect x="0"  y="7" width="3" height="4" rx="0.6" fill="currentColor"/>
+          <rect x="4"  y="5" width="3" height="6" rx="0.6" fill="currentColor"/>
+          <rect x="8"  y="3" width="3" height="8" rx="0.6" fill="currentColor"/>
+          <rect x="12" y="0" width="3" height="11" rx="0.6" fill="currentColor"/>
+        </svg>
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="none">
+          <path d="M7.5 9.5a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z" fill="currentColor"/>
+          <path d="M3.7 6.6a5.4 5.4 0 0 1 7.6 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+          <path d="M.8 3.7a9.5 9.5 0 0 1 13.4 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13" fill="none">
+          <rect x="0.75" y="0.75" width="22" height="11" rx="3" stroke="currentColor" stroke-opacity=".55"/>
+          <rect x="2.5"  y="2.5"  width="18.5" height="7.5" rx="1.5" fill="currentColor"/>
+          <rect x="24.5" y="4.5" width="1.5"  height="4"  rx="0.5" fill="currentColor" opacity=".55"/>
+        </svg>
+      </span>
+    </div>
+
+    <!-- ----- Floating hamburger (top-left, sits over every view) ----- -->
+    <button class="ham-btn" id="hamburgerBtn"
+            type="button" aria-label="Open menu" aria-controls="drawer" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="4" y1="7"  x2="20" y2="7"/>
+        <line x1="4" y1="13" x2="20" y2="13"/>
+        <line x1="4" y1="19" x2="14" y2="19"/>
+      </svg>
+    </button>
+
+    <!-- ============================================================
+         DRAWER + SCRIM
+         (Profile lives INSIDE this drawer — same as desktop sidenav.)
+         ============================================================ -->
+    <div class="scrim" id="drawerScrim" aria-hidden="true"></div>
+    <aside class="drawer" id="drawer" aria-label="Menu" aria-hidden="true">
+      <div class="drawer__head">
+        <span class="drawer__brand-mark" aria-hidden="true">
+          <img src="assets/jarvis-mark.png" alt="" />
+        </span>
+        <div>
+          <div class="drawer__brand-text">Jarvis</div>
+          <div class="drawer__brand-sub">IT Manager workspace</div>
+        </div>
+      </div>
+
+      <nav class="drawer__nav" aria-label="Workspace">
+        <span class="drawer__group-label">Workspace</span>
+        <div id="drawerItems"></div>
+      </nav>
+
+      <div style="flex: 1; min-height: 6px;"></div>
+
+      <div class="drawer__jarvis" id="drawerJarvis" role="button" tabindex="0"
+           aria-label="Open Jarvis chat">
+        <span class="drawer__jarvis-mark"><img src="assets/jarvis-mark.png" alt=""/></span>
+        <div style="flex:1;">
+          <div class="drawer__jarvis-text">Jarvis</div>
+          <div class="drawer__jarvis-sub">Tap to chat</div>
+        </div>
+      </div>
+
+      <div class="drawer__profile">
+        <div class="drawer__profile-row">
+          <span class="drawer__profile-avatar" id="drawerAvatar">J</span>
+          <div class="drawer__profile-text">
+            <div class="drawer__profile-name" id="drawerName">John Mathew</div>
+            <div class="drawer__profile-role" id="drawerRole">IT Manager · IndiaFirst Bank</div>
+            <div class="drawer__profile-email" id="drawerEmail">john.mathew@indiafirst.com</div>
+          </div>
+        </div>
+        <div class="drawer__profile-actions">
+          <button class="drawer__profile-btn" id="drawerThemeBtn" type="button">Switch theme</button>
+          <button class="drawer__profile-btn" id="drawerSignOutBtn" type="button">Sign out</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============================================================
+         VIEW STACK — home / chat / right (slide horizontally)
+         ============================================================ -->
+    <div class="view-stack">
+      <!-- HOME -->
+      <section class="view view--home" id="viewHome" aria-label="Home">
+        <div class="home-scroll" id="home"></div>
+      </section>
+
+      <!-- CHAT -->
+      <section class="view view--chat" id="viewChat" aria-label="Chat with Jarvis">
+        <div class="chat">
+          <div class="thread" id="thread"></div>
+        </div>
+      </section>
+
+      <!-- RIGHT — Cockpit canvas -->
+      <section class="view view--right" id="viewRight" aria-label="Cockpit">
+        <div class="right-scroll" id="rightPane"></div>
+      </section>
+    </div>
+
+    <!-- Toast stack — director's notes. -->
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <!-- ============================================================
+         BOTTOMBAR — single slot, contents swap per view (see app.js
+         renderBottombar()). On the chat view, the right-pane switcher
+         lives here and pulses while Jarvis is generating UI.
+         ============================================================ -->
+    <div class="bottombar" id="bottombar" data-state="idle"></div>
+
+    <div class="home-indicator" aria-hidden="true"></div>
+  </div>
+
+  <script src="data/john.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

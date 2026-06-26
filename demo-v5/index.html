@@ -42,30 +42,29 @@
               (open ↔ closed). This replaces the previous floating FAB.
          ===================================================================== -->
     <aside class="sidenav" id="sidenav"
-           data-collapsed="false"
+           data-collapsed="true"
            role="navigation"
            aria-label="Primary navigation">
 
-      <!-- Header: hamburger -->
-      <div class="sidenav__head">
-        <button class="sidenav__hamburger" id="navToggle" type="button"
-                aria-label="Collapse sidebar" aria-expanded="true"
-                aria-controls="sidenav">
-          <i class="icon icon--hamburger" aria-hidden="true"></i>
-        </button>
-      </div>
-
       <!-- Workspace items.
-           Tower / Insight / Horizon / Lens start with `is-locked` which
-           hides them until the IT admin completes Setup; the JS strips
-           that class on `setup complete` and the items reveal in place.
-           Settings is the only nav item visible during Setup, and it's
-           marked active for the entire flow. Profile sits inline below
-           Settings (always visible). -->
+           Home is the persistent chat surface (the Setup story runs
+           here) and stays active until Setup completes. Tower / CMDB /
+           Studio / Horizon / Lens / Reports start `is-locked` + hidden
+           and reveal in place once Setup finishes. The rail is icon-only
+           (trial mode) — each item's label appears as a floating tooltip
+           on hover. -->
       <nav class="sidenav__group" aria-label="Workspace">
+        <button class="sidenav__item is-active"
+                type="button" id="navHome" data-nav="home"
+                aria-current="page">
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--home"></i>
+          </span>
+          <span class="sidenav__label">Home</span>
+        </button>
+
         <button class="sidenav__item is-locked"
-                type="button" id="navTower" data-nav="tower"
-                hidden>
+                type="button" id="navTower" data-nav="tower" hidden>
           <span class="sidenav__icon" aria-hidden="true">
             <i class="icon icon--tower"></i>
           </span>
@@ -73,17 +72,23 @@
         </button>
 
         <button class="sidenav__item is-locked"
-                type="button" id="navInsight" data-nav="insight"
-                hidden>
+                type="button" id="navCmdb" data-nav="cmdb" hidden>
           <span class="sidenav__icon" aria-hidden="true">
-            <i class="icon icon--insight"></i>
+            <i class="icon icon--cmdb"></i>
           </span>
-          <span class="sidenav__label">Insight</span>
+          <span class="sidenav__label">CMDB</span>
         </button>
 
         <button class="sidenav__item is-locked"
-                type="button" id="navHorizon" data-nav="horizon"
-                hidden>
+                type="button" id="navStudio" data-nav="studio" hidden>
+          <span class="sidenav__icon" aria-hidden="true">
+            <i class="icon icon--studio"></i>
+          </span>
+          <span class="sidenav__label">Studio</span>
+        </button>
+
+        <button class="sidenav__item is-locked"
+                type="button" id="navHorizon" data-nav="horizon" hidden>
           <span class="sidenav__icon" aria-hidden="true">
             <i class="icon icon--horizon"></i>
           </span>
@@ -91,22 +96,27 @@
         </button>
 
         <button class="sidenav__item is-locked"
-                type="button" id="navLens" data-nav="lens"
-                hidden>
+                type="button" id="navLens" data-nav="lens" hidden>
           <span class="sidenav__icon" aria-hidden="true">
             <i class="icon icon--lens"></i>
           </span>
           <span class="sidenav__label">Lens</span>
         </button>
 
-        <button class="sidenav__item is-active"
-                type="button" id="navSettings" data-nav="settings"
-                aria-current="page">
+        <button class="sidenav__item is-locked"
+                type="button" id="navReports" data-nav="reports" hidden>
           <span class="sidenav__icon" aria-hidden="true">
-            <i class="icon icon--settings"></i>
+            <i class="icon icon--reports"></i>
           </span>
-          <span class="sidenav__label">Settings</span>
+          <span class="sidenav__label">Reports</span>
         </button>
+      </nav>
+
+      <!-- Divider between workspace items and the profile cluster. -->
+      <div class="sidenav__divider" aria-hidden="true"></div>
+
+      <!-- Profile — always visible. -->
+      <nav class="sidenav__group" aria-label="Profile">
 
         <button class="sidenav__item"
                 type="button" id="navProfile" data-nav="profile"
@@ -121,17 +131,16 @@
       <!-- Spacer: flex-grows to push Jarvis to the bottom of the rail -->
       <div class="sidenav__spacer" aria-hidden="true"></div>
 
-      <!-- Jarvis — pinned bottom. Click toggles the chat panel open/closed.
-           Replaces the previous floating FAB so the chat affordance lives
-           in the same rail as the rest of the navigation. -->
+      <!-- Agentforce — pinned bottom. Click toggles the chat panel. -->
       <div class="sidenav__foot">
-        <button class="sidenav__jarvis" id="navJarvis" type="button"
-                title="Open Jarvis"
-                aria-label="Open Jarvis chat panel"
+        <button class="sidenav__agentforce" id="navAgentforce" type="button"
+                title="Hide Agentforce"
+                aria-label="Hide Agentforce chat panel"
                 aria-pressed="true">
-          <span class="sidenav__jarvis-mark" aria-hidden="true">
-            <img src="assets/jarvis-mark.png" alt="" />
+          <span class="sidenav__agentforce-mark" aria-hidden="true">
+            <img src="assets/agentforce.png" alt="" />
           </span>
+          <span class="sidenav__label">Agentforce</span>
         </button>
       </div>
     </aside>

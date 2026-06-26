@@ -52,14 +52,15 @@
   // Jarvis tile is pinned to the bottom of the rail and toggles
   // the chat panel.
   const $sidenav         = $("#sidenav");
-  const $navToggle       = $("#navToggle");
+  const $navHome         = $("#navHome");
   const $navTower        = $("#navTower");
-  const $navInsight      = $("#navInsight");
+  const $navCmdb         = $("#navCmdb");
+  const $navStudio       = $("#navStudio");
   const $navHorizon      = $("#navHorizon");
   const $navLens         = $("#navLens");
-  const $navSettings     = $("#navSettings");
+  const $navReports      = $("#navReports");
   const $navProfile      = $("#navProfile");
-  const $navJarvis       = $("#navJarvis");
+  const $navAgentforce   = $("#navAgentforce");
 
   // Director's-notes stack (bottom-right toasts — used for "Setup
   // complete · Cockpit unlocked" and similar quiet system updates).
@@ -1529,8 +1530,8 @@
 
       pushDirectorNote({
         title: "Setup complete",
-        text: "Tower, Insight, Horizon, and Lens are now available in the sidebar.",
-        sub: "You can come back to Settings any time.",
+        text: "Tower, CMDB, Studio, Horizon, Lens, and Reports are now available in the sidebar.",
+        sub: "Find them on the left rail any time.",
         actions: [
           { label: "Open Tower", primary: true,
             onClick: () => navigateTo("tower") },
@@ -1555,9 +1556,11 @@
     const animate = !!(options && options.animate);
     const gatedItems = [
       { el: $navTower,   key: "tower",   title: "Tower · your day-1 control surface" },
-      { el: $navInsight, key: "insight", title: "Insight · trends, signals, and patterns" },
+      { el: $navCmdb,    key: "cmdb",    title: "CMDB · your configuration graph" },
+      { el: $navStudio,  key: "studio",  title: "Studio · build and tune agents" },
       { el: $navHorizon, key: "horizon", title: "Horizon · long-range planning" },
       { el: $navLens,    key: "lens",    title: "Lens · search across your IT graph" },
+      { el: $navReports, key: "reports", title: "Reports · metrics and rollups" },
     ];
     gatedItems.forEach(({ el, title }, i) => {
       if (!el) return;
@@ -1600,7 +1603,7 @@
 
   function setActiveNavItem(key) {
     const navKey = NAV_KEY_ALIAS[key] || key;
-    [$navTower, $navInsight, $navHorizon, $navLens, $navSettings, $navProfile]
+    [$navHome, $navTower, $navCmdb, $navStudio, $navHorizon, $navLens, $navReports, $navProfile]
       .forEach((el) => {
         if (!el) return;
         const active = el.dataset.nav === navKey;
@@ -1610,11 +1613,10 @@
       });
   }
 
-  function setCollapsed(collapsed) {
-    $sidenav.dataset.collapsed = collapsed ? "true" : "false";
-    $navToggle.setAttribute("aria-expanded", String(!collapsed));
-    $navToggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
-    try { localStorage.setItem(SIDENAV_KEY, collapsed ? "1" : "0"); } catch (_) {}
+  // Trial mode — the rail is permanently icon-only (collapsed). There is
+  // no hamburger toggle; each item reveals its label as a hover tooltip.
+  function setCollapsed() {
+    $sidenav.dataset.collapsed = "true";
   }
 
   // -------------------------------------------------------------
@@ -1650,12 +1652,12 @@
     // Reflect the chat-panel state on the Jarvis tile.
     //   aria-pressed=true  → chat is OPEN  (toggle would close it)
     //   aria-pressed=false → chat is CLOSED (toggle would open it)
-    if ($navJarvis) {
-      $navJarvis.setAttribute("aria-pressed", String(!closed));
-      $navJarvis.title = closed ? "Open Jarvis" : "Hide Jarvis";
-      $navJarvis.setAttribute(
+    if ($navAgentforce) {
+      $navAgentforce.setAttribute("aria-pressed", String(!closed));
+      $navAgentforce.title = closed ? "Open Agentforce" : "Hide Agentforce";
+      $navAgentforce.setAttribute(
         "aria-label",
-        closed ? "Open Jarvis chat panel" : "Hide Jarvis chat panel"
+        closed ? "Open Agentforce chat panel" : "Hide Agentforce chat panel"
       );
     }
 
@@ -1755,6 +1757,21 @@
     lens: {
       title: "Lens",
       lead: "Search across every service, asset, and incident in the ontology.",
+      hint: "Design coming soon.",
+    },
+    cmdb: {
+      title: "CMDB",
+      lead: "Your configuration graph — services, assets, and their relationships.",
+      hint: "Design coming soon.",
+    },
+    studio: {
+      title: "Studio",
+      lead: "Build, tune, and govern the agents that run your IT operations.",
+      hint: "Design coming soon.",
+    },
+    reports: {
+      title: "Reports",
+      lead: "Metrics, rollups, and exports across your IT graph.",
       hint: "Design coming soon.",
     },
     // Live incident detail surface — mounted by the Phase 2 incident
@@ -2322,6 +2339,7 @@
     // workspace pages are reachable from boot.
     setupComplete = true;
     applySidenavGating();
+    setActiveNavItem("home");
 
     // Tear down any running incident: clears the bar, cancels the
     // pending timer, wipes the timeline. Called both on initial
@@ -2377,7 +2395,7 @@
     $stageMain.querySelectorAll(".chapter-welcome").forEach((n) => n.remove());
     lastPersona = null;
     closeBrowser();
-    setActiveNavItem("settings");
+    setActiveNavItem("home");
 
     runStory(chapter.story || []);
   }
@@ -3552,10 +3570,7 @@
   // -------------------------------------------------------------
   // Wiring
   // -------------------------------------------------------------
-  $navToggle.addEventListener("click", () => {
-    const isCollapsed = $sidenav.dataset.collapsed === "true";
-    setCollapsed(!isCollapsed);
-  });
+  // Trial mode has no hamburger — the rail stays collapsed (icon-only).
 
   // Chat-panel header X — dismiss the chat (workspace page below
   // takes the full canvas). `setChatClosed` also collapses the
@@ -3819,16 +3834,23 @@
     }
   });
 
-  // Jarvis tile in the sidenav — toggle the chat panel open/closed.
+  // Agentforce tile in the sidenav — toggle the chat panel open/closed.
   // `aria-pressed=true` means the chat is currently open, so a click
   // should close it; `aria-pressed=false` means it's closed, so a
   // click should open it.
-  $navJarvis?.addEventListener("click", () => {
-    const open = $navJarvis.getAttribute("aria-pressed") === "true";
+  $navAgentforce?.addEventListener("click", () => {
+    const open = $navAgentforce.getAttribute("aria-pressed") === "true";
     setChatClosed(open);
   });
 
-  $navSettings.addEventListener("click", () => startSetup());
+  // Home — the persistent chat surface. Restores the chat panel and
+  // returns to the demo's chat landing: the steady-state home where
+  // one exists (v4/v5), otherwise the Setup story (v3).
+  $navHome?.addEventListener("click", () => {
+    setChatClosed(false);
+    if (typeof startHome === "function") startHome();
+    else startSetup();
+  });
 
   // Gated workspace nav — each item opens its page in the right-side
   // panel via `navigateTo`. The `disabled` guard is belt-and-braces;
@@ -3838,9 +3860,13 @@
     if ($navTower.disabled) { e.preventDefault(); return; }
     navigateTo("tower");
   });
-  $navInsight?.addEventListener("click", (e) => {
-    if ($navInsight.disabled) { e.preventDefault(); return; }
-    navigateTo("insight");
+  $navCmdb?.addEventListener("click", (e) => {
+    if ($navCmdb.disabled) { e.preventDefault(); return; }
+    navigateTo("cmdb");
+  });
+  $navStudio?.addEventListener("click", (e) => {
+    if ($navStudio.disabled) { e.preventDefault(); return; }
+    navigateTo("studio");
   });
   $navHorizon?.addEventListener("click", (e) => {
     if ($navHorizon.disabled) { e.preventDefault(); return; }
@@ -3849,6 +3875,10 @@
   $navLens?.addEventListener("click", (e) => {
     if ($navLens.disabled) { e.preventDefault(); return; }
     navigateTo("lens");
+  });
+  $navReports?.addEventListener("click", (e) => {
+    if ($navReports.disabled) { e.preventDefault(); return; }
+    navigateTo("reports");
   });
 
   $navProfile?.addEventListener("click", () => {
@@ -3882,17 +3912,19 @@
   // chat panel so the surface gets the entire canvas.
   // -------------------------------------------------------------
   (function bootstrap() {
-    let initialCollapsed = false;
-    try { initialCollapsed = localStorage.getItem(SIDENAV_KEY) === "1"; } catch (_) {}
-    setCollapsed(initialCollapsed);
+    // Trial mode — the rail is always collapsed (icon-only).
+    setCollapsed();
 
     const hash = (location.hash || "").replace(/^#/, "").toLowerCase();
     const deepLinkPage = {
       cockpit: "tower",      // Cockpit is the Tower nav item's page
       tower:   "tower",
+      cmdb:    "cmdb",
+      studio:  "studio",
       insight: "insight",
       horizon: "horizon",
       lens:    "lens",
+      reports: "reports",
     }[hash];
 
     if (deepLinkPage) {
@@ -3907,7 +3939,7 @@
     } else if (location.hash.toLowerCase() === "#setup") {
       // Explicit escape hatch — the original v3 Setup story is
       // still reachable for anyone who wants to replay it. Lives
-      // at the Settings nav item too (see $navSettings handler).
+      // at the Home nav item too (see $navHome handler).
       setChatClosed(false, { instant: true });
       applySidenavGating();
       startSetup();

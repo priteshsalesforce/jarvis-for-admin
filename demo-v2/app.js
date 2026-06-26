@@ -55,6 +55,19 @@
   const $browserClose    = $("#browserClose");
   const $browserFullscreen = $("#browserFullscreen");
 
+  // Left rail (sidenav). Home, Profile, and the Agentforce mascot are always
+  // visible; the workspace items below stay hidden until Setup completes.
+  const $sidenav       = $("#sidenav");
+  const $navAgentforce = $("#navAgentforce");
+  const GATED_NAV = [
+    { id: "navTower",   title: "Tower · your day-1 control surface" },
+    { id: "navCmdb",    title: "CMDB · your configuration graph" },
+    { id: "navStudio",  title: "Studio · build and tune your agents" },
+    { id: "navHorizon", title: "Horizon · long-range planning" },
+    { id: "navLens",    title: "Lens · search across your IT graph" },
+    { id: "navReports", title: "Reports · trends, signals, and patterns" },
+  ].map((it) => ({ el: $("#" + it.id), title: it.title }));
+
   // Default title for each registered page. The browser step in a story
   // can override these by passing `title: "..."` explicitly. We keep this
   // map close to the engine so authors don't have to repeat themselves
@@ -750,6 +763,53 @@
       .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
+  // -------------------------------------------------------------
+  // Left rail (sidenav) setup-gating
+  //   • During Setup only Home, Profile, and the Agentforce mascot show.
+  //   • When the Cockpit opens at the very end of the chapter, the
+  //     workspace items (Tower · CMDB · Studio · Horizon · Lens · Reports)
+  //     reveal in place with a staggered cascade.
+  // -------------------------------------------------------------
+  let setupComplete = false;
+
+  function applySidenavGating(animate) {
+    GATED_NAV.forEach(({ el, title }, i) => {
+      if (!el) return;
+      const wasHidden =
+        el.classList.contains("is-locked") || el.hasAttribute("hidden");
+      if (setupComplete) {
+        el.classList.remove("is-locked");
+        el.removeAttribute("hidden");
+        if (title) el.title = title;
+        if (animate && wasHidden) {
+          el.classList.add("sidenav__item--revealing");
+          el.style.setProperty("--reveal-delay", i * 90 + "ms");
+          el.addEventListener("animationend", function done() {
+            el.classList.remove("sidenav__item--revealing");
+            el.style.removeProperty("--reveal-delay");
+            el.removeEventListener("animationend", done);
+          });
+        }
+      } else {
+        el.classList.add("is-locked");
+        el.setAttribute("hidden", "");
+        el.classList.remove("sidenav__item--revealing");
+        el.style.removeProperty("--reveal-delay");
+      }
+    });
+  }
+
+  function completeSetup() {
+    if (setupComplete) return;
+    setupComplete = true;
+    applySidenavGating(true);
+  }
+
+  function resetSidenavGating() {
+    setupComplete = false;
+    applySidenavGating(false);
+  }
+
   function openBrowser(url, pageKey, title) {
     if (!activeChapter) return; // browser is chapter-only
     $sidepanel.removeAttribute("inert");
@@ -769,6 +829,13 @@
       });
     } else {
       $browserView.innerHTML = `<div class="page"><p>${pageKey || "Empty page"}</p></div>`;
+    }
+
+    // The Cockpit is the end-of-Setup surface — once it opens, the full
+    // workspace rail unlocks. Delay slightly so the reveal cascade plays
+    // after the side panel has slid into view.
+    if (pageKey === "cockpit") {
+      setTimeout(completeSetup, 480);
     }
   }
 
@@ -918,41 +985,18 @@
   function renderEndOfChapter() {
     const here = activeChapter;
     if (!here) return;
-    const idx = (window.CHAPTERS || []).findIndex((c) => c.id === here.id);
-    const next = (window.CHAPTERS || [])[idx + 1];
 
-    const actions = [];
-    if (next) {
-      actions.push({
-        label: `Next: **${next.persona.name} — ${next.title}** →`,
-        primary: true,
-        onClick: () => JARVIS.startChapter(next.id),
-      });
-    }
-    actions.push({
-      label: "Back to lobby",
-      onClick: () => JARVIS.backToLobby(),
-    });
+    // Fallback: make sure the full rail is unlocked by the end of the
+    // chapter even if the Cockpit handoff step was skipped.
+    completeSetup();
 
+    // Setup-only build: no "next chapter" or "back to lobby" — just the
+    // closing recap note for the viewer.
     pushDirectorNote({
       title: `End of ${here.persona.name} — ${here.title}`,
-      text: here.endline || "Ready for the next scene?",
-      sub: next ? `Chapter ${idx + 2} of ${(window.CHAPTERS || []).length}` : "Final chapter",
-      actions,
+      text: here.endline || "Setup complete.",
+      sub: "Setup demo",
     });
-
-    // Mark chapter watched in the lobby
-    try {
-      const watched = JSON.parse(localStorage.getItem("jarvis-watched") || "[]");
-      if (!watched.includes(here.id)) watched.push(here.id);
-      localStorage.setItem("jarvis-watched", JSON.stringify(watched));
-    } catch (_) {}
-
-    // Auto-advance when "Play all" is on
-    if (playAllQueue.length > 0) {
-      const nextId = playAllQueue.shift();
-      setTimeout(() => JARVIS.startChapter(nextId), 1200);
-    }
   }
 
   // -------------------------------------------------------------
@@ -1160,8 +1204,8 @@
       activeChapter = chapter;
       CURRENT_PERSONA = chapter.persona;
 
-      // Topbar chrome
-      $btnBackLobby.removeAttribute("hidden");
+      // Topbar chrome — Setup-only build has no lobby, so the
+      // "Back to lobby" affordance stays hidden.
       $chapterPill.removeAttribute("hidden");
       $chapterAvatar.textContent = chapter.persona.avatarText || "?";
       $chapterAvatar.style.setProperty("--persona-accent", chapter.persona.accent || "var(--accent-1)");
@@ -1180,8 +1224,8 @@
         $sfAvatar.title = `${chapter.persona.name} · ${chapter.persona.role}`;
       }
 
-      // Reveal workspace, hide lobby
-      $lobby.setAttribute("hidden", "");
+      // Reveal workspace (lobby markup no longer exists in this build)
+      if ($lobby) $lobby.setAttribute("hidden", "");
       $workspace.removeAttribute("hidden");
 
       // Reset chat state
@@ -1193,52 +1237,35 @@
       clearDirectorStack();
       renderSuggestChips();
 
+      // Re-lock the rail to the Setup view on every (re)start.
+      resetSidenavGating();
+
       // Bump runToken so any prior runStory loop bails immediately
       runToken += 1;
       runStory(chapter.story || []);
     },
 
+    // Setup-only build: there is no lobby to return to. Treat any
+    // "back" request as a restart of the Setup chapter from a clean slate.
     backToLobby() {
-      activeChapter = null;
-      CURRENT_PERSONA = null;
-      runToken += 1;
-
-      $btnBackLobby.setAttribute("hidden", "");
-      $chapterPill.setAttribute("hidden", "");
-      if ($sfAvatar) {
-        $sfAvatar.style.background = "";
-        $sfAvatar.setAttribute("aria-label", "View profile");
-        $sfAvatar.title = "Profile";
-      }
-
-      $workspace.setAttribute("hidden", "");
-      $workspace.classList.remove("workspace--welcome");
-      $lobby.removeAttribute("hidden");
-
-      $thread.innerHTML = "";
-      // Clear any lingering chapter-welcome hero so the next chapter
-      // starts from a clean stage.
-      $stageMain.querySelectorAll(".chapter-welcome").forEach((n) => n.remove());
-      closeBrowser();
-      clearDirectorStack();
-      renderLobbyGrid();
-      renderSuggestChips();
-      lastPersona = null;
-      // Cancel any in-flight Play-All
       playAllQueue = [];
+      window.JARVIS.startChapter("admin-sarah");
     },
   };
 
   // -------------------------------------------------------------
   // Wiring
   // -------------------------------------------------------------
-  $btnBackLobby.addEventListener("click", () => JARVIS.backToLobby());
+  $btnBackLobby?.addEventListener("click", () => JARVIS.backToLobby());
+
+  // Agentforce mascot — a gentle nudge to the composer to talk to Jarvis.
+  $navAgentforce?.addEventListener("click", () => $whisperInput?.focus());
 
   $ctaPlayAll?.addEventListener("click", () => startPlayAll());
 
-  // Lobby whisper
-  $lobbyWhisperSend.addEventListener("click", () => handleWhisper($lobbyWhisperInput.value));
-  $lobbyWhisperInput.addEventListener("keydown", (e) => {
+  // Lobby whisper (lobby markup is absent in the Setup-only build)
+  $lobbyWhisperSend?.addEventListener("click", () => handleWhisper($lobbyWhisperInput.value));
+  $lobbyWhisperInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") handleWhisper($lobbyWhisperInput.value);
   });
 
@@ -1359,13 +1386,8 @@
   });
 
   // -------------------------------------------------------------
-  // Bootstrap — render the lobby once all story files have loaded
+  // Bootstrap — this build is Setup-only. There is no lobby; boot
+  // straight into Sarah's "The Setup" chapter every time.
   // -------------------------------------------------------------
-  renderLobbyGrid();
-  renderSuggestChips();
-
-  // If the page was loaded with a persona slug in the URL, jump
-  // straight into that chapter instead of showing the lobby.
-  const initialChapterId = chapterIdFromHash();
-  if (initialChapterId) window.JARVIS.startChapter(initialChapterId);
+  window.JARVIS.startChapter("admin-sarah");
 })();

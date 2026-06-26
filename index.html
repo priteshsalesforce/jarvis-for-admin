@@ -3,79 +3,410 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jarvis · Proactive ITSM</title>
+  <title>Jarvis · Proactive ITSM — Demo Studio</title>
   <link rel="icon" type="image/png" href="demo-v6/assets/jarvis-mark.png" />
-  <!-- The canonical demo lives in /demo-v6 so the chapter stories,
-       assets, and styles can stay together as one self-contained
-       experience. This root page just bounces visitors there so the
-       Pages URL `priteshsalesforce.github.io/jarvis-for-admin/`
-       drops them straight into the demo.
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-       The redirect is JS-only on purpose: a <meta refresh> tag can't
-       carry the URL fragment (`#admin`, `#cto`, …) so any per-persona
-       share link would lose its hash before app.js could read it. By
-       running JS first we always forward `demo-v4/` + the live hash,
-       which is what the in-app router needs to deep-link straight
-       into a chapter. <noscript> users get a manual link instead. -->
+  <!-- Honor the shared Jarvis theme so the shell bar matches the embedded demo. -->
   <script>
-    // Forward to the v6 demo. We append `location.hash` so any
-    // share link (e.g. `…/#lens`, `…/#workitem`) survives the
-    // redirect and lands the viewer directly on the right surface.
-    // Using `replace()` keeps this bouncer out of the back stack.
-    window.location.replace("demo-v6/" + window.location.search + window.location.hash);
+    (function () {
+      try {
+        var t = localStorage.getItem("jarvis-theme");
+        if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+      } catch (_) {}
+    })();
   </script>
-  <noscript>
-    <meta http-equiv="refresh" content="0; url=demo-v4/" />
-  </noscript>
+
   <style>
-    :root { color-scheme: light dark; }
-    html, body { margin: 0; height: 100%; }
+    /* ============================================================
+       Demo Studio shell — a single black bar + dropdown that swaps
+       the active demo inside an iframe. Each embedded demo keeps its
+       own files; we just hide its in-app black bar so only this one
+       shows. Tokens mirror the demos' .topbar-meta aesthetic.
+       ============================================================ */
+    :root {
+      --shell-bar-bg: #0b0e16;
+      --shell-bar-fg: #f4f6fc;
+      --shell-bar-muted: #9aa6c4;
+      --shell-bar-line: rgba(255, 255, 255, .12);
+      --shell-bar-surface: rgba(255, 255, 255, .07);
+      --shell-bar-surface-hover: rgba(255, 255, 255, .14);
+      --shell-accent: #1b96ff;
+      --shell-ok: #2ecf8f;
+      --shell-bar-h: 48px;
+      --shell-page-bg: #e9edf6;
+      --shell-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    [data-theme="dark"] {
+      --shell-page-bg: #06081a;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(180deg, #f7f9ff 0%, #eef1ff 100%);
-      color: #2a3358;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      padding: 24px;
+      font-family: var(--shell-font);
+      background: var(--shell-page-bg);
+      color: var(--shell-bar-fg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
-    .card {
-      max-width: 420px;
-      padding: 28px 32px;
-      background: rgba(255, 255, 255, .82);
-      border: 1px solid rgba(80, 100, 180, .14);
-      border-radius: 18px;
-      box-shadow: 0 24px 48px rgba(40, 60, 140, .14);
-      backdrop-filter: saturate(160%) blur(18px);
+
+    /* ---- Black meta bar ---- */
+    .shell-bar {
+      flex: 0 0 var(--shell-bar-h);
+      height: var(--shell-bar-h);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 14px;
+      background: var(--shell-bar-bg);
+      color: var(--shell-bar-fg);
+      border-bottom: 1px solid var(--shell-bar-line);
+      z-index: 10;
     }
-    .mark {
-      width: 56px; height: 56px; margin-bottom: 14px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #2f5cff 0%, #6a4dff 50%, #a25cff 100%);
-      box-shadow: 0 12px 28px rgba(122, 92, 255, .28);
+    .shell-bar__brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 700;
+      font-size: 13.5px;
+      letter-spacing: .01em;
+      white-space: nowrap;
     }
-    h1 { margin: 0 0 6px; font-size: 20px; letter-spacing: -.01em; }
-    p  { margin: 0 0 16px; font-size: 14px; color: #5a6892; line-height: 1.5; }
-    a.btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 18px; border-radius: 999px;
-      background: #2f5cff; color: #fff; text-decoration: none;
-      font-weight: 600; font-size: 14px;
-      box-shadow: 0 10px 24px rgba(47, 92, 255, .28);
+    .shell-bar__mark {
+      width: 22px; height: 22px; border-radius: 6px; display: block;
     }
-    @media (prefers-color-scheme: dark) {
-      body { background: linear-gradient(180deg, #06081a 0%, #0a1230 100%); color: #e6e9f4; }
-      .card { background: rgba(20, 28, 56, .72); border-color: rgba(120, 140, 220, .18); }
-      p { color: #a8b1d6; }
+    .shell-bar__brand-text { color: var(--shell-bar-fg); }
+    .shell-bar__brand-text small { color: var(--shell-bar-muted); font-weight: 500; }
+
+    /* ---- Demo selector ---- */
+    .shell-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 6px;
+    }
+    .shell-select__label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--shell-bar-muted);
+    }
+    .shell-select select {
+      appearance: none;
+      -webkit-appearance: none;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--shell-bar-fg);
+      background: var(--shell-bar-surface);
+      border: 1px solid var(--shell-bar-line);
+      border-radius: 8px;
+      padding: 7px 30px 7px 12px;
+      cursor: pointer;
+      min-width: 220px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239aa6c4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: background .14s ease, border-color .14s ease;
+    }
+    .shell-select select:hover { background-color: var(--shell-bar-surface-hover); }
+    .shell-select select:focus-visible {
+      outline: none;
+      border-color: var(--shell-accent);
+      box-shadow: 0 0 0 3px rgba(27, 150, 255, .35);
+    }
+    .shell-select select option { color: #12151f; background: #fff; }
+
+    .shell-bar__spacer { flex: 1 1 auto; }
+
+    /* ---- Right side: theme + status ---- */
+    .shell-bar__right { display: inline-flex; align-items: center; gap: 12px; }
+    .shell-iconbtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      height: 32px;
+      padding: 0 11px;
+      border-radius: 8px;
+      border: 1px solid var(--shell-bar-line);
+      background: var(--shell-bar-surface);
+      color: var(--shell-bar-fg);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .14s ease;
+    }
+    .shell-iconbtn:hover { background: var(--shell-bar-surface-hover); }
+    .shell-iconbtn:focus-visible {
+      outline: none;
+      border-color: var(--shell-accent);
+      box-shadow: 0 0 0 3px rgba(27, 150, 255, .35);
+    }
+    .shell-iconbtn svg { display: block; }
+    .theme-toggle__icon--sun { display: none; }
+    [data-theme="dark"] .theme-toggle__icon--moon { display: none; }
+    [data-theme="dark"] .theme-toggle__icon--sun { display: block; }
+
+    .shell-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--shell-bar-muted);
+      white-space: nowrap;
+    }
+    .shell-status__dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--shell-ok);
+      box-shadow: 0 0 0 3px rgba(46, 207, 143, .22);
+    }
+
+    /* ---- Stage / iframe ---- */
+    .shell-stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      background: var(--shell-page-bg);
+    }
+    .shell-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: var(--shell-page-bg);
+      /* Hidden until load so the embedded demo's own bar can't flash. */
+      visibility: hidden;
+    }
+    .shell-frame.is-ready { visibility: visible; }
+
+    .shell-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #5a6892;
+      font-size: 14px;
+      font-weight: 600;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity .2s ease;
+    }
+    [data-theme="dark"] .shell-loading { color: #9aa6c4; }
+    .shell-loading.is-hidden { opacity: 0; }
+    .shell-loading__spin {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(120, 140, 200, .35);
+      border-top-color: var(--shell-accent);
+      animation: shellspin .8s linear infinite;
+    }
+    @keyframes shellspin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .shell-loading__spin { animation: none; } }
+
+    @media (max-width: 640px) {
+      .shell-bar { gap: 8px; padding: 0 10px; }
+      .shell-bar__brand-text, .shell-select__label, .shell-status { display: none; }
+      .shell-select select { min-width: 150px; }
     }
   </style>
 </head>
 <body>
-  <div class="card" role="status" aria-live="polite">
-    <div class="mark" aria-hidden="true"></div>
-    <h1>Jarvis · Proactive ITSM</h1>
-    <p>Loading the demo…</p>
-    <a class="btn" href="demo-v6/">Open the demo</a>
-  </div>
+  <header class="shell-bar" role="navigation" aria-label="Demo studio navigation">
+    <span class="shell-bar__brand">
+      <img class="shell-bar__mark" src="demo-v6/assets/jarvis-mark.png" alt="" aria-hidden="true" />
+      <span class="shell-bar__brand-text">Jarvis · Demos <small>Proactive ITSM</small></span>
+    </span>
+
+    <label class="shell-select">
+      <span class="shell-select__label">Demo</span>
+      <select id="demoSelect" aria-label="Select a demo to view">
+        <option value="v2">Setup (v2)</option>
+        <option value="v3">v3 — Agentic IT Architect</option>
+        <option value="v4">v4 — Control Room</option>
+        <option value="v5">v5 — Onboarding Day</option>
+        <option value="v6">v6 — The Lens</option>
+        <option value="mobile-v4">Mobile v4 (bezel)</option>
+        <option value="mobile-v5">Mobile v5 (bezel)</option>
+      </select>
+    </label>
+
+    <span class="shell-bar__spacer"></span>
+
+    <div class="shell-bar__right">
+      <button class="shell-iconbtn" id="themeToggle" type="button"
+              aria-label="Switch theme" aria-pressed="false" title="Switch theme">
+        <svg class="theme-toggle__icon theme-toggle__icon--moon"
+             viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg class="theme-toggle__icon theme-toggle__icon--sun"
+             viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+        <span id="themeLabel">Dark</span>
+      </button>
+      <span class="shell-status">
+        <span class="shell-status__dot" aria-hidden="true"></span>
+        <span>Jarvis online</span>
+      </span>
+    </div>
+  </header>
+
+  <main class="shell-stage">
+    <div class="shell-loading" id="shellLoading" aria-hidden="true">
+      <span class="shell-loading__spin"></span>
+      <span>Loading demo…</span>
+    </div>
+    <iframe class="shell-frame" id="demoFrame" title="Jarvis demo" allow="fullscreen"></iframe>
+  </main>
+
+  <script>
+  (function () {
+    // -----------------------------------------------------------------
+    // Demo registry — token -> { label, url, mobile }.
+    // Desktop demos get ?embed=1 (a marker); their own .topbar-meta is
+    // hidden via injected CSS on load so only the shell bar shows.
+    // Mobile entries load the bezel preview (no .topbar-meta).
+    // -----------------------------------------------------------------
+    var DEMOS = {
+      "v2":        { url: "demo-v2/?embed=1",  mobile: false },
+      "v3":        { url: "demo-v3/?embed=1",  mobile: false },
+      "v4":        { url: "demo-v4/?embed=1",  mobile: false },
+      "v5":        { url: "demo-v5/?embed=1",  mobile: false },
+      "v6":        { url: "demo-v6/?embed=1",  mobile: false },
+      "mobile-v4": { url: "mobile-v4/preview.html", mobile: true },
+      "mobile-v5": { url: "mobile-v5/preview.html", mobile: true }
+    };
+    var DEFAULT_TOKEN = "v6";
+    // Bump to force embedded demos past cached copies after an update.
+    var BUILD = "2";
+
+    var frame   = document.getElementById("demoFrame");
+    var select  = document.getElementById("demoSelect");
+    var loading = document.getElementById("shellLoading");
+
+    // CSS injected into each embedded desktop demo to suppress its own
+    // in-app black bar so the shell's bar is the only one visible.
+    var HIDE_INNER_BAR = ".topbar-meta{display:none !important;}";
+
+    var current = null;
+
+    function reveal() {
+      frame.classList.add("is-ready");
+      loading.classList.add("is-hidden");
+    }
+
+    function onFrameLoad() {
+      // Same-origin: inject a style tag to hide the embedded demo's own
+      // black bar (desktop demos only — mobile bezels have no .topbar-meta).
+      var isMobile = DEMOS[current] && DEMOS[current].mobile;
+      if (!isMobile) {
+        try {
+          var doc = frame.contentDocument;
+          if (doc && !doc.getElementById("__shellHideBar")) {
+            var st = doc.createElement("style");
+            st.id = "__shellHideBar";
+            st.textContent = HIDE_INNER_BAR;
+            (doc.head || doc.documentElement).appendChild(st);
+          }
+        } catch (_) {
+          // Cross-origin (shouldn't happen for same-origin Pages) — skip.
+        }
+      }
+      reveal();
+    }
+
+    frame.addEventListener("load", onFrameLoad);
+
+    function selectDemo(token, opts) {
+      opts = opts || {};
+      if (!DEMOS[token]) token = DEFAULT_TOKEN;
+      current = token;
+
+      // Append a build token so the embedded demo (and its scripts)
+      // refresh past sticky caches after an update.
+      var url = DEMOS[token].url;
+      url += (url.indexOf("?") === -1 ? "?" : "&") + "v=" + BUILD;
+      // Forward a legacy chapter sub-hash into the default demo so old
+      // share links like `#lens` still land somewhere sensible.
+      if (opts.subHash) {
+        url += "#" + opts.subHash;
+      }
+
+      // Hide + show loading while the next demo boots.
+      frame.classList.remove("is-ready");
+      loading.classList.remove("is-hidden");
+
+      if (select.value !== token) select.value = token;
+      frame.src = url;
+
+      if (!opts.skipHash) {
+        var newHash = "#" + token;
+        if (location.hash !== newHash) {
+          history.replaceState(null, "", newHash);
+        }
+      }
+    }
+
+    // ---- Dropdown ----
+    select.addEventListener("change", function () {
+      selectDemo(select.value);
+    });
+
+    // ---- Theme toggle (writes the shared key + reloads the frame) ----
+    var themeToggle = document.getElementById("themeToggle");
+    var themeLabel  = document.getElementById("themeLabel");
+    function syncThemeLabel() {
+      var dark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (themeLabel) themeLabel.textContent = dark ? "Light" : "Dark";
+      themeToggle.setAttribute("aria-pressed", dark ? "true" : "false");
+    }
+    syncThemeLabel();
+    themeToggle.addEventListener("click", function () {
+      var dark = document.documentElement.getAttribute("data-theme") === "dark";
+      var next = dark ? "" : "dark";
+      if (next) document.documentElement.setAttribute("data-theme", next);
+      else      document.documentElement.removeAttribute("data-theme");
+      try { localStorage.setItem("jarvis-theme", next || "light"); } catch (_) {}
+      syncThemeLabel();
+      // Reload the frame so the embedded demo re-reads the theme on boot.
+      frame.classList.remove("is-ready");
+      loading.classList.remove("is-hidden");
+      frame.src = frame.src;
+    });
+
+    // ---- Initial route from the URL hash ----
+    function boot() {
+      var raw = (location.hash || "").replace(/^#/, "").trim().toLowerCase();
+      if (DEMOS[raw]) {
+        selectDemo(raw, { skipHash: true });
+      } else if (raw) {
+        // Unknown hash — treat as a legacy chapter token; show the
+        // default demo and forward the sub-hash into it.
+        selectDemo(DEFAULT_TOKEN, { subHash: raw });
+      } else {
+        selectDemo(DEFAULT_TOKEN);
+      }
+    }
+
+    boot();
+  })();
+  </script>
 </body>
 </html>

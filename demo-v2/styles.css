@@ -56,6 +56,13 @@
   --progress-track:rgba(120, 140, 210, .15);
   --focus-ring:    rgba(47, 92, 255, .15);
 
+  /* ----- Sidenav (left rail) tokens ----- */
+  --ink-5:                   #c9c7c5;   /* divider hairline */
+  --sidenav-width-expanded:  264px;
+  --sidenav-width-collapsed: 64px;
+  --sidenav-hover:           color-mix(in srgb, #0b1430 8%,  transparent);
+  --sidenav-hover-strong:    color-mix(in srgb, #0b1430 14%, transparent);
+
   --radius-lg: 18px;
   --radius-md: 12px;
   --radius-sm: 8px;
@@ -108,6 +115,11 @@
   --scrollbar:     rgba(170, 190, 255, .22);
   --progress-track:rgba(170, 190, 255, .12);
   --focus-ring:    rgba(107, 138, 255, .25);
+
+  /* Sidenav tokens — dark */
+  --ink-5:                #2a3358;
+  --sidenav-hover:        color-mix(in srgb, #ffffff 8%,  transparent);
+  --sidenav-hover-strong: color-mix(in srgb, #ffffff 14%, transparent);
 
   --shadow-1: 0 10px 30px rgba(0, 0, 0, 0.40), 0 1px 0 rgba(255,255,255,.04) inset;
   --shadow-2: 0 24px 60px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,.04) inset;
@@ -3771,3 +3783,251 @@ section.lobby[hidden]  { display: none; }
   }
   .bs-inspector__dialog { transform: none; }
 }
+
+/* ===========================================================================
+   APP SHELL + SIDENAV (left rail)
+   ---------------------------------------------------------------------------
+   Ported from autonomous-itxm-poc's app-cockpit Sidenav — a permanently-
+   collapsed, icon-only "Gemini-style" rail with hover-tooltip labels and the
+   Agentforce mascot pinned to the bottom.
+
+   Setup gating: during Setup only Home, Profile, and the Agentforce mascot
+   show. The remaining items (Tower · CMDB · Studio · Horizon · Lens · Reports)
+   start `.is-locked` / `[hidden]` and reveal in place with a staggered
+   cascade once the Cockpit is ready at the end of the chapter.
+   =========================================================================== */
+
+.app-shell {
+  display: flex;
+  height: calc(100vh - var(--topbar-total));
+  min-height: 0;
+  position: relative;
+  z-index: 2;
+}
+/* Workspace flexes to fill the canvas right of the rail; it keeps its own
+   grid layout, we just let it grow and allow it to shrink below content. */
+.app-shell > .workspace {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+.sidenav {
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  height: 100%;
+  width: var(--sidenav-width-collapsed);
+  flex-shrink: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 4;
+}
+[data-theme="dark"] .sidenav { background: rgba(15, 21, 44, .35); }
+
+/* Item groups — vertical icon stack */
+.sidenav__group {
+  display: flex; flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.sidenav__item {
+  appearance: none;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  border: 0; background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  position: relative;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+.sidenav__item:hover  { background: var(--sidenav-hover); }
+.sidenav__item:active { background: var(--sidenav-hover-strong); }
+.sidenav__item:focus-visible {
+  outline: none;
+  background: var(--sidenav-hover);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Active state */
+.sidenav__item.is-active {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-1) 12%, transparent),
+    color-mix(in srgb, var(--accent-3) 14%, transparent));
+}
+[data-theme="dark"] .sidenav__item.is-active {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-1) 22%, transparent),
+    color-mix(in srgb, var(--accent-3) 22%, transparent));
+}
+
+.sidenav__icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  flex-shrink: 0;
+}
+
+/* Gating: locked / hidden items drop out of the rail during Setup */
+.sidenav__item.is-locked,
+.sidenav__item[hidden] { display: none !important; }
+
+/* Reveal cascade — JS adds `--revealing` + a per-item `--reveal-delay`
+   when Setup completes so the new items slide/fade in one after another. */
+.sidenav__item--revealing {
+  animation: sidenav-reveal .42s cubic-bezier(.2, .8, .25, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+@keyframes sidenav-reveal {
+  0%   { opacity: 0; transform: translateY(-6px) scale(.92); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Floating tooltip label — hidden until hover / keyboard focus */
+.sidenav__label {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translate(-6px, -50%);
+  width: max-content;
+  padding: 6px 10px;
+  background: var(--bg-1);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(11, 20, 48, .12);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 12;
+  transition: opacity .14s ease, transform .18s cubic-bezier(.2, .8, .25, 1);
+}
+.sidenav__item:hover  .sidenav__label,
+.sidenav__item:focus-visible .sidenav__label,
+.sidenav__agentforce:hover .sidenav__label,
+.sidenav__agentforce:focus-visible .sidenav__label {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+[data-theme="dark"] .sidenav__label {
+  background: #1a2240;
+  border-color: #2a356b;
+  color: #e5ebff;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+}
+
+/* Divider */
+.sidenav__divider {
+  height: 1px;
+  background: var(--ink-5);
+  margin: 8px 0;
+  width: 32px;
+  align-self: center;
+}
+
+/* Spacer — flex-grows to push the Agentforce tile to the bottom */
+.sidenav__spacer { flex: 1 1 auto; min-height: 8px; }
+
+/* Foot — Agentforce mascot tile */
+.sidenav__foot {
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidenav__agentforce {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px;
+  padding: 4px;
+  border: 0; background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: background .18s ease, transform .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.sidenav__agentforce:hover  { background: var(--sidenav-hover); }
+.sidenav__agentforce:active { background: var(--sidenav-hover-strong); transform: scale(.98); }
+.sidenav__agentforce:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
+  outline-offset: 2px;
+  background: var(--sidenav-hover);
+}
+.sidenav__agentforce-mark {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(106, 77, 255, .14), 0 0 0 4px rgba(106, 77, 255, .04);
+  transition: box-shadow .25s ease, transform .25s ease;
+  animation: sidenav-agentforce-breathe 5.4s ease-in-out infinite;
+}
+.sidenav__agentforce-mark img {
+  width: 36px; height: 36px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(106, 77, 255, .30))
+          drop-shadow(0 0 10px rgba(247, 147, 207, .18));
+  animation: sidenav-agentforce-float 5.2s ease-in-out infinite;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.sidenav__agentforce:hover .sidenav__agentforce-mark {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(106, 77, 255, .28), 0 0 0 6px rgba(106, 77, 255, .12);
+}
+@keyframes sidenav-agentforce-breathe {
+  0%, 100% { box-shadow: 0 4px 14px rgba(106, 77, 255, .14), 0 0 0 4px rgba(106, 77, 255, .04); }
+  50%      { box-shadow: 0 6px 18px rgba(106, 77, 255, .20), 0 0 0 6px rgba(106, 77, 255, .08); }
+}
+@keyframes sidenav-agentforce-float {
+  0%, 100% { transform: translateY(0)    rotate(-2deg); }
+  50%      { transform: translateY(-1px) rotate( 2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidenav__item--revealing,
+  .sidenav__agentforce-mark,
+  .sidenav__agentforce-mark img { animation: none; }
+}
+
+/* Iconography — single-color SVG glyphs painted in currentColor via CSS mask */
+.icon {
+  display: inline-block;
+  width: 18px; height: 18px;
+  flex-shrink: 0;
+  color: var(--ink-dim);
+  background-color: currentColor;
+  -webkit-mask-position: center; mask-position: center;
+  -webkit-mask-repeat:   no-repeat; mask-repeat:   no-repeat;
+  -webkit-mask-size:     contain;  mask-size:     contain;
+}
+.icon--home    { -webkit-mask-image: url("assets/icons/Home.svg");    mask-image: url("assets/icons/Home.svg"); }
+.icon--tower   { -webkit-mask-image: url("assets/icons/Tower.svg");   mask-image: url("assets/icons/Tower.svg"); }
+.icon--cmdb    { -webkit-mask-image: url("assets/icons/Cmdb.svg");    mask-image: url("assets/icons/Cmdb.svg"); }
+.icon--studio  { -webkit-mask-image: url("assets/icons/Studio.svg");  mask-image: url("assets/icons/Studio.svg"); }
+.icon--horizon { -webkit-mask-image: url("assets/icons/Horizon.svg"); mask-image: url("assets/icons/Horizon.svg"); }
+.icon--lens    { -webkit-mask-image: url("assets/icons/Lens.svg");    mask-image: url("assets/icons/Lens.svg"); }
+.icon--reports { -webkit-mask-image: url("assets/icons/Reports.svg"); mask-image: url("assets/icons/Reports.svg"); }
+.icon--profile { -webkit-mask-image: url("assets/icons/Profile.svg"); mask-image: url("assets/icons/Profile.svg"); }
+
+/* Icon color per state (the .icon sets its own color, so target it directly) */
+.sidenav__item:hover .icon            { color: var(--ink); }
+.sidenav__item.is-active .icon        { color: var(--accent-1); }
+[data-theme="dark"] .sidenav__item.is-active .icon { color: #c8d3ff; }

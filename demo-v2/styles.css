@@ -138,6 +138,11 @@ body {
     radial-gradient(900px 700px at 95% 95%, var(--bg-end)   0%, transparent 60%),
     linear-gradient(180deg, var(--bg-base) 0%, var(--bg-mid) 100%);
   overflow: hidden;
+  /* Column flex so the app shell flex-fills whatever height is left below the
+     meta bar — works whether the bar is shown (standalone) or hidden (embed),
+     so the left rail always reaches the bottom of the viewport. */
+  display: flex;
+  flex-direction: column;
   transition: color .3s ease;
 }
 
@@ -174,6 +179,7 @@ body {
 .topbar-meta {
   position: relative; z-index: 6;
   height: var(--topbar-meta-height);
+  flex: 0 0 auto;   /* fixed-height flex child; never shrink */
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px;
   background: #181c2a;
@@ -3799,7 +3805,7 @@ section.lobby[hidden]  { display: none; }
 
 .app-shell {
   display: flex;
-  height: calc(100vh - var(--topbar-total));
+  flex: 1 1 auto;        /* fill the height left below the meta bar */
   min-height: 0;
   position: relative;
   z-index: 2;

@@ -233,13 +233,10 @@
     <label class="shell-select">
       <span class="shell-select__label">Demo</span>
       <select id="demoSelect" aria-label="Select a demo to view">
-        <option value="v2">Setup (v2)</option>
-        <option value="v3">v3 — Agentic IT Architect</option>
-        <option value="v4">v4 — Control Room</option>
-        <option value="v5">v5 — Onboarding Day</option>
-        <option value="v6">v6 — The Lens</option>
-        <option value="mobile-v4">Mobile v4 (bezel)</option>
-        <option value="mobile-v5">Mobile v5 (bezel)</option>
+        <option value="v2">Conversational Setup</option>
+        <option value="v4">Autonomous Resolution and JD-to-Agent</option>
+        <option value="v5">Agentic Onboarding</option>
+        <option value="v6">The Lens</option>
       </select>
     </label>
 
@@ -286,12 +283,9 @@
     // -----------------------------------------------------------------
     var DEMOS = {
       "v2":        { url: "demo-v2/?embed=1",  mobile: false },
-      "v3":        { url: "demo-v3/?embed=1",  mobile: false },
       "v4":        { url: "demo-v4/?embed=1",  mobile: false },
       "v5":        { url: "demo-v5/?embed=1",  mobile: false },
-      "v6":        { url: "demo-v6/?embed=1",  mobile: false },
-      "mobile-v4": { url: "mobile-v4/preview.html", mobile: true },
-      "mobile-v5": { url: "mobile-v5/preview.html", mobile: true }
+      "v6":        { url: "demo-v6/?embed=1",  mobile: false }
     };
     var DEFAULT_TOKEN = "v6";
     // Bump to force embedded demos past cached copies after an update.

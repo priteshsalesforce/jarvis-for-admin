@@ -92,7 +92,7 @@ window.STORY = [
 
   // 3 — Skip branch (kept short; you can expand later)
   { id: "skip-cmdb", type: "say",
-    text: "No problem — I'll continue without CMDB. You can add it any time from the Control Tower.",
+    text: "No problem — I'll continue without CMDB. You can add it any time from the Cockpit.",
     pause: 200, goto: "after-cmdb" },
 
   // 4 — Install CMDB branch

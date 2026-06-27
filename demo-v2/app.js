@@ -60,7 +60,7 @@
   const $sidenav       = $("#sidenav");
   const $navAgentforce = $("#navAgentforce");
   const GATED_NAV = [
-    { id: "navTower",   title: "Tower · your day-1 control surface" },
+    { id: "navTower",   title: "Cockpit · your day-1 control surface" },
     { id: "navCmdb",    title: "CMDB · your configuration graph" },
     { id: "navStudio",  title: "Studio · build and tune your agents" },
     { id: "navHorizon", title: "Horizon · long-range planning" },

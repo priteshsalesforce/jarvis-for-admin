@@ -982,7 +982,7 @@
               ["Position", `(${Math.round(n.x)}, ${Math.round(n.y)})`],
             ]},
           ],
-          actions: [{ label: "Open in Control Tower", primary: true }],
+          actions: [{ label: "Open in Cockpit", primary: true }],
         });
       });
 

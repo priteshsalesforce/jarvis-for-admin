@@ -932,10 +932,10 @@
 
       pushDirectorNote({
         title: "Setup complete",
-        text: "Tower, CMDB, Studio, Horizon, Lens, and Reports are now available in the sidebar.",
+        text: "Cockpit, CMDB, Studio, Horizon, Lens, and Reports are now available in the sidebar.",
         sub: "Find them on the left rail any time.",
         actions: [
-          { label: "Open Tower", primary: true,
+          { label: "Open Cockpit", primary: true,
             onClick: () => navigateTo("tower") },
         ],
       });
@@ -957,7 +957,7 @@
   function applySidenavGating(options) {
     const animate = !!(options && options.animate);
     const gatedItems = [
-      { el: $navTower,   key: "tower",   title: "Tower · your day-1 control surface" },
+      { el: $navTower,   key: "tower",   title: "Cockpit · your day-1 control surface" },
       { el: $navCmdb,    key: "cmdb",    title: "CMDB · your configuration graph" },
       { el: $navStudio,  key: "studio",  title: "Studio · build and tune agents" },
       { el: $navHorizon, key: "horizon", title: "Horizon · long-range planning" },
@@ -1111,7 +1111,7 @@
   // -------------------------------------------------------------
   const WORKSPACE_PAGES = {
     tower: {
-      title: "Tower",
+      title: "Cockpit",
       lead: "Your day-1 control surface. Agents, signals, and sign-offs at a glance.",
       hint: "Design coming soon — this is the post-setup landing surface for Alex.",
     },

@@ -1728,7 +1728,7 @@
   function applySidenavGating(options) {
     const animate = !!(options && options.animate);
     const gatedItems = [
-      { el: $navTower,   key: "tower",   title: "Tower · your day-1 control surface" },
+      { el: $navTower,   key: "tower",   title: "Cockpit · your day-1 control surface" },
       { el: $navCmdb,    key: "cmdb",    title: "CMDB · your configuration graph" },
       { el: $navStudio,  key: "studio",  title: "Studio · build and tune agents" },
       { el: $navHorizon, key: "horizon", title: "Horizon · long-range planning" },
@@ -1882,7 +1882,7 @@
   // -------------------------------------------------------------
   const WORKSPACE_PAGES = {
     tower: {
-      title: "Tower",
+      title: "Cockpit",
       lead: "Your HR command surface. Agents, joiners and sign-offs at a glance.",
       hint: "Detailed view coming next \u2014 today the strip on home covers your day.",
     },

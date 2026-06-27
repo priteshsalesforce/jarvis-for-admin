@@ -982,7 +982,7 @@
               ["Position", `(${Math.round(n.x)}, ${Math.round(n.y)})`],
             ]},
           ],
-          actions: [{ label: "Open in Control Tower", primary: true }],
+          actions: [{ label: "Open in Cockpit", primary: true }],
         });
       });
 
@@ -2877,7 +2877,7 @@
       accent: "var(--persona-admin)"
     },
     intentKeywords: ["admin", "alex", "setup", "install", "itsm", "cmdb", "discovery", "agent", "fleet", "go live"],
-    endline: "Setup complete — your Tower is live with real-time System Health.",
+    endline: "Setup complete — your Cockpit is live with real-time System Health.",
 
     // The two opener prompts the welcome screen surfaces as one-tap
     // chips. Either one (or the Get-Started button, or any free-text
@@ -3217,7 +3217,7 @@
         pause: 250 },
 
       { type: "link-card",
-        title: "The Tower",
+        title: "Cockpit",
         sub:   "Your day-1 control surface · agents, signals &amp; sign-offs",
         icon: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>`,
         url:  "https://itsm.salesforce.com/tower",

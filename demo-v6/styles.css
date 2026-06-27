@@ -692,6 +692,157 @@ body {
   gap: 0;
 }
 
+/* ============================================================================
+   PRODUCT RAIL — ported from autonomous-itxm-poc (app-cockpit Sidenav).
+   Trial mode: the rail is permanently icon-only and reveals each item's
+   label as a floating tooltip on hover / focus. Adds the workspace→profile
+   divider, the new workspace icon glyphs (Home / CMDB / Studio / Reports),
+   and the Agentforce mascot tile that replaces the old Jarvis foot.
+   These rules are appended last so they win the cascade over the legacy
+   collapsed-rail styles above.
+   ============================================================================ */
+
+/* New workspace icon glyphs (mask the single-color SVGs in currentColor). */
+.icon--home    { -webkit-mask-image: url("assets/icons/Home.svg");    mask-image: url("assets/icons/Home.svg"); }
+.icon--cmdb    { -webkit-mask-image: url("assets/icons/Cmdb.svg");    mask-image: url("assets/icons/Cmdb.svg"); }
+.icon--studio  { -webkit-mask-image: url("assets/icons/Studio.svg");  mask-image: url("assets/icons/Studio.svg"); }
+.icon--reports { -webkit-mask-image: url("assets/icons/Reports.svg"); mask-image: url("assets/icons/Reports.svg"); }
+
+/* Let floating label chips escape the rail bounds — the rail no longer
+   animates its width in trial mode, so overflow can be visible. */
+.sidenav { overflow: visible; }
+
+/* Divider between the workspace group and the profile cluster. */
+.sidenav__divider {
+  height: 1px;
+  background: var(--line);
+  margin: 8px 0;
+  width: 32px;
+  align-self: center;
+}
+
+/* Anchor the absolutely-positioned tooltip chip to each rail item. */
+.sidenav__item,
+.sidenav__agentforce { position: relative; }
+
+/* Floating label chip — hidden until hover / keyboard focus. Higher
+   specificity than the legacy collapsed `display: none` label rule, so
+   this wins and turns each label into a tooltip chip beside the icon. */
+.sidenav[data-collapsed="true"] .sidenav__item .sidenav__label,
+.sidenav[data-collapsed="true"] .sidenav__agentforce .sidenav__label {
+  display: block;
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translate(-6px, -50%);
+  width: max-content;
+  max-width: none;
+  padding: 6px 10px;
+  background: var(--bg-1);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(11, 20, 48, .12);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 12;
+  transition: opacity .14s ease, transform .18s cubic-bezier(.2, .8, .25, 1);
+}
+.sidenav[data-collapsed="true"] .sidenav__item:hover .sidenav__label,
+.sidenav[data-collapsed="true"] .sidenav__item:focus-visible .sidenav__label,
+.sidenav[data-collapsed="true"] .sidenav__agentforce:hover .sidenav__label,
+.sidenav[data-collapsed="true"] .sidenav__agentforce:focus-visible .sidenav__label {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+[data-theme="dark"] .sidenav[data-collapsed="true"] .sidenav__item .sidenav__label,
+[data-theme="dark"] .sidenav[data-collapsed="true"] .sidenav__agentforce .sidenav__label {
+  background: #1a2240;
+  border-color: #2a356b;
+  color: #e5ebff;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+}
+
+/* Foot + Agentforce mascot tile — replaces the Jarvis tile. The 3D
+   mascot is the focal element: transparent disc with a soft purple
+   halo that breathes, no card / border. */
+.sidenav__foot { justify-content: center; }
+.sidenav__agentforce {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 44px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  color: var(--ink);
+  font: 600 13px/1.2 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.sidenav__agentforce:hover { background: var(--sidenav-hover); }
+.sidenav__agentforce:active { background: var(--sidenav-hover-strong); transform: scale(.98); }
+.sidenav__agentforce:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-1) 60%, transparent);
+  outline-offset: 2px;
+  background: var(--sidenav-hover);
+}
+.sidenav__agentforce-mark {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  border: 0;
+  box-shadow:
+    0 4px 14px rgba(106, 77, 255, .14),
+    0 0 0 4px rgba(106, 77, 255, .04);
+  transition: box-shadow .25s ease, transform .25s ease;
+  animation: sidenav-agentforce-breathe 5.4s ease-in-out infinite;
+}
+.sidenav__agentforce-mark img {
+  width: 36px; height: 36px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(106, 77, 255, .30))
+          drop-shadow(0 0 10px rgba(247, 147, 207, .18));
+  animation: sidenav-agentforce-float 5.2s ease-in-out infinite;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+.sidenav__agentforce[aria-pressed="true"] .sidenav__agentforce-mark {
+  box-shadow:
+    0 6px 18px rgba(106, 77, 255, .22),
+    0 0 0 5px rgba(106, 77, 255, .10);
+}
+.sidenav__agentforce:hover .sidenav__agentforce-mark {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 20px rgba(106, 77, 255, .28),
+    0 0 0 6px rgba(106, 77, 255, .12);
+}
+@keyframes sidenav-agentforce-breathe {
+  0%, 100% { box-shadow: 0 4px 14px rgba(106, 77, 255, .14), 0 0 0 4px rgba(106, 77, 255, .04); }
+  50%      { box-shadow: 0 6px 18px rgba(106, 77, 255, .20), 0 0 0 6px rgba(106, 77, 255, .08); }
+}
+@keyframes sidenav-agentforce-float {
+  0%, 100% { transform: translateY(0)    rotate(-2deg); }
+  50%      { transform: translateY(-1px) rotate( 2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidenav__agentforce-mark,
+  .sidenav__agentforce-mark img { animation: none; }
+}
+
 /* ---------- Workspace layout ----------
    ALWAYS two grid tracks: the right track is 0px wide when no panel,
    540px when split. Keeping the track count fixed lets
@@ -3893,6 +4044,7 @@ section.lobby[hidden]  { display: none; }
   /* Reserve one extra descender's worth of room beneath the line so
      the "y" never touches the next element. */
   padding-bottom: .08em;
+  height: 79px;
 }
 @keyframes chapter-welcome-grad {
   0%, 100% { background-position: 0% 50%; }

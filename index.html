@@ -272,15 +272,19 @@
     // hidden via injected CSS on load so only the shell bar shows.
     // Mobile entries load the bezel preview (no .topbar-meta).
     // -----------------------------------------------------------------
+    // Use explicit index.html paths (not bare `demo-vX/` directory URLs)
+    // so the iframe resolves the same way on every host — GitHub Pages,
+    // a plain local static server, or file:// — instead of relying on the
+    // server's directory-index behaviour, which can yield a blank frame.
     var DEMOS = {
-      "v2":        { url: "demo-v2/?embed=1",  mobile: false },
-      "v4":        { url: "demo-v4/?embed=1",  mobile: false },
-      "v5":        { url: "demo-v5/?embed=1",  mobile: false },
-      "v6":        { url: "demo-v6/?embed=1",  mobile: false }
+      "v2":        { url: "demo-v2/index.html?embed=1",  mobile: false },
+      "v4":        { url: "demo-v4/index.html?embed=1",  mobile: false },
+      "v5":        { url: "demo-v5/index.html?embed=1",  mobile: false },
+      "v6":        { url: "demo-v6/index.html?embed=1",  mobile: false }
     };
     var DEFAULT_TOKEN = "v6";
     // Bump to force embedded demos past cached copies after an update.
-    var BUILD = "2";
+    var BUILD = "3";
 
     var frame   = document.getElementById("demoFrame");
     var select  = document.getElementById("demoSelect");
